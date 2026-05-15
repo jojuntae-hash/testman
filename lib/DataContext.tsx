@@ -75,11 +75,20 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           설치핸드폰번호: fixPhoneNumber(c.설치핸드폰번호)
         }))
         setCustomersState(fixed)
+        // 보정된 데이터를 다시 저장하여 영구 반영
+        localStorage.setItem('customers', JSON.stringify(fixed))
       } catch (e) {
         setCustomersState(initialCustomers)
       }
     } else {
-      setCustomersState(initialCustomers)
+      const initialFixed = initialCustomers.map((c: any) => ({
+        ...c,
+        전화번호: fixPhoneNumber(c.전화번호),
+        핸드폰번호: fixPhoneNumber(c.핸드폰번호),
+        설치전화번호: fixPhoneNumber(c.설치전화번호),
+        설치핸드폰번호: fixPhoneNumber(c.설치핸드폰번호)
+      }))
+      setCustomersState(initialFixed)
     }
     setIsInitialized(true)
   }, [])

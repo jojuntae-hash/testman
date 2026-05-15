@@ -3,12 +3,15 @@
 import React, { useEffect, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useData, CustomerData } from '@/lib/DataContext'
-import { ChevronLeft, Search, MapPin, Clock, Navigation, CheckCircle2, ChevronRight, X, Play, RotateCcw } from 'lucide-react'
-import { Map, CustomOverlayMap, Polyline } from 'react-kakao-maps-sdk'
+import { ChevronLeft, Search, MapPin, Clock, Navigation, CheckCircle2, ChevronRight, X, Play, RotateCcw, LocateFixed, ExternalLink, Share2, ArrowUp, ArrowDown } from 'lucide-react'
+import { DataProvider } from '@/lib/DataContext'
+import Script from 'next/script'
+import { Map, CustomOverlayMap, Polyline, useKakaoLoader } from 'react-kakao-maps-sdk'
 
 declare global {
   interface Window {
     daum: any;
+    kakao: any;
   }
 }
 
@@ -18,8 +21,65 @@ export default function RoutePage() {
   const [selectedFolder, setSelectedFolder] = useState<string>('작업미완료')
   const [source, setSource] = useState('인천 미추홀구 주안동 1467')
   const [destination, setDestination] = useState('별도의 종착지 없음')
+
+  // 초기 로드 시 로컬 스토리지에서 출발지 정보 불러오기
+  useEffect(() => {
+    const savedSource = localStorage.getItem('last_source')
+    if (savedSource) setSource(savedSource)
+  }, [])
+
+  // 출발지 변경 시 저장
+  const handleSetSource = (val: string) => {
+    setSource(val)
+    localStorage.setItem('last_source', val)
+  }
+
+  const handleGetCurrentLocation = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition((pos) => {
+        alert('현재 위치 좌표를 출발지로 설정합니다.')
+        handleSetSource(`${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)}`)
+      })
+    }
+  }
+
+  const openExternalMap = (address: string) => {
+    const encodedAddr = encodeURIComponent(address)
+    const url = `https://map.kakao.com/link/search/${encodedAddr}`
+    window.open(url, '_blank')
+  }
+
+  const handleShareRoute = () => {
+    if (optimizedRoute.length === 0) {
+      alert('공유할 경로가 없습니다. 먼저 경로를 생성해 주세요.')
+      return
+    }
+    const summary = optimizedRoute.map((item, idx) => {
+      const name = item.type === 'waypoint' ? item.customer.고객명_상호 : (item.type === 'source' ? '출발지' : '종착지')
+      return `${idx + 1}. ${name} (${item.type === 'waypoint' ? (item.customer.설치주소 || item.customer.주소) : item.address})`
+    }).join('\n')
+    
+    const text = `[방문 일정 공유]\n총 ${optimizedRoute.length}개 지점\n\n${summary}`
+    
+    navigator.clipboard.writeText(text).then(() => {
+      alert('경로 리스트가 클립보드에 복사되었습니다.')
+    })
+  }
+
+  const moveRouteItem = (index: number, direction: 'up' | 'down') => {
+    // 0은 출발지, 마지막은 도착지이므로 그 사이(경유지)만 스왑 가능
+    const newRoute = [...optimizedRoute];
+    if (direction === 'up' && index > 1) {
+      [newRoute[index - 1], newRoute[index]] = [newRoute[index], newRoute[index - 1]];
+      setOptimizedRoute(newRoute);
+    } else if (direction === 'down' && index < optimizedRoute.length - 2 && index > 0) {
+      [newRoute[index + 1], newRoute[index]] = [newRoute[index], newRoute[index + 1]];
+      setOptimizedRoute(newRoute);
+    }
+  }
   const [optimizedRoute, setOptimizedRoute] = useState<any[]>([])
   const [isMapReady, setIsMapReady] = useState(false)
+  const [isExpanded, setIsExpanded] = useState(false)
   const [markers, setMarkers] = useState<any[]>([])
   const [isOptimizing, setIsOptimizing] = useState(false)
   const [routeStats, setRouteStats] = useState({ distance: 0, duration: 0 })
@@ -35,7 +95,7 @@ export default function RoutePage() {
     new window.daum.Postcode({
       oncomplete: (data: any) => {
         const fullAddress = data.address
-        if (target === 'source') setSource(fullAddress)
+        if (target === 'source') handleSetSource(fullAddress)
         else setDestination(fullAddress)
       }
     }).open()
@@ -50,20 +110,6 @@ export default function RoutePage() {
     if (selectedFolder === '전체리스트') return customers.filter(c => c.status !== '삭제됨')
     return customers.filter(c => c.status === selectedFolder)
   }, [customers, selectedFolder])
-
-  useEffect(() => {
-    const checkKakao = () => {
-      if (window.kakao && window.kakao.maps) {
-        window.kakao.maps.load(() => setIsMapReady(true))
-        return true
-      }
-      return false
-    }
-    if (!checkKakao()) {
-      const interval = setInterval(() => { if (checkKakao()) clearInterval(interval) }, 500)
-      return () => clearInterval(interval)
-    }
-  }, [])
 
   // 주소를 좌표로 변환하여 마커 생성
   useEffect(() => {
@@ -180,8 +226,12 @@ export default function RoutePage() {
       totalDist += calculateDistance(route[i].lat, route[i].lng, route[i+1].lat, route[i+1].lng)
     }
 
+    // 로컬스토리지에서 작업 소요 시간 가져오기 (없으면 기본 30분)
+    const savedDuration = localStorage.getItem('task_duration')
+    const taskMin = savedDuration ? parseInt(savedDuration, 10) : 30
+
     const roadDist = totalDist * 1.3 // 직선 거리 대비 도로 보정 계수
-    const workTime = route.filter(p => p.type === 'waypoint').length * 30 // 지점당 30분 작업 시간
+    const workTime = route.filter(p => p.type === 'waypoint').length * taskMin // 지점당 설정된 작업 시간
     const duration = (roadDist / 30) * 60 + workTime // 주행 시간 + 작업 시간
 
     setRouteStats({ distance: roadDist, duration: duration })
@@ -193,6 +243,18 @@ export default function RoutePage() {
 
   return (
     <div className="route-page">
+      <Script 
+        src={`https://dapi.kakao.com/v2/maps/sdk.js?appkey=${process.env.NEXT_PUBLIC_KAKAO_APP_KEY || 'bcf159529047078b426216b892689408'}&libraries=services&autoload=false`}
+        strategy="afterInteractive"
+        onLoad={() => {
+          if (window.kakao && window.kakao.maps) {
+            window.kakao.maps.load(() => {
+              setIsMapReady(true)
+            })
+          }
+        }}
+      />
+      <Script src="//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js" strategy="afterInteractive" />
       <div className="view-header">
         <button className="back-btn" onClick={() => router.back()}>
           <ChevronLeft size={24} />
@@ -201,11 +263,20 @@ export default function RoutePage() {
           <h1>경로 최적화</h1>
           <p>방문 순서 및 최단 경로 탐색</p>
         </div>
+        <button className="share-btn" onClick={handleShareRoute} title="경로 공유">
+          <Share2 size={22} />
+        </button>
       </div>
 
       <div className="map-section">
         {!isMapReady ? <div className="loading-map">지도를 불러오는 중...</div> : (
           <Map center={mapCenter} style={{ width: '100%', height: '100%' }} level={6}>
+            {/* 현위치 버튼 */}
+            <div className="map-controls">
+              <button className="ctrl-btn" onClick={handleGetCurrentLocation} title="현위치">
+                <LocateFixed size={20} />
+              </button>
+            </div>
             {/* 최적화된 경로의 마커들 표시 */}
             {optimizedRoute.length > 0 ? (
               optimizedRoute.map((m, idx) => (
@@ -248,8 +319,11 @@ export default function RoutePage() {
         )}
       </div>
 
-      <div className="route-container shadow-xl">
-        <div className="drag-handle"></div>
+      <div className={`route-container ${isExpanded ? 'expanded' : 'collapsed'}`}>
+        <div className="drag-handle-area" onClick={() => setIsExpanded(!isExpanded)}>
+          <div className="drag-handle"></div>
+          <span className="drag-text">{isExpanded ? '지도 보기' : '리스트 보기'}</span>
+        </div>
 
         <div className="folder-selector">
           <select 
@@ -264,8 +338,6 @@ export default function RoutePage() {
             {folders.map(f => <option key={f} value={f}>{f}</option>)}
           </select>
         </div>
-
-
 
         <div className="route-stats">
           <div className="stat-item">
@@ -303,26 +375,47 @@ export default function RoutePage() {
                   {item.type === 'source' ? '출' : item.type === 'dest' ? '종' : idx}
                 </div>
                 <div className="point-info">
-                  <div className="point-name">
-                    {item.type === 'waypoint' ? item.customer.고객명_상호 : item.name}
+                  <div className="point-addr">
+                    <span className="point-name">{item.type === 'waypoint' ? item.customer.고객명_상호 : item.name}</span>
                   </div>
                   <div className="point-addr-sub">
                     {item.type === 'waypoint' ? (item.customer.설치주소 || item.customer.주소) : item.address}
                   </div>
                 </div>
-                {item.type === 'waypoint' && (
-                  <button 
-                    className="detail-link-btn" 
-                    onClick={() => router.push(`/detail/${item.customer.id}`)}
-                  >
-                    <ChevronRight size={18} className="arrow-icon" />
-                  </button>
-                )}
+                <div className="item-actions">
+                  {item.type === 'waypoint' && (
+                    <div className="order-controls">
+                      <button className="order-btn" onClick={(e) => { e.stopPropagation(); moveRouteItem(idx, 'up'); }} disabled={idx === 1}>
+                        <ArrowUp size={14} />
+                      </button>
+                      <button className="order-btn" onClick={(e) => { e.stopPropagation(); moveRouteItem(idx, 'down'); }} disabled={idx === optimizedRoute.length - 2}>
+                        <ArrowDown size={14} />
+                      </button>
+                    </div>
+                  )}
+                  {item.type !== 'dest' && (
+                    <button 
+                      className="action-link-btn nav" 
+                      onClick={(e) => { e.stopPropagation(); openExternalMap(item.type === 'waypoint' ? (item.customer.설치주소 || item.customer.주소) : item.address); }}
+                      title="길찾기"
+                    >
+                      <Navigation size={18} />
+                    </button>
+                  )}
+                  {item.type === 'waypoint' && (
+                    <button 
+                      className="action-link-btn detail" 
+                      onClick={(e) => { e.stopPropagation(); router.push(`/detail/${item.customer.id}`); }}
+                      title="상세정보"
+                    >
+                      <ChevronRight size={18} />
+                    </button>
+                  )}
+                </div>
               </div>
             ))
           ) : (
             <>
-              {/* 초기 상태 (입력창 위주) */}
               <div className="route-item editable-point">
                 <div className="point-icon source">출</div>
                 <div className="point-info">
@@ -357,13 +450,6 @@ export default function RoutePage() {
                     <button className="search-btn-mini" onClick={() => handleAddressSearch('destination')}><Search size={14} /></button>
                   </div>
                 )}
-                
-                {destinationType === 'none' && (
-                  <div className="dest-guide-text">별도의 종착지 없이 마지막 작업지에서 종료합니다.</div>
-                )}
-                {destinationType === 'start' && (
-                  <div className="dest-guide-text">출발지로 다시 돌아오는 왕복 경로를 생성합니다.</div>
-                )}
               </div>
             </>
           )}
@@ -381,12 +467,13 @@ export default function RoutePage() {
       </div>
 
       <style jsx>{`
-        .route-page { height: 100vh; display: flex; flex-direction: column; background: #fff; overflow: hidden; }
+        .route-page { position: absolute; top: 0; left: 0; right: 0; bottom: 70px; display: flex; flex-direction: column; background: #fff; overflow: hidden; }
         .view-header { height: 80px; display: flex; align-items: center; padding: 0 20px; border-bottom: 1px solid #f1f5f9; background: #fff; z-index: 100; flex-shrink: 0; }
         .back-btn { background: none; border: none; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #334155; }
         .header-text { margin-left: 12px; }
         .header-text h1 { font-size: 1.15rem; font-weight: 800; margin: 0; color: #1e293b; }
         .header-text p { font-size: 0.75rem; color: #94a3b8; margin: 0; font-weight: 500; }
+        .share-btn { margin-left: auto; background: none; border: none; padding: 10px; cursor: pointer; color: #334155; display: flex; align-items: center; }
         .map-section { flex: 1; position: relative; background: #f0f0f0; }
         .loading-map {
           height: 100%;
@@ -395,44 +482,46 @@ export default function RoutePage() {
           justify-content: center;
           color: #999;
         }
-        .floating-back-btn {
-          position: absolute;
-          top: 20px;
-          left: 20px;
-          z-index: 10;
-          background: #fff;
-          border: none;
-          width: 40px;
-          height: 40px;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        .route-container {
-          height: 60%;
-          background: #fff;
-          border-radius: 30px 30px 0 0;
-          padding: 20px;
+        .route-container { 
+          position: absolute; 
+          bottom: 0; 
+          left: 0; 
+          right: 0; 
+          background: #fff; 
+          border-radius: 24px 24px 0 0; 
+          z-index: 1000; 
+          padding: 0 20px 20px 20px;
+          transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+          max-height: calc(100% - 120px);
           display: flex;
           flex-direction: column;
-          z-index: 20;
-          margin-top: -30px;
-          overflow-y: auto;
+          box-shadow: 0 -4px 12px rgba(0,0,0,0.05);
+        }
+        .route-container.collapsed {
+          transform: translateY(calc(100% - 140px));
+        }
+        .route-container.expanded {
+          transform: translateY(0);
+        }
+        .drag-handle-area {
+          padding: 8px 0;
+          cursor: pointer;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 5px;
+          flex-shrink: 0;
+        }
+        .drag-text {
+          font-size: 0.7rem;
+          color: #94a3b8;
+          font-weight: 700;
         }
         .drag-handle {
           width: 40px;
           height: 4px;
-          background: #ddd;
+          background: #e2e8f0;
           border-radius: 2px;
-          margin: 0 auto 15px;
-        }
-        .page-title {
-          font-size: 1.1rem;
-          font-weight: 700;
-          text-align: center;
-          margin-bottom: 20px;
         }
         .folder-selector {
           margin-bottom: 15px;
@@ -488,10 +577,11 @@ export default function RoutePage() {
           color: #334155;
         }
         .route-list {
-          padding: 10px 0;
-          display: flex;
-          flex-direction: column;
-          gap: 10px;
+          flex: 1;
+          overflow-y: auto;
+          margin-top: 15px;
+          padding-bottom: 20px;
+          min-height: 200px;
         }
         .route-item {
           display: flex;
@@ -525,10 +615,22 @@ export default function RoutePage() {
         .point-info { flex: 1; min-width: 0; }
         .point-addr { font-size: 0.9rem; color: #334155; font-weight: 600; }
         .point-name { font-size: 0.95rem; font-weight: 700; color: #1e293b; }
-        .point-addr-sub { font-size: 0.8rem; color: #94a3b8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .detail-link-btn { background: none; border: none; padding: 5px; cursor: pointer; color: #cbd5e1; transition: color 0.2s; }
-        .detail-link-btn:hover { color: #6366f1; }
-        .arrow-icon { color: inherit; }
+        .point-addr-sub { font-size: 0.8rem; color: #94a3b8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px; }
+        .item-actions { display: flex; align-items: center; gap: 5px; }
+        .action-link-btn { background: #f8fafc; border: 1px solid #e2e8f0; width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #64748b; transition: all 0.2s; }
+        .action-link-btn:active { transform: scale(0.95); }
+        .action-link-btn.nav { color: #3b82f6; background: #eff6ff; border-color: #dbeafe; }
+        .action-link-btn.detail { color: #64748b; }
+        .action-link-btn:hover { background: #f1f5f9; }
+
+        .order-controls { display: flex; flex-direction: column; gap: 2px; margin-right: 5px; }
+        .order-btn { background: #f1f5f9; border: none; padding: 2px; border-radius: 4px; color: #64748b; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s; }
+        .order-btn:hover { background: #e2e8f0; }
+        .order-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+        .map-controls { position: absolute; bottom: 20px; right: 20px; z-index: 10; display: flex; flex-direction: column; gap: 10px; }
+        .ctrl-btn { width: 44px; height: 44px; background: #fff; border: none; border-radius: 12px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.15); cursor: pointer; color: #334155; transition: all 0.2s; }
+        .ctrl-btn:active { transform: scale(0.9); }
         .empty-route {
           padding: 10px 0;
           text-align: center;

@@ -3,12 +3,13 @@
 import React, { useState, useMemo } from 'react'
 import { useData } from '@/lib/DataContext'
 import { useRouter } from 'next/navigation'
-import { Folder, Clock, Calendar, CheckCircle2, ChevronRight, Trash2, FolderPlus, Map, ClipboardList } from 'lucide-react'
+import { Folder, Clock, Calendar, CheckCircle2, ChevronRight, Trash2, FolderPlus, Map, ClipboardList, Search, Phone } from 'lucide-react'
 
 export default function HomePage() {
   const { customers, setCustomers, selectedIds, setSelectedIds } = useData()
   const router = useRouter()
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null)
+  const [searchTerm, setSearchTerm] = useState('')
 
   const uniqueStatuses = useMemo(() => {
     const statuses = Array.from(new Set(customers.map(c => c.status)))
@@ -50,11 +51,21 @@ export default function HomePage() {
   }, [uniqueStatuses, customers])
 
   const filteredCustomers = useMemo(() => {
-    if (selectedFolder === '전체리스트') return customers.filter(c => c.status !== '삭제됨')
-    return selectedFolder 
-      ? customers.filter(c => c.status === selectedFolder)
-      : customers.filter(c => c.status !== '삭제됨')
-  }, [customers, selectedFolder])
+    let list = customers.filter(c => c.status !== '삭제됨')
+    if (selectedFolder && selectedFolder !== '전체리스트') {
+      list = customers.filter(c => c.status === selectedFolder)
+    }
+    if (searchTerm.trim() !== '') {
+      const lowerTerm = searchTerm.toLowerCase()
+      list = list.filter(c => 
+        (c.고객명_상호 && c.고객명_상호.toLowerCase().includes(lowerTerm)) ||
+        (c.전화번호 && c.전화번호.includes(lowerTerm)) ||
+        (c.설치주소 && c.설치주소.toLowerCase().includes(lowerTerm)) ||
+        (c.주소 && c.주소.toLowerCase().includes(lowerTerm))
+      )
+    }
+    return list
+  }, [customers, selectedFolder, searchTerm])
 
   const toggleSelect = (id: string, e: React.MouseEvent) => {
     e.stopPropagation()
@@ -115,6 +126,18 @@ export default function HomePage() {
         ))}
       </div>
 
+      <div className="search-section">
+        <div className="search-box">
+          <Search size={18} className="search-icon" />
+          <input 
+            type="text" 
+            placeholder="이름, 전화번호, 주소로 검색" 
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+      </div>
+
       <div className="customer-list-section">
         <div className="flex-between list-title">
           <div className="title-with-btn">
@@ -138,7 +161,9 @@ export default function HomePage() {
                   <p className="font-bold">{customer.고객명_상호}</p>
                   <p className="text-xs text-sub">{customer.전화번호} | {customer.설치주소 || customer.주소}</p>
                 </div>
-                <button className="go-detail-mini-btn" onClick={(e) => { e.stopPropagation(); router.push(`/detail/${customer.id}`); }}>상세 <ChevronRight size={14} /></button>
+                <div className="item-actions">
+                  <button className="go-detail-mini-btn" onClick={(e) => { e.stopPropagation(); router.push(`/detail/${customer.id}`); }}>상세 <ChevronRight size={14} /></button>
+                </div>
               </div>
             ))
           )}
@@ -185,6 +210,10 @@ export default function HomePage() {
         .status-customer-item.selected { border-color: var(--primary-color); background: #f0f7ff; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
         .item-main { flex: 1; min-width: 0; }
         .item-main p { margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .item-actions { display: flex; align-items: center; gap: 6px; }
+        .action-circle-btn { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; text-decoration: none; transition: all 0.2s; }
+        .action-circle-btn:active { transform: scale(0.9); }
+        .action-circle-btn.phone { background: #10b981; }
         .go-detail-mini-btn { padding: 8px 12px; background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; font-size: 0.75rem; font-weight: 700; color: #64748b; display: flex; align-items: center; gap: 2px; }
         .floating-bar { position: fixed; bottom: 85px; left: 5px; right: 5px; background: #2c3e50; color: #fff; padding: 12px 10px; border-radius: 20px; display: flex; align-items: center; justify-content: space-between; z-index: 1000; box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
         .selection-info { font-size: 0.75rem; white-space: nowrap; padding-left: 5px; }
@@ -202,6 +231,11 @@ export default function HomePage() {
         .flex-between { display: flex; align-items: center; justify-content: space-between; }
         .animated-up { animation: slideUp 0.3s ease-out; }
         @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .search-section { padding: 0 20px 20px 20px; }
+        .search-box { display: flex; align-items: center; background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 10px 15px; }
+        .search-icon { color: #94a3b8; margin-right: 10px; }
+        .search-box input { flex: 1; border: none; outline: none; font-size: 0.9rem; color: #1e293b; background: transparent; }
+        .search-box input::placeholder { color: #94a3b8; }
       `}</style>
     </div>
   )

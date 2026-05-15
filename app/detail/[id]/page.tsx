@@ -1,9 +1,9 @@
 'use client'
 
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useData } from '@/lib/DataContext'
-import { Info, FileText, MapPin, MessageSquare, ChevronLeft } from 'lucide-react'
+import { Info, FileText, MapPin, MessageSquare, ChevronLeft, Phone, Save } from 'lucide-react'
 
 export default function DetailPage() {
   const { id } = useParams()
@@ -11,6 +11,19 @@ export default function DetailPage() {
   const router = useRouter()
   
   const customer = customers.find(c => c.id === id)
+  const [memo, setMemo] = useState('')
+
+  useEffect(() => {
+    if (id) {
+      const savedMemo = localStorage.getItem(`memo_${id}`)
+      if (savedMemo) setMemo(savedMemo)
+    }
+  }, [id])
+
+  const handleSaveMemo = () => {
+    localStorage.setItem(`memo_${id}`, memo)
+    alert('메모가 저장되었습니다.')
+  }
 
   if (!customer) {
     return (
@@ -33,7 +46,14 @@ export default function DetailPage() {
 
       <div className="customer-title-section">
         <span className="badge-simple">정기 관리 대상</span>
-        <h2 className="customer-name">{customer.고객명_상호}</h2>
+        <div className="title-row">
+          <h2 className="customer-name">{customer.고객명_상호}</h2>
+          {customer.전화번호 && (
+            <a href={`tel:${customer.전화번호.replace(/[^0-9]/g, '')}`} className="action-circle-btn phone">
+              <Phone size={18} />
+            </a>
+          )}
+        </div>
       </div>
 
       {/* 01. 일반사항 */}
@@ -99,11 +119,25 @@ export default function DetailPage() {
           </div>
           <div className="info-item">
             <label>전화번호</label>
-            <span>{customer.전화번호}</span>
+            <div className="value-with-action">
+              <span>{customer.전화번호}</span>
+              {customer.전화번호 && (
+                <a href={`tel:${customer.전화번호.replace(/[^0-9]/g, '')}`} className="mini-call-btn">
+                  <Phone size={12} />
+                </a>
+              )}
+            </div>
           </div>
           <div className="info-item">
             <label>핸드폰번호</label>
-            <span>{customer.핸드폰번호}</span>
+            <div className="value-with-action">
+              <span>{customer.핸드폰번호}</span>
+              {customer.핸드폰번호 && (
+                <a href={`tel:${customer.핸드폰번호.replace(/[^0-9]/g, '')}`} className="mini-call-btn">
+                  <Phone size={12} />
+                </a>
+              )}
+            </div>
           </div>
           <div className="info-item full">
             <label>주소</label>
@@ -133,7 +167,14 @@ export default function DetailPage() {
           </div>
           <div className="info-item">
             <label>전화번호</label>
-            <span>{customer.설치전화번호}</span>
+            <div className="value-with-action">
+              <span>{customer.설치전화번호}</span>
+              {customer.설치전화번호 && (
+                <a href={`tel:${customer.설치전화번호.replace(/[^0-9]/g, '')}`} className="mini-call-btn">
+                  <Phone size={12} />
+                </a>
+              )}
+            </div>
           </div>
           <div className="info-item full">
             <label>주소</label>
@@ -144,6 +185,27 @@ export default function DetailPage() {
             <div className="memo-box">
               {customer.설치시특이사항}
             </div>
+          </div>
+        </div>
+      </div>
+      
+      {/* 04. 현장 메모 */}
+      <div className="card">
+        <div className="card-title">
+          <FileText size={18} />
+          <span>현장 메모</span>
+        </div>
+        <div className="info-grid">
+          <div className="info-item full">
+            <textarea 
+              className="memo-textarea" 
+              placeholder="방문 전/후 특이사항을 기록하세요." 
+              value={memo}
+              onChange={(e) => setMemo(e.target.value)}
+            />
+            <button className="save-memo-btn" onClick={handleSaveMemo}>
+              <Save size={14} /> 메모 저장
+            </button>
           </div>
         </div>
       </div>
@@ -230,6 +292,18 @@ export default function DetailPage() {
           font-weight: 700;
           font-size: 1rem;
         }
+        .title-row { display: flex; align-items: center; justify-content: space-between; }
+        .action-circle-btn { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; text-decoration: none; transition: all 0.2s; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3); }
+        .action-circle-btn:active { transform: scale(0.9); }
+        .action-circle-btn.phone { background: #10b981; }
+        .memo-textarea { width: 100%; min-height: 80px; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 0.9rem; resize: vertical; outline: none; margin-bottom: 8px; }
+        .memo-textarea:focus { border-color: var(--accent-blue); }
+        .save-memo-btn { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 8px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; transition: all 0.2s; }
+        .save-memo-btn:hover { background: #e2e8f0; }
+        .save-memo-btn:active { transform: scale(0.98); }
+        .value-with-action { display: flex; align-items: center; gap: 8px; }
+        .mini-call-btn { width: 24px; height: 24px; background: #ecfdf5; color: #10b981; border: 1px solid #d1fae5; border-radius: 6px; display: flex; align-items: center; justify-content: center; text-decoration: none; transition: all 0.2s; }
+        .mini-call-btn:active { transform: scale(0.9); }
       `}</style>
     </div>
   )

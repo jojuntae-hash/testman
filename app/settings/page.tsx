@@ -10,6 +10,18 @@ import { useData } from '@/lib/DataContext'
 export default function SettingsPage() {
   const router = useRouter()
   const { customers, setCustomers } = useData()
+  const [taskDuration, setTaskDuration] = React.useState<number>(30)
+
+  React.useEffect(() => {
+    const saved = localStorage.getItem('task_duration')
+    if (saved) setTaskDuration(parseInt(saved, 10))
+  }, [])
+
+  const handleDurationChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const val = parseInt(e.target.value, 10)
+    setTaskDuration(val)
+    localStorage.setItem('task_duration', val.toString())
+  }
 
   const handleResetData = () => {
     if (confirm('모든 데이터를 초기화하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) {
@@ -52,6 +64,26 @@ export default function SettingsPage() {
           <h2 className="section-title">데이터 불러오기</h2>
           <div className="card">
             <ExcelUploader />
+          </div>
+        </section>
+
+        <section className="settings-section">
+          <h2 className="section-title">환경 설정</h2>
+          <div className="card">
+            <div className="setting-item">
+              <div className="setting-info">
+                <h3>기본 작업 소요 시간</h3>
+                <p>경로 소요 시간 계산 시 각 고객마다 추가되는 기본 작업 시간입니다.</p>
+              </div>
+              <select className="duration-select" value={taskDuration} onChange={handleDurationChange}>
+                <option value={10}>10분</option>
+                <option value={20}>20분</option>
+                <option value={30}>30분</option>
+                <option value={40}>40분</option>
+                <option value={50}>50분</option>
+                <option value={60}>60분 (1시간)</option>
+              </select>
+            </div>
           </div>
         </section>
 
@@ -139,6 +171,31 @@ export default function SettingsPage() {
           border: 1px solid #e2e8f0;
           overflow: hidden;
           box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        }
+        .setting-item {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 15px 0;
+        }
+        .setting-info h3 {
+          font-size: 1rem;
+          font-weight: 700;
+          color: #1e293b;
+          margin-bottom: 4px;
+        }
+        .setting-info p {
+          font-size: 0.8rem;
+          color: #64748b;
+        }
+        .duration-select {
+          padding: 8px 12px;
+          border: 1px solid #e2e8f0;
+          border-radius: 8px;
+          font-size: 0.95rem;
+          color: #334155;
+          background: #f8fafc;
+          outline: none;
         }
         .action-card {
           display: flex;

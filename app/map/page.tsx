@@ -3,17 +3,17 @@
 import React, { useEffect, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useData, CustomerData } from '@/lib/DataContext'
-import { ChevronLeft, ChevronRight, X, Phone, MapPin, ExternalLink, FolderPlus, Trash2, Map as MapIcon } from 'lucide-react'
+import { ChevronLeft, ChevronRight, X, Phone, MapPin, ExternalLink, FolderPlus, Trash2, Map as MapIcon, LocateFixed } from 'lucide-react'
 import { Map, CustomOverlayMap } from 'react-kakao-maps-sdk'
+import Script from 'next/script'
 
 export default function MapPage() {
   const { customers, setCustomers, selectedIds } = useData()
   const router = useRouter()
   const [selectedCustomersList, setSelectedCustomersList] = useState<CustomerData[]>([])
   const [markers, setMarkers] = useState<{ id: string; lat: number; lng: number; customer: CustomerData }[]>([])
-  const [isMapReady, setIsMapReady] = useState(false)
-  const [mapError, setMapError] = useState(false)
   const [selectedFolder, setSelectedFolder] = useState<string>('선택된 항목')
+  const [isMapReady, setIsMapReady] = useState(false)
 
   const folders = useMemo(() => {
     const statuses = Array.from(new Set(customers.map(c => c.status))).filter(s => s !== '삭제됨')
@@ -29,20 +29,6 @@ export default function MapPage() {
     }
     return customers.filter(c => c.status === selectedFolder)
   }, [customers, selectedIds, selectedFolder])
-
-  useEffect(() => {
-    const checkKakao = () => {
-      if (window.kakao && window.kakao.maps) {
-        window.kakao.maps.load(() => setIsMapReady(true))
-        return true
-      }
-      return false
-    }
-    if (!checkKakao()) {
-      const interval = setInterval(() => { if (checkKakao()) clearInterval(interval) }, 500)
-      return () => clearInterval(interval)
-    }
-  }, [])
 
   useEffect(() => {
     if (isMapReady && window.kakao && window.kakao.maps.services) {
@@ -107,6 +93,17 @@ export default function MapPage() {
 
   return (
     <div className="map-page">
+      <Script 
+        src={`https://dapi.kakao.com/v2/maps/sdk.js?appkey=${process.env.NEXT_PUBLIC_KAKAO_APP_KEY || 'bcf159529047078b426216b892689408'}&libraries=services&autoload=false`}
+        strategy="afterInteractive"
+        onLoad={() => {
+          if (window.kakao && window.kakao.maps) {
+            window.kakao.maps.load(() => {
+              setIsMapReady(true)
+            })
+          }
+        }}
+      />
       <div className="view-header">
         <button className="back-btn" onClick={() => router.back()}>
           <ChevronLeft size={24} />
@@ -120,6 +117,19 @@ export default function MapPage() {
       <div className="map-area">
         {!isMapReady ? <div className="loading-map">지도를 불러오는 중...</div> : (
           <Map center={center} style={{ width: "100%", height: "100%" }} level={4}>
+            {/* 현위치 버튼 */}
+            <div className="map-controls">
+              <button className="ctrl-btn" onClick={() => {
+                if (navigator.geolocation) {
+                  navigator.geolocation.getCurrentPosition((pos) => {
+                    alert('현재 위치로 지도를 이동합니다.')
+                    // 실제 이동 로직은 state center 업데이트 필요
+                  })
+                }
+              }} title="현위치">
+                <LocateFixed size={20} />
+              </button>
+            </div>
             {markers.map((marker) => (
               <CustomOverlayMap key={marker.id} position={{ lat: marker.lat, lng: marker.lng }} zIndex={isSelected(marker.id) ? 10 : 1}>
                 <div className={`marker-wrapper ${isSelected(marker.id) ? 'active' : ''}`} onClick={() => toggleCustomerSelection(marker.customer)} style={{ '--m-color': getMarkerColor(marker.customer.status) } as any}>
@@ -187,6 +197,9 @@ export default function MapPage() {
         .header-text h1 { font-size: 1.15rem; font-weight: 800; margin: 0; color: #1e293b; }
         .header-text p { font-size: 0.75rem; color: #94a3b8; margin: 0; font-weight: 500; }
         .map-area { flex: 1; position: relative; background: #f0f0f0; overflow: hidden; }
+        .map-controls { position: absolute; bottom: 20px; right: 20px; z-index: 10; display: flex; flex-direction: column; gap: 10px; }
+        .ctrl-btn { width: 44px; height: 44px; background: #fff; border: none; border-radius: 12px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.15); cursor: pointer; color: #334155; transition: all 0.2s; }
+        .ctrl-btn:active { transform: scale(0.9); }
         .loading-map { height: 100%; display: flex; align-items: center; justify-content: center; color: #999; }
         .marker-wrapper { display: flex; flex-direction: column; align-items: center; cursor: pointer; transform: translateY(-50%); }
         .marker-pin { width: 24px; height: 24px; background: var(--m-color); border: 2px solid #fff; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(0,0,0,0.3); }
