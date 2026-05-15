@@ -1,9 +1,9 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useData, CustomerData } from '@/lib/DataContext'
-import { ChevronLeft, Phone, User, Hash } from 'lucide-react'
+import { ChevronLeft, Phone, User, Hash, MapPin } from 'lucide-react'
 import { Map, MapMarker, useKakaoLoader } from 'react-kakao-maps-sdk'
 
 export default function MapPage() {
@@ -12,9 +12,9 @@ export default function MapPage() {
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerData | null>(null)
   const [markers, setMarkers] = useState<{ id: string; lat: number; lng: number; customer: CustomerData }[]>([])
 
-  const selectedCustomers = customers.filter(c => selectedIds.includes(c.id))
+  const selectedCustomers = useMemo(() => customers.filter(c => selectedIds.includes(c.id)), [customers, selectedIds])
 
-  const { loading, error } = useKakaoLoader({
+  const [loading, error] = useKakaoLoader({
     appkey: "bcf159529047078b426216b892689408",
     libraries: ["services"],
   })
@@ -25,12 +25,18 @@ export default function MapPage() {
       const newMarkers: any[] = []
       let processedCount = 0
 
-      if (selectedCustomers.length === 0) return
+      if (selectedCustomers.length === 0) {
+        setMarkers([])
+        return
+      }
 
       selectedCustomers.forEach((customer) => {
         const address = customer.설치주소 || customer.주소
         if (!address) {
           processedCount++
+          if (processedCount === selectedCustomers.length) {
+            setMarkers(newMarkers)
+          }
           return
         }
 
@@ -50,13 +56,13 @@ export default function MapPage() {
         })
       })
     }
-  }, [loading, selectedCustomers.length])
+  }, [loading, selectedCustomers])
 
   if (loading) {
     return (
       <div className="map-placeholder">
         <div className="spinner"></div>
-        <p>지도를 불러오는 중...</p>
+        <p>카카오 지도를 불러오는 중...</p>
       </div>
     )
   }
@@ -65,7 +71,7 @@ export default function MapPage() {
     return (
       <div className="map-placeholder">
         <p>지도를 불러오는 데 실패했습니다.</p>
-        <p className="text-xs text-sub">도메인 등록 여부를 확인해 주세요. (localhost:3000)</p>
+        <p className="text-xs text-sub">API 키 및 도메인 등록 여부를 확인해 주세요.</p>
         <button onClick={() => router.back()} className="mt-10">뒤로 가기</button>
       </div>
     )
@@ -81,14 +87,14 @@ export default function MapPage() {
         <button className="back-btn" onClick={() => router.back()}>
           <ChevronLeft size={24} />
         </button>
-        <h2>설치 위치 확인 ({selectedCustomers.length}곳)</h2>
+        <h2>카카오 지도 확인 ({selectedCustomers.length}곳)</h2>
       </div>
 
       <div className="map-container">
         <Map
           center={center}
           style={{ width: "100%", height: "100%" }}
-          level={3}
+          level={4}
         >
           {markers.map((marker) => (
             <MapMarker
@@ -104,7 +110,12 @@ export default function MapPage() {
       {selectedCustomer && (
         <div className="info-panel animated-up">
           <div className="panel-header flex-between">
-            <h3 className="font-bold">{selectedCustomer.고객명_상호}</h3>
+            <div className="flex-row">
+              <h3 className="font-bold">{selectedCustomer.고객명_상호}</h3>
+              <span className={`status-badge-small ${selectedCustomer.status === '작업완료' ? 'done' : selectedCustomer.status === '예약완료' ? 'reserved' : 'pending'}`}>
+                {selectedCustomer.status}
+              </span>
+            </div>
             <button className="close-btn" onClick={() => setSelectedCustomer(null)}>×</button>
           </div>
           <div className="panel-body">
@@ -121,7 +132,10 @@ export default function MapPage() {
               <span>연락처: {selectedCustomer.전화번호}</span>
             </div>
             <div className="panel-item address">
-              <p className="text-xs text-sub">설치 주소</p>
+              <div className="flex-row" style={{ gap: '5px', color: '#888', marginBottom: '4px' }}>
+                <MapPin size={14} />
+                <p className="text-xs">설치 주소</p>
+              </div>
               <p>{selectedCustomer.설치주소 || selectedCustomer.주소}</p>
             </div>
           </div>
@@ -208,6 +222,21 @@ export default function MapPage() {
           padding: 10px;
           border-radius: 8px;
         }
+        .flex-row {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        .status-badge-small {
+          font-size: 0.6rem;
+          padding: 2px 6px;
+          border-radius: 4px;
+          font-weight: 700;
+        }
+        .status-badge-small.pending { background: #f5f5f5; color: #888; }
+        .status-badge-small.reserved { background: #eef2ff; color: #4f46e5; }
+        .status-badge-small.done { background: #ecfdf5; color: #10b981; }
+
         .detail-view-btn {
           width: 100%;
           background: var(--primary-color);

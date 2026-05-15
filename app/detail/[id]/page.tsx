@@ -64,6 +64,10 @@ export default function DetailPage() {
             <span>{customer.최종점검일}</span>
           </div>
           <div className="info-item">
+            <label>예약일자</label>
+            <span>{customer.예약일자 || '-'}</span>
+          </div>
+          <div className="info-item">
             <label>당월작업</label>
             <span>{customer.당월작업}</span>
           </div>

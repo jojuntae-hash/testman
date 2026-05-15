@@ -1,8 +1,8 @@
 import './globals.css'
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
-import { ClipboardList, Map, Menu, Bell } from 'lucide-react'
-import Link from 'next/link'
+import { Menu, Bell } from 'lucide-react'
+import BottomNav from '@/components/BottomNav'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -12,7 +12,6 @@ export const metadata: Metadata = {
 }
 
 import { DataProvider } from '@/lib/DataContext'
-import Script from 'next/script'
 
 export default function RootLayout({
   children,
@@ -34,19 +33,11 @@ export default function RootLayout({
               {children}
             </main>
 
-            <nav className="bottom-nav">
-              <Link href="/" className="nav-item">
-                <ClipboardList size={24} />
-                <span>고객 리스트</span>
-              </Link>
-              <Link href="/map" className="nav-item">
-                <Map size={24} />
-                <span>지도</span>
-              </Link>
-            </nav>
+            <BottomNav />
           </div>
         </DataProvider>
       </body>
     </html>
   )
 }
+

@@ -10,8 +10,10 @@ export interface CustomerData {
   계약일자: string
   계약만료일자: string
   최종점검일: string
+  예약일자: string
   당월작업: string
   최종작업내용: string
+  status: '작업미완료' | '예약완료' | '작업완료'
   // 02. 계약정보
   계약자구분: string
   고객명_상호: string

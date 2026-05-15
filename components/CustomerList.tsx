@@ -6,8 +6,19 @@ import { Map, ChevronRight } from 'lucide-react'
 import { useData } from '@/lib/DataContext'
 
 export default function CustomerList() {
-  const { customers, selectedIds, setSelectedIds } = useData()
+  const { customers, setCustomers, selectedIds, setSelectedIds } = useData()
   const router = useRouter()
+
+  const moveSelectedToStatus = (newStatus: '작업미완료' | '예약완료' | '작업완료') => {
+    const updatedCustomers = customers.map(customer => {
+      if (selectedIds.includes(customer.id)) {
+        return { ...customer, status: newStatus }
+      }
+      return customer
+    })
+    setCustomers(updatedCustomers)
+    setSelectedIds([]) // Clear selection after moving
+  }
 
   const toggleSelect = (id: string) => {
     if (selectedIds.includes(id)) {
@@ -55,7 +66,12 @@ export default function CustomerList() {
                 className="custom-checkbox"
               />
               <div className="item-info" onClick={() => handleRowClick(customer.id)} style={{ flex: 1, cursor: 'pointer' }}>
-                <p className="font-bold">{customer.고객명_상호 || '이름 없음'}</p>
+                <div className="flex-between">
+                  <p className="font-bold">{customer.고객명_상호 || '이름 없음'}</p>
+                  <span className={`status-badge ${customer.status === '작업완료' ? 'done' : customer.status === '예약완료' ? 'reserved' : 'pending'}`}>
+                    {customer.status}
+                  </span>
+                </div>
                 <p className="text-xs text-sub">{customer.고객번호} | {customer.전화번호}</p>
               </div>
             </div>
@@ -63,6 +79,18 @@ export default function CustomerList() {
           </div>
         ))}
       </div>
+
+      {selectedIds.length > 0 && (
+        <div className="status-action-bar">
+          <div className="selection-info">{selectedIds.length}명 선택됨</div>
+          <div className="action-buttons">
+            <button onClick={() => moveSelectedToStatus('예약완료')} className="action-btn reserved">예약완료</button>
+            <button onClick={() => moveSelectedToStatus('작업완료')} className="action-btn done">작업완료</button>
+            <button onClick={() => moveSelectedToStatus('작업미완료')} className="action-btn pending">미완료</button>
+          </div>
+        </div>
+      )}
+
 
       <style jsx>{`
         .list-container {
@@ -117,6 +145,50 @@ export default function CustomerList() {
           color: #666;
           margin-top: 2px;
         }
+        .status-badge {
+          font-size: 0.65rem;
+          padding: 2px 6px;
+          border-radius: 4px;
+          font-weight: 700;
+        }
+        .status-badge.pending { background: #f5f5f5; color: #888; }
+        .status-badge.reserved { background: #eef2ff; color: #4f46e5; }
+        .status-badge.done { background: #ecfdf5; color: #10b981; }
+
+        .status-action-bar {
+          position: fixed;
+          bottom: 85px;
+          left: 20px;
+          right: 20px;
+          background: #333;
+          color: #fff;
+          padding: 12px 20px;
+          border-radius: 12px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+          z-index: 100;
+        }
+        .selection-info {
+          font-size: 0.9rem;
+          font-weight: 600;
+        }
+        .action-buttons {
+          display: flex;
+          gap: 8px;
+        }
+        .action-btn {
+          padding: 6px 12px;
+          border-radius: 6px;
+          font-size: 0.8rem;
+          font-weight: 700;
+          cursor: pointer;
+        }
+        .action-btn.reserved { background: #4f46e5; color: #fff; }
+        .action-btn.done { background: #10b981; color: #fff; }
+        .action-btn.pending { background: #666; color: #fff; }
+
       `}</style>
     </div>
   )
