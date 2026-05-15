@@ -15,7 +15,7 @@ export default function MapPage() {
   const selectedCustomers = useMemo(() => customers.filter(c => selectedIds.includes(c.id)), [customers, selectedIds])
 
   const [loading, error] = useKakaoLoader({
-    appkey: "bcf159529047078b426216b892689408",
+    appkey: process.env.NEXT_PUBLIC_KAKAO_APP_KEY || "bcf159529047078b426216b892689408",
     libraries: ["services"],
   })
 
