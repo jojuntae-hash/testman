@@ -13,7 +13,7 @@ export default function CustomerList() {
   // 삭제되지 않은 고객만 필터링 + 검색어 적용
   const filteredCustomers = useMemo(() => {
     return customers.filter(c => 
-      c.status !== '삭제됨' && 
+      c.status === '작업미완료' && 
       (c.고객명_상호.includes(searchTerm) || 
        c.전화번호.includes(searchTerm) || 
        (c.설치주소 && c.설치주소.includes(searchTerm)) || 

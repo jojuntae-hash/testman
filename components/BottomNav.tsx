@@ -3,7 +3,7 @@
 import React from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { ClipboardList, Folder, Map } from 'lucide-react'
+import { LayoutGrid, Map, Navigation, Settings } from 'lucide-react'
 
 export default function BottomNav() {
   const pathname = usePathname()
@@ -11,16 +11,20 @@ export default function BottomNav() {
   return (
     <nav className="bottom-nav">
       <Link href="/" className={`nav-item ${pathname === '/' ? 'active' : ''}`}>
-        <ClipboardList size={24} />
+        <LayoutGrid size={22} />
         <span>리스트</span>
       </Link>
-      <Link href="/status" className={`nav-item ${pathname === '/status' ? 'active' : ''}`}>
-        <Folder size={24} />
-        <span>현황</span>
-      </Link>
       <Link href="/map" className={`nav-item ${pathname === '/map' ? 'active' : ''}`}>
-        <Map size={24} />
+        <Map size={22} />
         <span>지도</span>
+      </Link>
+      <Link href="/route" className={`nav-item ${pathname === '/route' ? 'active' : ''}`}>
+        <Navigation size={22} />
+        <span>경로</span>
+      </Link>
+      <Link href="/settings" className={`nav-item ${pathname === '/settings' ? 'active' : ''}`}>
+        <Settings size={22} />
+        <span>설정</span>
       </Link>
     </nav>
   )

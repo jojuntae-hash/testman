@@ -26,14 +26,9 @@ export default function RootLayout({
           src={`https://dapi.kakao.com/v2/maps/sdk.js?appkey=${process.env.NEXT_PUBLIC_KAKAO_APP_KEY || 'bcf159529047078b426216b892689408'}&libraries=services&autoload=false`}
           strategy="beforeInteractive"
         />
+        <Script src="//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js" strategy="afterInteractive" />
         <DataProvider>
           <div className="container">
-            <header className="header">
-              <Menu size={24} />
-              <h1>서비스 관리</h1>
-              <Bell size={24} />
-            </header>
-            
             <main>
               {children}
             </main>
