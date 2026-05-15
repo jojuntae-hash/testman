@@ -1,197 +1,172 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import { useData } from '@/lib/DataContext'
 import { useRouter } from 'next/navigation'
-import { Folder, Clock, Calendar, CheckCircle2, ChevronRight } from 'lucide-react'
+import { Folder, Clock, Calendar, CheckCircle2, ChevronRight, Trash2, FolderPlus, Map } from 'lucide-react'
 
 export default function StatusPage() {
-  const { customers } = useData()
+  const { customers, setCustomers, selectedIds, setSelectedIds } = useData()
   const router = useRouter()
-  const [selectedFolder, setSelectedFolder] = useState<'작업미완료' | '예약완료' | '작업완료' | null>(null)
+  const [selectedFolder, setSelectedFolder] = useState<string | null>(null)
 
-  const counts = {
-    '작업미완료': customers.filter(c => c.status === '작업미완료').length,
-    '예약완료': customers.filter(c => c.status === '예약완료').length,
-    '작업완료': customers.filter(c => c.status === '작업완료').length,
-  }
+  const uniqueStatuses = useMemo(() => {
+    const statuses = Array.from(new Set(customers.map(c => c.status)))
+    const priority = ['작업미완료', '예약완료', '작업완료', '삭제됨']
+    return statuses.sort((a, b) => {
+      const indexA = priority.indexOf(a)
+      const indexB = priority.indexOf(b)
+      if (indexA === -1 && indexB === -1) return a.localeCompare(b)
+      if (indexA === -1) return 1
+      if (indexB === -1) return -1
+      return indexA - indexB
+    })
+  }, [customers])
+
+  const stats = useMemo(() => {
+    return uniqueStatuses.map(status => {
+      let icon = <Folder size={24} />
+      let color = '#34495e'
+      let bgColor = '#f8fafc'
+      let label = status
+      if (status === '작업미완료') { label = '작업 미완료'; icon = <Clock size={24} />; color = '#666'; bgColor = '#f5f5f5'; }
+      else if (status === '예약완료') { label = '예약 완료'; icon = <Calendar size={24} />; color = '#4f46e5'; bgColor = '#eef2ff'; }
+      else if (status === '작업완료') { label = '작업 완료'; icon = <CheckCircle2 size={24} />; color = '#10b981'; bgColor = '#ecfdf5'; }
+      else if (status === '삭제됨') { label = '삭제됨'; icon = <Trash2 size={24} />; color = '#ff4d4f'; bgColor = '#fff0f0'; }
+      return { label, count: customers.filter(c => c.status === status).length, icon, color, bgColor, status }
+    })
+  }, [uniqueStatuses, customers])
 
   const filteredCustomers = selectedFolder 
     ? customers.filter(c => c.status === selectedFolder)
-    : []
+    : customers.filter(c => c.status !== '삭제됨')
+
+  const toggleSelect = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (selectedIds.includes(id)) {
+      setSelectedIds(selectedIds.filter(i => i !== id))
+    } else {
+      setSelectedIds([...selectedIds, id])
+    }
+  }
+
+  const handleBulkStatusChange = (newStatus: string) => {
+    if (selectedIds.length === 0) return
+    const msg = newStatus === '삭제됨' ? '삭제하시겠습니까?' : `'${newStatus}' 상태로 변경하시겠습니까?`
+    if (confirm(msg)) {
+      const updated = customers.map(c => selectedIds.includes(c.id) ? { ...c, status: newStatus } : c)
+      setCustomers(updated as any); setSelectedIds([]);
+    }
+  }
+
+  const handleCreateFolder = () => {
+    const folderName = prompt('새로운 폴더 이름을 입력해 주세요.')
+    if (!folderName || folderName.trim() === '') return
+    const updated = customers.map(c => selectedIds.includes(c.id) ? { ...c, status: folderName.trim() } : c)
+    setCustomers(updated as any); setSelectedIds([]);
+  }
 
   return (
     <div className="status-page">
       <div className="status-header">
-        <h2 className="title">진행 현황 관리</h2>
-        <p className="subtitle">상태별로 고객 리스트를 관리하세요</p>
+        <h2>진행 현황</h2>
+        <p className="text-sub">폴더별로 고객을 분류하여 관리합니다.</p>
       </div>
 
       <div className="folder-grid">
-        <div className={`folder-card pending ${selectedFolder === '작업미완료' ? 'active' : ''}`} onClick={() => setSelectedFolder('작업미완료')}>
-          <div className="icon-wrapper"><Clock size={24} /></div>
-          <div className="folder-info">
-            <span className="label">작업 미완료</span>
-            <span className="count">{counts['작업미완료']}건</span>
+        {stats.map((stat) => (
+          <div 
+            key={stat.status} 
+            className={`folder-card ${selectedFolder === stat.status ? 'active' : ''}`}
+            onClick={() => { setSelectedFolder(stat.status); setSelectedIds([]); }}
+            style={{ '--folder-color': stat.color, '--folder-bg': stat.bgColor } as any}
+          >
+            <div className="folder-icon" style={{ color: stat.color, background: stat.bgColor }}>{stat.icon}</div>
+            <div className="folder-info">
+              <span className="folder-label">{stat.label}</span>
+              <span className="folder-count">{stat.count}</span>
+            </div>
           </div>
+        ))}
+      </div>
+
+      <div className="customer-list-section">
+        <div className="flex-between list-title">
+          <h3>{selectedFolder || '전체'} 고객 목록</h3>
+          <span className="count-badge">총 {filteredCustomers.length}건</span>
         </div>
 
-        <div className={`folder-card reserved ${selectedFolder === '예약완료' ? 'active' : ''}`} onClick={() => setSelectedFolder('예약완료')}>
-          <div className="icon-wrapper"><Calendar size={24} /></div>
-          <div className="folder-info">
-            <span className="label">예약 완료</span>
-            <span className="count">{counts['예약완료']}건</span>
-          </div>
-        </div>
-
-        <div className={`folder-card done ${selectedFolder === '작업완료' ? 'active' : ''}`} onClick={() => setSelectedFolder('작업완료')}>
-          <div className="icon-wrapper"><CheckCircle2 size={24} /></div>
-          <div className="folder-info">
-            <span className="label">작업 완료</span>
-            <span className="count">{counts['작업완료']}건</span>
-          </div>
+        <div className="status-customer-list">
+          {filteredCustomers.length === 0 ? <div className="empty-state">해당하는 고객이 없습니다.</div> : (
+            filteredCustomers.map((customer) => (
+              <div 
+                key={customer.id} 
+                className={`status-customer-item ${selectedIds.includes(customer.id) ? 'selected' : ''}`}
+                onClick={(e) => toggleSelect(customer.id, e)}
+              >
+                <div className="item-main">
+                  <p className="font-bold">{customer.고객명_상호}</p>
+                  <p className="text-xs text-sub">{customer.전화번호} | {customer.설치주소 || customer.주소}</p>
+                </div>
+                <button className="go-detail-mini-btn" onClick={(e) => { e.stopPropagation(); router.push(`/detail/${customer.id}`); }}>상세 <ChevronRight size={14} /></button>
+              </div>
+            ))
+          )}
         </div>
       </div>
 
-      {selectedFolder && (
-        <div className="customer-list-section">
-          <div className="section-title flex-between">
-            <h3>{selectedFolder} 리스트</h3>
-            <button className="close-btn" onClick={() => setSelectedFolder(null)}>닫기</button>
-          </div>
-          
-          <div className="mini-list">
-            {filteredCustomers.length === 0 ? (
-              <p className="empty-msg">해당 상태의 고객이 없습니다.</p>
-            ) : (
-              filteredCustomers.map(customer => (
-                <div key={customer.id} className="mini-item flex-between" onClick={() => router.push(`/detail/${customer.id}`)}>
-                  <div>
-                    <p className="name">{customer.고객명_상호}</p>
-                    <p className="info">{customer.고객번호}</p>
-                  </div>
-                  <ChevronRight size={18} color="#ccc" />
-                </div>
-              ))
-            )}
+      {/* Floating Action Bar */}
+      {selectedIds.length > 0 && (
+        <div className="floating-bar animated-up shadow-lg">
+          <div className="selection-info"><span className="count">{selectedIds.length}</span>명</div>
+          <div className="action-buttons">
+            <button className="action-btn" onClick={() => router.push('/map')}><Map size={18} /> 지도</button>
+            <div className="divider"></div>
+            <button className="action-btn folder-btn" onClick={handleCreateFolder}><FolderPlus size={18} /> 폴더</button>
+            <div className="divider"></div>
+            <button className="action-btn status-btn" onClick={() => handleBulkStatusChange('작업미완료')}>미완료</button>
+            <button className="action-btn status-btn reserved" onClick={() => handleBulkStatusChange('예약완료')}>예약</button>
+            <button className="action-btn status-btn complete" onClick={() => handleBulkStatusChange('작업완료')}>완료</button>
+            <div className="divider"></div>
+            <button className="action-btn delete-btn" onClick={() => handleBulkStatusChange('삭제됨')}><Trash2 size={18} /> 삭제</button>
           </div>
         </div>
       )}
 
       <style jsx>{`
-        .status-page {
-          padding: 20px;
-          padding-bottom: 100px;
-        }
-        .status-header {
-          margin-bottom: 25px;
-        }
-        .title {
-          font-size: 1.4rem;
-          font-weight: 800;
-          color: #333;
-        }
-        .subtitle {
-          font-size: 0.85rem;
-          color: #888;
-          margin-top: 4px;
-        }
-        .folder-grid {
-          display: flex;
-          flex-direction: column;
-          gap: 15px;
-        }
-        .folder-card {
-          background: #fff;
-          border-radius: 16px;
-          padding: 20px;
-          display: flex;
-          align-items: center;
-          gap: 20px;
-          cursor: pointer;
-          border: 2px solid transparent;
-          transition: all 0.2s;
-          box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-        }
-        .folder-card:active {
-          transform: scale(0.98);
-        }
-        .folder-card.active {
-          border-color: var(--primary-color);
-          background: #f8faff;
-        }
-        .icon-wrapper {
-          width: 50px;
-          height: 50px;
-          border-radius: 12px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-        .pending .icon-wrapper { background: #f5f5f5; color: #888; }
-        .reserved .icon-wrapper { background: #eef2ff; color: #4f46e5; }
-        .done .icon-wrapper { background: #ecfdf5; color: #10b981; }
-
-        .folder-info {
-          display: flex;
-          flex-direction: column;
-        }
-        .folder-info .label {
-          font-size: 1rem;
-          font-weight: 700;
-          color: #333;
-        }
-        .folder-info .count {
-          font-size: 0.85rem;
-          color: #888;
-          margin-top: 2px;
-        }
-        
-        .customer-list-section {
-          margin-top: 30px;
-          background: #fff;
-          border-radius: 20px;
-          padding: 20px;
-          box-shadow: 0 -4px 20px rgba(0,0,0,0.05);
-          border: 1px solid #eee;
-        }
-        .section-title h3 {
-          font-size: 1.1rem;
-          font-weight: 800;
-        }
-        .close-btn {
-          font-size: 0.8rem;
-          color: #888;
-          background: #f5f5f5;
-          padding: 4px 10px;
-          border-radius: 6px;
-        }
-        .mini-list {
-          margin-top: 15px;
-          display: flex;
-          flex-direction: column;
-          gap: 10px;
-        }
-        .mini-item {
-          padding: 12px;
-          border-radius: 10px;
-          background: #f9f9f9;
-          cursor: pointer;
-        }
-        .mini-item .name {
-          font-size: 0.9rem;
-          font-weight: 700;
-        }
-        .mini-item .info {
-          font-size: 0.75rem;
-          color: #888;
-        }
-        .empty-msg {
-          text-align: center;
-          color: #aaa;
-          padding: 30px 0;
-          font-size: 0.9rem;
-        }
+        .status-page { padding: 20px; padding-bottom: 120px; }
+        .status-header { margin-bottom: 25px; }
+        .text-sub { color: #888; font-size: 0.85rem; margin-top: 4px; }
+        .folder-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 30px; }
+        .folder-card { background: #fff; border: 1px solid var(--border-color); padding: 20px; border-radius: 20px; display: flex; align-items: center; gap: 15px; transition: all 0.2s; cursor: pointer; }
+        .folder-card.active { border-color: var(--folder-color); background: var(--folder-bg); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        .folder-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; }
+        .folder-label { font-size: 0.85rem; color: #666; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 80px; }
+        .folder-count { font-size: 1.2rem; font-weight: 800; }
+        .list-title { margin-bottom: 15px; }
+        .count-badge { background: #f0f0f0; padding: 2px 8px; border-radius: 10px; font-size: 0.75rem; font-weight: 700; }
+        .status-customer-list { display: flex; flex-direction: column; gap: 10px; }
+        .status-customer-item { background: #fff; padding: 18px 20px; border-radius: 18px; border: 1px solid var(--border-color); display: flex; align-items: center; gap: 12px; cursor: pointer; transition: all 0.2s; }
+        .status-customer-item.selected { border-color: var(--primary-color); background: #f0f7ff; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .item-main { flex: 1; min-width: 0; }
+        .item-main p { margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .go-detail-mini-btn { padding: 8px 12px; background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; font-size: 0.75rem; font-weight: 700; color: #64748b; display: flex; align-items: center; gap: 2px; }
+        .floating-bar { position: fixed; bottom: 85px; left: 5px; right: 5px; background: #2c3e50; color: #fff; padding: 12px 10px; border-radius: 20px; display: flex; align-items: center; justify-content: space-between; z-index: 1000; box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+        .selection-info { font-size: 0.75rem; white-space: nowrap; padding-left: 5px; }
+        .selection-info .count { font-weight: 800; color: #3498db; margin-right: 2px; }
+        .action-buttons { display: flex; align-items: center; gap: 8px; }
+        .action-btn { background: transparent; color: #fff; border: none; font-size: 0.7rem; font-weight: 600; display: flex; align-items: center; gap: 3px; cursor: pointer; white-space: nowrap; }
+        .action-btn.folder-btn { color: #f1c40f; }
+        .action-btn.reserved { color: #a5b4fc; }
+        .action-btn.complete { color: #2ecc71; }
+        .action-btn.delete-btn { color: #ff4d4f; }
+        .divider { width: 1px; height: 14px; background: rgba(255,255,255,0.2); }
+        .empty-state { text-align: center; padding: 40px 0; color: #999; font-size: 0.9rem; }
+        .font-bold { font-weight: 700; }
+        .text-xs { font-size: 0.75rem; }
+        .flex-between { display: flex; align-items: center; justify-content: space-between; }
+        .animated-up { animation: slideUp 0.3s ease-out; }
+        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
       `}</style>
     </div>
   )

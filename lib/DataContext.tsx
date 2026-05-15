@@ -13,7 +13,7 @@ export interface CustomerData {
   예약일자: string
   당월작업: string
   최종작업내용: string
-  status: '작업미완료' | '예약완료' | '작업완료'
+  status: string // '작업미완료' | '예약완료' | '작업완료' | '삭제됨' 및 사용자 정의 폴더명
   // 02. 계약정보
   계약자구분: string
   고객명_상호: string
@@ -43,8 +43,63 @@ const DataContext = createContext<DataContextType | undefined>(undefined)
 import { initialCustomers } from './initialData'
 
 export function DataProvider({ children }: { children: React.ReactNode }) {
-  const [customers, setCustomers] = useState<CustomerData[]>(initialCustomers)
+  const [customers, setCustomersState] = useState<CustomerData[]>([])
   const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [isInitialized, setIsInitialized] = useState(false)
+
+  // 전화번호 보정 로직 (10으로 시작하면 0 추가)
+  const fixPhoneNumber = (phone: string) => {
+    if (!phone) return ''
+    const s = phone.toString().trim()
+    // 숫자만 추출
+    const clean = s.replace(/[^0-9]/g, '')
+    // 10으로 시작하고 총 길이가 9~10자리인 경우 (010인데 0이 빠진 경우)
+    if (clean.startsWith('10') && (clean.length === 9 || clean.length === 10)) {
+      return '0' + clean
+    }
+    return s
+  }
+
+  // Load from localStorage on mount
+  useEffect(() => {
+    const savedCustomers = localStorage.getItem('customers')
+    if (savedCustomers) {
+      try {
+        const parsed = JSON.parse(savedCustomers)
+        // 로드할 때 모든 연락처 필드 보정
+        const fixed = parsed.map((c: any) => ({
+          ...c,
+          전화번호: fixPhoneNumber(c.전화번호),
+          핸드폰번호: fixPhoneNumber(c.핸드폰번호),
+          설치전화번호: fixPhoneNumber(c.설치전화번호),
+          설치핸드폰번호: fixPhoneNumber(c.설치핸드폰번호)
+        }))
+        setCustomersState(fixed)
+      } catch (e) {
+        setCustomersState(initialCustomers)
+      }
+    } else {
+      setCustomersState(initialCustomers)
+    }
+    setIsInitialized(true)
+  }, [])
+
+  // Save to localStorage whenever customers change
+  const setCustomers = (data: CustomerData[]) => {
+    // 저장 전에도 보정 적용
+    const fixedData = data.map(c => ({
+      ...c,
+      전화번호: fixPhoneNumber(c.전화번호),
+      핸드폰번호: fixPhoneNumber(c.핸드폰번호),
+      설치전화번호: fixPhoneNumber(c.설치전화번호),
+      설치핸드폰번호: fixPhoneNumber(c.설치핸드폰번호)
+    }))
+    setCustomersState(fixedData)
+    localStorage.setItem('customers', JSON.stringify(fixedData))
+  }
+
+  // Prevent hydration mismatch by not rendering children until initialized
+  if (!isInitialized) return null
 
   return (
     <DataContext.Provider value={{ customers, setCustomers, selectedIds, setSelectedIds }}>

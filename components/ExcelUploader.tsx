@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useCallback } from 'react'
+import React from 'react'
 import * as XLSX from 'xlsx'
 import { Upload } from 'lucide-react'
 import { useData, CustomerData } from '@/lib/DataContext'
@@ -20,33 +20,46 @@ export default function ExcelUploader() {
       const worksheet = workbook.Sheets[sheetName]
       const jsonData = XLSX.utils.sheet_to_json(worksheet) as any[]
 
-      const formattedData: CustomerData[] = jsonData.map((row, index) => ({
-        id: String(index),
-        고객번호: row['고객번호'] || '',
-        모델명: row['모델명'] || '',
-        계약일자: row['계약일자'] || '',
-        계약만료일자: row['계약만료일자'] || '',
-        최종점검일: row['최종점검일'] || '',
-        예약일자: row['예약일시'] || row['예약일자'] || '',
-        당월작업: row['당월작업'] || '',
-        최종작업내용: row['최종작업내용'] || '',
-        status: '작업미완료',
-        계약자구분: row['계약자구분'] || '',
-        고객명_상호: row['고객명/상호'] || row['고객명_상호'] || '',
-        사업자번호: row['사업자번호'] || '',
-        전화번호: row['계약_전화번호'] || row['전화번호'] || '',
-        핸드폰번호: row['계약_핸드폰번호'] || row['핸드폰번호'] || '',
-        주소: row['계약_주소'] || row['주소'] || '',
-        설치처구분: row['설치처구분'] || '',
-        설치자명: row['설치자명'] || '',
-        설치구분: row['설치구분'] || '',
-        설치전화번호: row['설치_전화번호'] || row['설치전화번호'] || '',
-        설치핸드폰번호: row['설치_핸드폰번호'] || row['설치핸드폰번호'] || '',
-        설치주소: row['설치_주소'] || row['설치주소'] || '',
-        설치시특이사항: row['설치시 특이사항'] || row['설치시특이사항'] || '',
-      }))
+      const formattedData: CustomerData[] = jsonData.map((row, index) => {
+        // Helper to get value by multiple possible keys
+        const getVal = (keys: string[]) => {
+          for (const key of keys) {
+            if (row[key] !== undefined && row[key] !== null) return String(row[key])
+          }
+          return ''
+        }
 
-      setCustomers(formattedData)
+        return {
+          id: String(Date.now() + index), // Unique ID using timestamp
+          고객번호: getVal(['고객번호']),
+          모델명: getVal(['모델명']),
+          계약일자: getVal(['계약일자']),
+          계약만료일자: getVal(['계약만료일자']),
+          최종점검일: getVal(['최종점검일']),
+          예약일자: getVal(['예약일시', '예약일자']),
+          당월작업: getVal(['당월작업']),
+          최종작업내용: getVal(['최종작업내용']),
+          status: '작업미완료',
+          계약자구분: getVal(['계약자구분']),
+          고객명_상호: getVal(['고객명/상호', '고객명_상호', '상호', '고객명']),
+          사업자번호: getVal(['사업자번호']),
+          전화번호: getVal(['계약_전화번호', '전화번호', '연락처']),
+          핸드폰번호: getVal(['계약_핸드폰번호', '핸드폰번호', '휴대폰']),
+          주소: getVal(['계약_주소', '주소']),
+          설치처구분: getVal(['설치처구분']),
+          설치자명: getVal(['설치자명']),
+          설치구분: getVal(['설치구분']),
+          설치전화번호: getVal(['설치_전화번호', '설치전화번호', '전화번호_설치']),
+          설치핸드폰번호: getVal(['설치_핸드폰번호', '설치핸드폰번호', '핸드폰번호_설치']),
+          설치주소: getVal(['설치_주소', '설치주소', '주소_설치']),
+          설치시특이사항: getVal(['설치시 특이사항', '설치시특이사항', '특이사항', '메모']),
+        }
+      })
+
+      if (formattedData.length > 0) {
+        setCustomers(formattedData)
+        alert(`${formattedData.length}건의 데이터를 성공적으로 불러왔습니다.`)
+      }
     }
     reader.readAsArrayBuffer(file)
   }
@@ -62,7 +75,7 @@ export default function ExcelUploader() {
         <input 
           id="excel-upload" 
           type="file" 
-          accept=".xlsx, .xls" 
+          accept=".xlsx, .xls, .csv" 
           onChange={handleFileUpload}
           style={{ display: 'none' }}
         />
@@ -91,6 +104,7 @@ export default function ExcelUploader() {
         .text-sub {
           color: #888;
         }
+        .mt-10 { margin-top: 10px; }
       `}</style>
     </div>
   )

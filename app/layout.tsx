@@ -12,6 +12,7 @@ export const metadata: Metadata = {
 }
 
 import { DataProvider } from '@/lib/DataContext'
+import Script from 'next/script'
 
 export default function RootLayout({
   children,
@@ -21,6 +22,10 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <body className={inter.className}>
+        <Script
+          src={`https://dapi.kakao.com/v2/maps/sdk.js?appkey=${process.env.NEXT_PUBLIC_KAKAO_APP_KEY || 'bcf159529047078b426216b892689408'}&libraries=services&autoload=false`}
+          strategy="beforeInteractive"
+        />
         <DataProvider>
           <div className="container">
             <header className="header">

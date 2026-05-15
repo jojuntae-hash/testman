@@ -1,194 +1,162 @@
 'use client'
 
-import React from 'react'
+import React, { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { Map, ChevronRight } from 'lucide-react'
+import { Map, ChevronRight, Search, X, FolderPlus, Trash2 } from 'lucide-react'
 import { useData } from '@/lib/DataContext'
 
 export default function CustomerList() {
   const { customers, setCustomers, selectedIds, setSelectedIds } = useData()
   const router = useRouter()
+  const [searchTerm, setSearchTerm] = useState('')
 
-  const moveSelectedToStatus = (newStatus: '작업미완료' | '예약완료' | '작업완료') => {
-    const updatedCustomers = customers.map(customer => {
-      if (selectedIds.includes(customer.id)) {
-        return { ...customer, status: newStatus }
-      }
-      return customer
-    })
-    setCustomers(updatedCustomers)
-    setSelectedIds([]) // Clear selection after moving
-  }
+  // 삭제되지 않은 고객만 필터링 + 검색어 적용
+  const filteredCustomers = useMemo(() => {
+    return customers.filter(c => 
+      c.status !== '삭제됨' && 
+      (c.고객명_상호.includes(searchTerm) || 
+       c.전화번호.includes(searchTerm) || 
+       (c.설치주소 && c.설치주소.includes(searchTerm)) || 
+       (c.주소 && c.주소.includes(searchTerm)))
+    )
+  }, [customers, searchTerm])
 
   const toggleSelect = (id: string) => {
     if (selectedIds.includes(id)) {
-      setSelectedIds(selectedIds.filter(item => item !== id))
+      setSelectedIds(selectedIds.filter(i => i !== id))
     } else {
       setSelectedIds([...selectedIds, id])
     }
   }
 
-  const handleRowClick = (id: string) => {
-    router.push(`/detail/${id}`)
-  }
-
-  const goToMap = () => {
-    if (selectedIds.length > 0) {
-      router.push('/map')
+  const toggleSelectAll = () => {
+    if (filteredCustomers.length > 0 && selectedIds.length === filteredCustomers.length) {
+      setSelectedIds([])
+    } else {
+      setSelectedIds(filteredCustomers.map(c => c.id))
     }
   }
 
-  if (customers.length === 0) return null
+  // 일괄 상태 변경 공통 함수
+  const handleBulkStatusChange = (newStatus: string) => {
+    if (selectedIds.length === 0) return
+    const msg = newStatus === '삭제됨' ? '삭제하시겠습니까?' : `'${newStatus}' 상태로 변경하시겠습니까?`
+    if (confirm(msg)) {
+      const updated = customers.map(c => selectedIds.includes(c.id) ? { ...c, status: newStatus } : c)
+      setCustomers(updated as any); setSelectedIds([]);
+    }
+  }
+
+  // 커스텀 폴더 생성
+  const handleCreateFolder = () => {
+    const folderName = prompt('새로운 폴더 이름을 입력해 주세요.')
+    if (!folderName || folderName.trim() === '') return
+    const updated = customers.map(c => selectedIds.includes(c.id) ? { ...c, status: folderName.trim() } : c)
+    setCustomers(updated as any); setSelectedIds([]);
+  }
 
   return (
-    <div className="list-container">
-      <div className="list-header flex-between">
-        <h2 className="font-bold">고객 리스트 ({customers.length})</h2>
-        <button 
-          className={`map-btn ${selectedIds.length > 0 ? 'active' : ''}`}
-          onClick={goToMap}
-          disabled={selectedIds.length === 0}
-        >
-          <Map size={18} />
-          지도보기 ({selectedIds.length})
-        </button>
+    <div className="customer-list-container">
+      <div className="search-bar">
+        <div className="search-input-wrapper">
+          <Search size={18} className="search-icon" />
+          <input 
+            type="text" 
+            placeholder="이름, 전화번호, 주소 검색..." 
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+          {searchTerm && <X size={18} className="clear-icon" onClick={() => setSearchTerm('')} />}
+        </div>
       </div>
 
-      <div className="customer-items">
-        {customers.map((customer) => (
-          <div key={customer.id} className="customer-item-card flex-between">
-            <div className="item-left flex-between" style={{ gap: '15px', flex: 1 }}>
-              <input 
-                type="checkbox" 
-                checked={selectedIds.includes(customer.id)}
-                onChange={() => toggleSelect(customer.id)}
-                onClick={(e) => e.stopPropagation()}
-                className="custom-checkbox"
-              />
-              <div className="item-info" onClick={() => handleRowClick(customer.id)} style={{ flex: 1, cursor: 'pointer' }}>
-                <div className="flex-between">
-                  <p className="font-bold">{customer.고객명_상호 || '이름 없음'}</p>
-                  <span className={`status-badge ${customer.status === '작업완료' ? 'done' : customer.status === '예약완료' ? 'reserved' : 'pending'}`}>
-                    {customer.status}
-                  </span>
-                </div>
-                <p className="text-xs text-sub">{customer.고객번호} | {customer.전화번호}</p>
-              </div>
+      <div className="list-header flex-between">
+        <button className="select-all-btn" onClick={toggleSelectAll}>
+          {filteredCustomers.length > 0 && selectedIds.length === filteredCustomers.length ? '전체 해제' : '전체 선택'}
+        </button>
+        <span className="text-xs text-sub">총 {filteredCustomers.length}명</span>
+      </div>
+
+      <div className="customer-grid">
+        {filteredCustomers.map((customer) => (
+          <div 
+            key={customer.id} 
+            className={`customer-card-small ${selectedIds.includes(customer.id) ? 'selected' : ''}`}
+            onClick={() => toggleSelect(customer.id)}
+          >
+            <div className="card-top">
+              <span className={`status-tag status-${customer.status}`}>
+                {customer.status}
+              </span>
             </div>
-            <ChevronRight size={20} color="#ccc" onClick={() => handleRowClick(customer.id)} style={{ cursor: 'pointer' }} />
+            <div className="card-info">
+              <h3 className="customer-name">{customer.고객명_상호}</h3>
+              <p className="customer-phone">{customer.전화번호}</p>
+              <p className="customer-addr">{customer.설치주소 || customer.주소}</p>
+            </div>
+            <div className="card-actions">
+              <button className="view-detail-btn" onClick={(e) => { e.stopPropagation(); router.push(`/detail/${customer.id}`); }}>
+                상세보기 <ChevronRight size={14} />
+              </button>
+            </div>
           </div>
         ))}
+        {filteredCustomers.length === 0 && <div className="empty-state">검색 결과가 없습니다.</div>}
       </div>
 
+      {/* Floating Action Bar */}
       {selectedIds.length > 0 && (
-        <div className="status-action-bar">
-          <div className="selection-info">{selectedIds.length}명 선택됨</div>
+        <div className="floating-bar animated-up shadow-lg">
+          <div className="selection-info"><span className="count">{selectedIds.length}</span>명</div>
           <div className="action-buttons">
-            <button onClick={() => moveSelectedToStatus('예약완료')} className="action-btn reserved">예약완료</button>
-            <button onClick={() => moveSelectedToStatus('작업완료')} className="action-btn done">작업완료</button>
-            <button onClick={() => moveSelectedToStatus('작업미완료')} className="action-btn pending">미완료</button>
+            <button className="action-btn" onClick={() => router.push('/map')}><Map size={18} /> 지도</button>
+            <div className="divider"></div>
+            <button className="action-btn folder-btn" onClick={handleCreateFolder}><FolderPlus size={18} /> 폴더</button>
+            <div className="divider"></div>
+            <button className="action-btn status-btn" onClick={() => handleBulkStatusChange('작업미완료')}>미완료</button>
+            <button className="action-btn status-btn reserved" onClick={() => handleBulkStatusChange('예약완료')}>예약</button>
+            <button className="action-btn status-btn complete" onClick={() => handleBulkStatusChange('작업완료')}>완료</button>
+            <div className="divider"></div>
+            <button className="action-btn delete-btn" onClick={() => handleBulkStatusChange('삭제됨')}><Trash2 size={18} /> 삭제</button>
           </div>
         </div>
       )}
 
-
       <style jsx>{`
-        .list-container {
-          padding: 0 20px 40px;
-        }
-        .list-header {
-          margin-bottom: 15px;
-          position: sticky;
-          top: 60px;
-          background: #fff;
-          padding: 10px 0;
-          z-index: 10;
-        }
-        .map-btn {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          background: #f0f0f0;
-          color: #888;
-          padding: 8px 16px;
-          border-radius: 20px;
-          font-size: 0.85rem;
-          font-weight: 600;
-          transition: all 0.2s;
-        }
-        .map-btn.active {
-          background: var(--primary-color);
-          color: #fff;
-        }
-        .customer-items {
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-        }
-        .customer-item-card {
-          background: #fff;
-          border: 1px solid var(--border-color);
-          padding: 15px;
-          border-radius: 12px;
-          transition: transform 0.1s;
-        }
-        .customer-item-card:active {
-          transform: scale(0.98);
-          background: #f9f9f9;
-        }
-        .custom-checkbox {
-          width: 20px;
-          height: 20px;
-          cursor: pointer;
-        }
-        .text-sub {
-          color: #666;
-          margin-top: 2px;
-        }
-        .status-badge {
-          font-size: 0.65rem;
-          padding: 2px 6px;
-          border-radius: 4px;
-          font-weight: 700;
-        }
-        .status-badge.pending { background: #f5f5f5; color: #888; }
-        .status-badge.reserved { background: #eef2ff; color: #4f46e5; }
-        .status-badge.done { background: #ecfdf5; color: #10b981; }
-
-        .status-action-bar {
-          position: fixed;
-          bottom: 85px;
-          left: 20px;
-          right: 20px;
-          background: #333;
-          color: #fff;
-          padding: 12px 20px;
-          border-radius: 12px;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-          z-index: 100;
-        }
-        .selection-info {
-          font-size: 0.9rem;
-          font-weight: 600;
-        }
-        .action-buttons {
-          display: flex;
-          gap: 8px;
-        }
-        .action-btn {
-          padding: 6px 12px;
-          border-radius: 6px;
-          font-size: 0.8rem;
-          font-weight: 700;
-          cursor: pointer;
-        }
-        .action-btn.reserved { background: #4f46e5; color: #fff; }
-        .action-btn.done { background: #10b981; color: #fff; }
-        .action-btn.pending { background: #666; color: #fff; }
-
+        .customer-list-container { padding: 15px; padding-bottom: 120px; }
+        .search-bar { margin-bottom: 20px; }
+        .search-input-wrapper { position: relative; display: flex; align-items: center; }
+        .search-icon { position: absolute; left: 12px; color: #999; }
+        .clear-icon { position: absolute; right: 12px; color: #ccc; cursor: pointer; }
+        .search-bar input { width: 100%; padding: 12px 40px; border-radius: 12px; border: 1px solid var(--border-color); background: #f8f9fa; font-size: 0.95rem; }
+        .list-header { margin-bottom: 15px; padding: 0 5px; }
+        .select-all-btn { background: #f1f5f9; border: 1px solid #e2e8f0; padding: 4px 12px; border-radius: 8px; font-size: 0.75rem; font-weight: 700; color: #64748b; cursor: pointer; }
+        .customer-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .customer-card-small { background: #fff; border-radius: 18px; padding: 15px; border: 1px solid var(--border-color); transition: all 0.2s; display: flex; flex-direction: column; gap: 8px; position: relative; cursor: pointer; }
+        .customer-card-small.selected { border-color: var(--primary-color); background: #f0f7ff; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .status-tag { font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; font-weight: 700; background: #f1f5f9; color: #64748b; }
+        .status-tag.status-작업완료 { background: #ecfdf5; color: #10b981; }
+        .status-tag.status-예약완료 { background: #eef2ff; color: #4f46e5; }
+        .status-tag.status-작업미완료 { background: #f5f5f5; color: #888; }
+        .customer-name { font-size: 0.95rem; font-weight: 700; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .customer-phone { font-size: 0.8rem; color: #666; margin-bottom: 4px; }
+        .customer-addr { font-size: 0.75rem; color: #999; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; height: 32px; }
+        .card-actions { margin-top: auto; border-top: 1px solid #f0f0f0; padding-top: 8px; }
+        .view-detail-btn { width: 100%; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; color: var(--primary-color); font-weight: 600; }
+        .floating-bar { position: fixed; bottom: 85px; left: 5px; right: 5px; background: #2c3e50; color: #fff; padding: 12px 10px; border-radius: 20px; display: flex; align-items: center; justify-content: space-between; z-index: 1000; box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+        .selection-info { font-size: 0.75rem; white-space: nowrap; padding-left: 5px; }
+        .selection-info .count { font-weight: 800; color: #3498db; margin-right: 2px; }
+        .action-buttons { display: flex; align-items: center; gap: 8px; }
+        .action-btn { background: transparent; color: #fff; border: none; font-size: 0.7rem; font-weight: 600; display: flex; align-items: center; gap: 3px; cursor: pointer; white-space: nowrap; }
+        .action-btn.folder-btn { color: #f1c40f; }
+        .action-btn.reserved { color: #a5b4fc; }
+        .action-btn.complete { color: #2ecc71; }
+        .action-btn.delete-btn { color: #ff4d4f; }
+        .divider { width: 1px; height: 14px; background: rgba(255,255,255,0.2); }
+        .empty-state { grid-column: span 2; padding: 40px 0; text-align: center; color: #999; }
+        .animated-up { animation: slideUp 0.3s ease-out; }
+        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .flex-between { display: flex; align-items: center; justify-content: space-between; }
       `}</style>
     </div>
   )
