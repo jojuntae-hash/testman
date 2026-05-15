@@ -158,7 +158,10 @@ export default function HomePage() {
                 onClick={(e) => toggleSelect(customer.id, e)}
               >
                 <div className="item-main">
-                  <p className="font-bold">{customer.고객명_상호}</p>
+                  <div className="item-title-row">
+                    <p className="font-bold">{customer.고객명_상호}</p>
+                    <span className={`folder-badge status-${customer.status}`}>{customer.status}</span>
+                  </div>
                   <p className="text-xs text-sub">{customer.전화번호} | {customer.설치주소 || customer.주소}</p>
                 </div>
                 <div className="item-actions">
@@ -209,6 +212,11 @@ export default function HomePage() {
         .status-customer-item { background: #fff; padding: 18px 20px; border-radius: 18px; border: 1px solid var(--border-color); display: flex; align-items: center; gap: 12px; cursor: pointer; transition: all 0.2s; }
         .status-customer-item.selected { border-color: var(--primary-color); background: #f0f7ff; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
         .item-main { flex: 1; min-width: 0; }
+        .item-title-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+        .folder-badge { font-size: 0.65rem; padding: 1px 6px; border-radius: 4px; font-weight: 700; background: #f1f5f9; color: #64748b; white-space: nowrap; }
+        .folder-badge.status-작업완료 { background: #ecfdf5; color: #10b981; }
+        .folder-badge.status-예약완료 { background: #eef2ff; color: #4f46e5; }
+        .folder-badge.status-작업미완료 { background: #f5f5f5; color: #888; }
         .item-main p { margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .item-actions { display: flex; align-items: center; gap: 6px; }
         .action-circle-btn { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; text-decoration: none; transition: all 0.2s; }
