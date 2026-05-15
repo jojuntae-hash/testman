@@ -79,6 +79,15 @@ export default function RoutePage() {
   }
   const [optimizedRoute, setOptimizedRoute] = useState<any[]>([])
   const [isMapReady, setIsMapReady] = useState(false)
+  
+  useEffect(() => {
+    if (window.kakao && window.kakao.maps) {
+      window.kakao.maps.load(() => {
+        setIsMapReady(true)
+      })
+    }
+  }, [])
+
   const [isExpanded, setIsExpanded] = useState(false)
   const [markers, setMarkers] = useState<any[]>([])
   const [isOptimizing, setIsOptimizing] = useState(false)

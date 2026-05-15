@@ -15,6 +15,14 @@ export default function MapPage() {
   const [selectedFolder, setSelectedFolder] = useState<string>('선택된 항목')
   const [isMapReady, setIsMapReady] = useState(false)
 
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.kakao && window.kakao.maps) {
+      window.kakao.maps.load(() => {
+        setIsMapReady(true)
+      })
+    }
+  }, [])
+
   const folders = useMemo(() => {
     const statuses = Array.from(new Set(customers.map(c => c.status))).filter(s => s !== '삭제됨')
     return ['선택된 항목', '전체리스트', ...statuses]
