@@ -147,7 +147,7 @@ export default function RoutePage() {
       folderCustomers.forEach((customer) => {
         const address = customer.설치주소 || customer.주소
         if (!address) { processedCount++; return; }
-        geocoder.addressSearch(address, (result, status) => {
+        geocoder.addressSearch(address, (result: any, status: any) => {
           if (status === window.kakao.maps.services.Status.OK) {
             newMarkers.push({ 
               id: customer.id, 
@@ -170,7 +170,7 @@ export default function RoutePage() {
     const geocoder = new window.kakao.maps.services.Geocoder()
     const getCoords = (addr: string): Promise<{lat: number, lng: number} | null> => {
       return new Promise((resolve) => {
-        geocoder.addressSearch(addr, (result, status) => {
+        geocoder.addressSearch(addr, (result: any, status: any) => {
           if (status === window.kakao.maps.services.Status.OK) {
             resolve({ lat: parseFloat(result[0].y), lng: parseFloat(result[0].x) })
           } else resolve(null)

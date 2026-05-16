@@ -77,7 +77,7 @@ export default function MapPage() {
           if (processedCount === displayCustomers.length) setMarkers(newMarkers)
           return
         }
-        geocoder.addressSearch(address, (result, status) => {
+        geocoder.addressSearch(address, (result: any, status: any) => {
           if (status === window.kakao.maps.services.Status.OK) {
             newMarkers.push({
               id: customer.id,
