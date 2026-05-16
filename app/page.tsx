@@ -192,7 +192,7 @@ export default function HomePage() {
       )}
 
       <style jsx>{`
-        .home-page { padding: 0; padding-bottom: 120px; background: #f8fafc; min-height: 100vh; }
+        .home-page { padding: 0; padding-bottom: 100px; background: #f8fafc; min-height: 100%; }
         .view-header { height: 80px; display: flex; align-items: center; padding: 0 20px; border-bottom: 1px solid #f1f5f9; background: #fff; sticky; top: 0; z-index: 100; margin-bottom: 20px; }
         .header-text.no-back { margin-left: 52px; } /* 뒤로가기 버튼이 있는 페이지의 타이틀 위치와 완벽 정렬 */
         .header-text h1 { font-size: 1.25rem; font-weight: 800; margin: 0; color: #1e293b; }

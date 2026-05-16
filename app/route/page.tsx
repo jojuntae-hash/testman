@@ -414,7 +414,7 @@ export default function RoutePage() {
       </div>
 
       <style jsx>{`
-        .route-page { position: absolute; top: 0; left: 0; right: 0; bottom: 70px; display: flex; flex-direction: column; background: #fff; overflow: hidden; }
+        .route-page { height: 100%; display: flex; flex-direction: column; background: #fff; overflow: hidden; position: relative; }
         .view-header { height: 80px; display: flex; align-items: center; padding: 0 20px; border-bottom: 1px solid #f1f5f9; background: #fff; z-index: 100; flex-shrink: 0; }
         .back-btn { background: none; border: none; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #334155; }
         .header-text { margin-left: 12px; flex: 1; }
@@ -432,7 +432,7 @@ export default function RoutePage() {
           max-height: calc(100% - 100px); display: flex; flex-direction: column; 
           box-shadow: 0 -4px 12px rgba(0,0,0,0.05); 
         }
-        .route-container.collapsed { transform: translateY(calc(100% - 140px)); }
+        .route-container.collapsed { transform: translateY(calc(100% - 130px)); }
         
         .drag-handle-area { padding: 10px 0; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 5px; }
         .drag-handle { width: 40px; height: 4px; background: #e2e8f0; border-radius: 2px; }

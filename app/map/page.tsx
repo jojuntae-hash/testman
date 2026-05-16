@@ -223,7 +223,7 @@ export default function MapPage() {
       )}
 
       <style jsx>{`
-        .map-page { height: 100vh; display: flex; flex-direction: column; overflow: hidden; background: #fff; }
+        .map-page { height: 100%; display: flex; flex-direction: column; overflow: hidden; background: #fff; }
         .view-header { height: 70px; display: flex; align-items: center; padding: 0 15px; border-bottom: 1px solid #eee; background: #fff; z-index: 100; }
         .back-btn { background: none; border: none; cursor: pointer; color: #333; padding: 5px; }
         .header-text { margin-left: 10px; }

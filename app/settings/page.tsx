@@ -255,7 +255,7 @@ export default function SettingsPage() {
       </div>
 
       <style jsx>{`
-        .settings-page { min-height: 100vh; background: #f8fafc; padding-bottom: 100px; }
+        .settings-page { min-height: 100%; background: #f8fafc; padding-bottom: 100px; }
         .view-header { height: 80px; display: flex; align-items: center; padding: 0 20px; border-bottom: 1px solid #e2e8f0; background: #fff; position: sticky; top: 0; z-index: 100; }
         .back-btn { background: none; border: none; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #64748b; }
         .header-text { margin-left: 12px; flex: 1; }

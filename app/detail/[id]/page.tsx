@@ -221,7 +221,7 @@ export default function DetailPage() {
         .detail-page {
           padding-bottom: 20px;
           background: #fff;
-          min-height: 100vh;
+          min-height: 100%;
         }
         .customer-title-section {
           padding: 25px 20px;
