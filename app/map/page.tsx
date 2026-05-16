@@ -19,6 +19,7 @@ export default function MapPage() {
   const [mapDefaultZoom, setMapDefaultZoom] = useState(4)
   const [mapShowNames, setMapShowNames] = useState(false)
   const [kakaoKey, setKakaoKey] = useState('bcf159529047078b426216b892689408') // 기본 키로 초기화
+  const [isExpanded, setIsExpanded] = useState(false)
 
   // 초기 설정 로드
   useEffect(() => {
@@ -167,7 +168,11 @@ export default function MapPage() {
         )}
       </div>
 
-      <div className="list-area shadow-lg">
+      <div className={`list-area shadow-lg ${isExpanded ? 'expanded' : 'collapsed'}`}>
+        <div className="drag-handle-area" onClick={() => setIsExpanded(!isExpanded)}>
+          <div className="drag-handle"></div>
+          <span className="drag-text">{isExpanded ? '지도 보기' : '리스트 보기'}</span>
+        </div>
         <div className="list-header">
           <span className="list-title">선택됨 <strong>{selectedCustomersList.length}</strong></span>
           <div className="list-controls">
@@ -241,7 +246,18 @@ export default function MapPage() {
         .marker-wrapper.active .marker-pin { background: #3b82f6 !important; transform: rotate(-45deg) scale(1.2); box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
         .marker-tooltip { position: absolute; top: -35px; background: #333; color: #fff; padding: 4px 10px; border-radius: 8px; font-size: 0.75rem; white-space: nowrap; font-weight: 600; z-index: 10; }
         
-        .list-area { height: 260px; background: #fff; border-top: 1px solid #eee; display: flex; flex-direction: column; z-index: 100; box-shadow: 0 -5px 20px rgba(0,0,0,0.05); }
+        .list-area { 
+          position: absolute; bottom: 0; left: 0; right: 0; background: #fff; 
+          border-radius: 24px 24px 0 0; z-index: 1000; padding: 0 0 20px; 
+          transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); 
+          max-height: calc(100% - 100px); display: flex; flex-direction: column; 
+          box-shadow: 0 -4px 12px rgba(0,0,0,0.05); 
+        }
+        .list-area.collapsed { transform: translateY(calc(100% - 130px)); }
+        
+        .drag-handle-area { padding: 10px 0; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 5px; }
+        .drag-handle { width: 40px; height: 4px; background: #e2e8f0; border-radius: 2px; }
+        .drag-text { font-size: 0.7rem; color: #94a3b8; font-weight: 700; }
         .list-header { padding: 12px 15px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #f5f5f5; }
         .list-title { font-size: 0.85rem; font-weight: 700; color: #333; }
         .list-title strong { color: #3b82f6; margin-left: 4px; }
