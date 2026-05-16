@@ -39,6 +39,8 @@ interface DataContextType {
   selectedIds: string[]
   setSelectedIds: (ids: string[]) => void
   updateCustomerCoords: (id: string, lat: number, lng: number) => void
+  resetToDefault: () => void
+  clearAllCustomers: () => void
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined)
@@ -119,11 +121,36 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     })
   }
 
+  // 샘플 데이터로 리셋
+  const resetToDefault = () => {
+    const initialFixed = initialCustomers.map((c: any) => ({
+      ...c,
+      전화번호: fixPhoneNumber(c.전화번호),
+      핸드폰번호: fixPhoneNumber(c.핸드폰번호),
+      설치전화번호: fixPhoneNumber(c.설치전화번호),
+      설치핸드폰번호: fixPhoneNumber(c.설치핸드폰번호)
+    }))
+    setCustomers(initialFixed)
+  }
+
+  // 모든 데이터 삭제
+  const clearAllCustomers = () => {
+    setCustomers([])
+  }
+
   // Prevent hydration mismatch by not rendering children until initialized
   if (!isInitialized) return null
 
   return (
-    <DataContext.Provider value={{ customers, setCustomers, selectedIds, setSelectedIds, updateCustomerCoords }}>
+    <DataContext.Provider value={{ 
+      customers, 
+      setCustomers, 
+      selectedIds, 
+      setSelectedIds, 
+      updateCustomerCoords, 
+      resetToDefault, 
+      clearAllCustomers 
+    }}>
       {children}
     </DataContext.Provider>
   )

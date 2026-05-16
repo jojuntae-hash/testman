@@ -3,13 +3,13 @@
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useData } from '@/lib/DataContext'
-import { ChevronLeft, Save, Trash2, Download, Upload, Map as MapIcon, Clock, Key, Home, Settings as SettingsIcon, Search, Lock, Unlock } from 'lucide-react'
+import { ChevronLeft, Save, Trash2, Download, Upload, Map as MapIcon, Clock, Key, Home, Settings as SettingsIcon, Search, Lock, Unlock, RotateCcw } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import Script from 'next/script'
 
 export default function SettingsPage() {
   const router = useRouter()
-  const { customers, setCustomers } = useData()
+  const { customers, setCustomers, resetToDefault, clearAllCustomers } = useData()
   
   // 기본 설정 상태
   const [defaultSource, setDefaultSource] = useState('')
@@ -108,10 +108,17 @@ export default function SettingsPage() {
     reader.readAsText(file)
   }
 
-  const handleReset = () => {
-    if (confirm('모든 고객 데이터와 설정이 초기화됩니다. 계속하시겠습니까?')) {
-      localStorage.clear()
-      window.location.reload()
+  const handleResetToDefault = () => {
+    if (confirm('모든 데이터를 초기 샘플 데이터로 복구하시겠습니까? (현재 데이터는 유실됩니다)')) {
+      resetToDefault()
+      alert('샘플 데이터로 복구되었습니다.')
+    }
+  }
+
+  const handleClearAll = () => {
+    if (confirm('정말로 모든 고객 데이터를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) {
+      clearAllCustomers()
+      alert('모든 데이터가 삭제되었습니다.')
     }
   }
 
@@ -268,9 +275,13 @@ export default function SettingsPage() {
               데이터 복원 (파일 선택)
               <input type="file" accept=".json" onChange={handleRestore} hidden />
             </label>
-            <button className="data-btn reset" onClick={handleReset}>
+            <button className="data-btn reset" onClick={handleResetToDefault}>
+              <RotateCcw size={18} />
+              샘플 데이터로 리셋
+            </button>
+            <button className="data-btn danger" onClick={handleClearAll}>
               <Trash2 size={18} />
-              전체 데이터 초기화
+              모든 고객 데이터 삭제
             </button>
           </div>
         </section>
@@ -321,7 +332,8 @@ export default function SettingsPage() {
         .data-action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
         .data-btn { padding: 20px 15px; border-radius: 20px; border: 1px solid #e2e8f0; background: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; font-size: 0.85rem; font-weight: 700; cursor: pointer; transition: all 0.2s; text-align: center; color: #475569; }
         .data-btn:hover { border-color: #cbd5e1; background: #f1f5f9; transform: translateY(-2px); }
-        .data-btn.reset { color: #ef4444; }
+        .data-btn.reset { color: #4f46e5; }
+        .data-btn.danger { color: #ef4444; }
         .data-btn.backup { color: #4f46e5; }
         .data-btn.excel { color: #10b981; }
         .data-btn.restore { color: #f59e0b; }
