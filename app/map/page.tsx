@@ -250,7 +250,7 @@ export default function MapPage() {
           position: absolute; bottom: 0; left: 0; right: 0; background: #fff; 
           border-radius: 24px 24px 0 0; z-index: 1000; padding: 0 0 20px; 
           transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); 
-          max-height: calc(100% - 100px); display: flex; flex-direction: column; 
+          max-height: 50%; display: flex; flex-direction: column; 
           box-shadow: 0 -4px 12px rgba(0,0,0,0.05); 
         }
         .list-area.collapsed { transform: translateY(calc(100% - 130px)); }
