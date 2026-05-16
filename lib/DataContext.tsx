@@ -29,6 +29,8 @@ export interface CustomerData {
   설치핸드폰번호: string
   설치주소: string
   설치시특이사항: string
+  lat?: number
+  lng?: number
 }
 
 interface DataContextType {
@@ -36,6 +38,7 @@ interface DataContextType {
   setCustomers: (data: CustomerData[]) => void
   selectedIds: string[]
   setSelectedIds: (ids: string[]) => void
+  updateCustomerCoords: (id: string, lat: number, lng: number) => void
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined)
@@ -107,11 +110,20 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem('customers', JSON.stringify(fixedData))
   }
 
+  // 좌표 업데이트 함수
+  const updateCustomerCoords = (id: string, lat: number, lng: number) => {
+    setCustomersState(prev => {
+      const updated = prev.map(c => c.id === id ? { ...c, lat, lng } : c)
+      localStorage.setItem('customers', JSON.stringify(updated))
+      return updated
+    })
+  }
+
   // Prevent hydration mismatch by not rendering children until initialized
   if (!isInitialized) return null
 
   return (
-    <DataContext.Provider value={{ customers, setCustomers, selectedIds, setSelectedIds }}>
+    <DataContext.Provider value={{ customers, setCustomers, selectedIds, setSelectedIds, updateCustomerCoords }}>
       {children}
     </DataContext.Provider>
   )

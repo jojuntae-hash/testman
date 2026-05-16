@@ -8,7 +8,7 @@ import { Map, CustomOverlayMap } from 'react-kakao-maps-sdk'
 import Script from 'next/script'
 
 export default function MapPage() {
-  const { customers, setCustomers, selectedIds } = useData()
+  const { customers, setCustomers, selectedIds, updateCustomerCoords } = useData()
   const router = useRouter()
   
   // 상태 관리
@@ -73,19 +73,30 @@ export default function MapPage() {
 
       displayCustomers.forEach((customer) => {
         const address = customer.설치주소 || customer.주소
-        if (!address) {
+        if (customer.lat && customer.lng) {
+          newMarkers.push({
+            id: customer.id,
+            lat: customer.lat,
+            lng: customer.lng,
+            customer
+          })
           processedCount++
           if (processedCount === displayCustomers.length) setMarkers(newMarkers)
           return
         }
+
         geocoder.addressSearch(address, (result: any, status: any) => {
           if (status === window.kakao.maps.services.Status.OK) {
+            const lat = parseFloat(result[0].y)
+            const lng = parseFloat(result[0].x)
             newMarkers.push({
               id: customer.id,
-              lat: parseFloat(result[0].y),
-              lng: parseFloat(result[0].x),
+              lat,
+              lng,
               customer
             })
+            // 좌표 캐싱
+            updateCustomerCoords(customer.id, lat, lng)
           }
           processedCount++
           if (processedCount === displayCustomers.length) {
@@ -130,6 +141,7 @@ export default function MapPage() {
   return (
     <div className="map-page">
       <Script 
+        id="kakao-map-sdk"
         src={`https://dapi.kakao.com/v2/maps/sdk.js?appkey=${kakaoKey}&libraries=services&autoload=false`}
         strategy="afterInteractive"
         onLoad={prepareMap}
@@ -250,7 +262,7 @@ export default function MapPage() {
           position: absolute; bottom: 0; left: 0; right: 0; background: #fff; 
           border-radius: 24px 24px 0 0; z-index: 1000; padding: 0 0 20px; 
           transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); 
-          max-height: 50%; display: flex; flex-direction: column; 
+          max-height: calc(100% - 100px); display: flex; flex-direction: column; 
           box-shadow: 0 -4px 12px rgba(0,0,0,0.05); 
         }
         .list-area.collapsed { transform: translateY(calc(100% - 130px)); }

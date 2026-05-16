@@ -117,7 +117,7 @@ export default function SettingsPage() {
 
   return (
     <div className="settings-page">
-      <Script src="//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js" strategy="afterInteractive" />
+      <Script id="daum-postcode" src="//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js" strategy="afterInteractive" />
       <div className="view-header">
         <button className="back-btn" onClick={() => router.back()}>
           <ChevronLeft size={24} />
@@ -195,11 +195,33 @@ export default function SettingsPage() {
 
         {/* 지도 설정 */}
         <section className="settings-section">
-          <div className="section-title"><MapIcon size={18} /> 지도 설정</div>
+          <div className="section-title"><MapIcon size={18} /> 지도 및 API 설정</div>
+          
+          <div className="setting-card">
+            <div className="setting-info">
+              <h3>카카오 API 앱 키</h3>
+              <p>지도를 불러오는 데 필요한 JavaScript 키입니다.</p>
+            </div>
+            <div className="setting-control-group">
+              <div className="key-input-wrapper">
+                <input 
+                  type={isKeyLocked ? "password" : "text"} 
+                  className={`setting-input-full ${isKeyLocked ? 'locked' : ''}`} 
+                  value={kakaoKey} 
+                  onChange={(e) => setKakaoKey(e.target.value)}
+                  disabled={isKeyLocked}
+                />
+                <button className="lock-btn" onClick={() => setIsKeyLocked(!isKeyLocked)}>
+                  {isKeyLocked ? <Lock size={16} /> : <Unlock size={16} />}
+                </button>
+              </div>
+            </div>
+          </div>
+
           <div className="setting-card">
             <div className="setting-info">
               <h3>기본 지도 확대 레벨</h3>
-              <p>지도를 처음 열었을 때의 확대 정도 (1~14)</p>
+              <p>지도를 처음 열었을 때의 확대 정도 (1~10)</p>
             </div>
             <div className="setting-control">
               <select 
@@ -278,7 +300,11 @@ export default function SettingsPage() {
         .setting-input { width: 80px; padding: 10px; border-radius: 10px; border: 1px solid #e2e8f0; text-align: center; font-weight: 700; color: #1e293b; outline: none; }
         .setting-input-full { width: 100%; padding: 10px 15px; border-radius: 10px; border: 1px solid #e2e8f0; font-size: 0.9rem; font-weight: 600; outline: none; transition: all 0.2s; }
         .setting-input-full:focus { border-color: #4f46e5; box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1); }
-        .setting-input-full.locked { background: #f8fafc; color: #94a3b8; cursor: not-allowed; }
+        .setting-input-full.locked { background: #f8fafc; color: #94a3b8; cursor: not-allowed; letter-spacing: 2px; }
+
+        .key-input-wrapper { position: relative; display: flex; align-items: center; }
+        .lock-btn { position: absolute; right: 10px; color: #94a3b8; padding: 5px; cursor: pointer; transition: color 0.2s; }
+        .lock-btn:hover { color: #4f46e5; }
 
         .search-addr-btn { background: #eff6ff; color: #3b82f6; border: 1px solid #dbeafe; padding: 8px; border-radius: 10px; font-size: 0.8rem; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 5px; cursor: pointer; transition: all 0.2s; }
 

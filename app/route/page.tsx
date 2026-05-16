@@ -15,7 +15,7 @@ declare global {
 }
 
 export default function RoutePage() {
-  const { customers } = useData()
+  const { customers, updateCustomerCoords } = useData()
   const router = useRouter()
   
   // 상태 관리
@@ -146,15 +146,30 @@ export default function RoutePage() {
       
       folderCustomers.forEach((customer) => {
         const address = customer.설치주소 || customer.주소
-        if (!address) { processedCount++; return; }
+        if (customer.lat && customer.lng) {
+          newMarkers.push({ 
+            id: customer.id, 
+            lat: customer.lat, 
+            lng: customer.lng, 
+            customer: customer 
+          })
+          processedCount++;
+          if (processedCount === folderCustomers.length) setMarkers(newMarkers)
+          return;
+        }
+
         geocoder.addressSearch(address, (result: any, status: any) => {
           if (status === window.kakao.maps.services.Status.OK) {
+            const lat = parseFloat(result[0].y)
+            const lng = parseFloat(result[0].x)
             newMarkers.push({ 
               id: customer.id, 
-              lat: parseFloat(result[0].y), 
-              lng: parseFloat(result[0].x), 
+              lat, 
+              lng, 
               customer: customer 
             })
+            // 좌표 캐싱
+            updateCustomerCoords(customer.id, lat, lng)
           }
           processedCount++;
           if (processedCount === folderCustomers.length) setMarkers(newMarkers)
@@ -241,11 +256,12 @@ export default function RoutePage() {
   return (
     <div className="route-page">
       <Script 
+        id="kakao-map-sdk"
         src={`https://dapi.kakao.com/v2/maps/sdk.js?appkey=${kakaoKey}&libraries=services&autoload=false`}
         strategy="afterInteractive"
         onLoad={prepareMap}
       />
-      <Script src="//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js" strategy="afterInteractive" />
+      <Script id="daum-postcode" src="//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js" strategy="afterInteractive" />
       
       <div className="view-header">
         <button className="back-btn" onClick={() => router.back()}>
@@ -429,7 +445,7 @@ export default function RoutePage() {
           position: absolute; bottom: 0; left: 0; right: 0; background: #fff; 
           border-radius: 24px 24px 0 0; z-index: 1000; padding: 0 20px 20px; 
           transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); 
-          max-height: 50%; display: flex; flex-direction: column; 
+          max-height: calc(100% - 100px); display: flex; flex-direction: column; 
           box-shadow: 0 -4px 12px rgba(0,0,0,0.05); 
         }
         .route-container.collapsed { transform: translateY(calc(100% - 130px)); }
