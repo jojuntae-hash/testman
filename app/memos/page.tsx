@@ -218,14 +218,20 @@ export default function MemosPage() {
         ) : (
           filteredData.map(group => (
             <div key={group.customerId} className="customer-card">
-              <div className="card-header">
+              <div 
+                className="card-header"
+                onClick={() => router.push(`/detail/${group.customerId}`)}
+              >
                 <div>
                   <h2 className="customer-name">{group.customerName}</h2>
                   <span className="customer-num">고객번호: {group.customerNumber}</span>
                 </div>
                 <button 
                   className="detail-btn"
-                  onClick={() => router.push(`/detail/${group.customerId}`)}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    router.push(`/detail/${group.customerId}`)
+                  }}
                 >
                   상세보기 <ChevronRight size={14} />
                 </button>
@@ -350,6 +356,18 @@ export default function MemosPage() {
           margin-bottom: 16px;
           padding-bottom: 12px;
           border-bottom: 1px dashed #e2e8f0;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          border-radius: 8px;
+          padding: 6px 8px 12px 8px;
+          margin-left: -8px;
+          margin-right: -8px;
+        }
+        .card-header:hover {
+          background-color: #f8fafc;
+        }
+        .card-header:hover .customer-name {
+          color: #3b82f6;
         }
         .customer-name {
           font-size: 1.1rem;
