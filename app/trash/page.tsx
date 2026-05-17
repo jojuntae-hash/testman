@@ -66,7 +66,7 @@ export default function TrashPage() {
           const customer = customers.find(c => c.id === memo.customer_id)
           return {
             id: memo.id,
-            type: 'memo',
+            type: 'memo' as 'memo',
             content: memo.content || '',
             date: memo.updated_at,
             customerName: customer ? customer.고객명_상호 : '알 수 없는 고객'
@@ -80,7 +80,7 @@ export default function TrashPage() {
           const customer = customers.find(c => c.id === visit.customer_id)
           return {
             id: visit.id,
-            type: 'visit_log',
+            type: 'visit_log' as 'visit_log',
             content: visit.content || '',
             date: visit.created_at,
             customerName: customer ? customer.고객명_상호 : '알 수 없는 고객'
