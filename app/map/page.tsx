@@ -136,6 +136,16 @@ export default function MapPage() {
     }
   }
 
+  const handleCreateFolder = () => {
+    if (selectedCustomersList.length === 0) return
+    const folderName = prompt('새로운 폴더 이름을 입력해 주세요.')
+    if (!folderName || folderName.trim() === '') return
+    const selectedListIds = selectedCustomersList.map(c => c.id)
+    const updated = customers.map(c => selectedListIds.includes(c.id) ? { ...c, status: folderName.trim() } : c)
+    setCustomers(updated as any)
+    setSelectedCustomersList([])
+  }
+
   const center = markers.length > 0 ? { lat: markers[0].lat, lng: markers[0].lng } : { lat: 37.5665, lng: 126.9780 }
 
   return (
@@ -188,13 +198,23 @@ export default function MapPage() {
         <div className="list-header">
           <span className="list-title">선택됨 <strong>{selectedCustomersList.length}</strong></span>
           <div className="list-controls">
-            <select 
-              className="folder-select-mini" 
-              value={selectedFolder} 
-              onChange={(e) => { setSelectedFolder(e.target.value); setSelectedCustomersList([]); }}
-            >
-              {folders.map(f => <option key={f} value={f}>{f}</option>)}
-            </select>
+            {selectedCustomersList.length > 0 ? (
+              <div className="header-actions">
+                <button className="act-btn-mini folder" onClick={handleCreateFolder}>폴더</button>
+                <button className="act-btn-mini" onClick={() => handleBulkStatusChange('작업미완료')}>미완료</button>
+                <button className="act-btn-mini reserved" onClick={() => handleBulkStatusChange('예약완료')}>예약</button>
+                <button className="act-btn-mini complete" onClick={() => handleBulkStatusChange('작업완료')}>완료</button>
+                <button className="act-btn-mini danger" onClick={() => handleBulkStatusChange('삭제됨')}>삭제</button>
+              </div>
+            ) : (
+              <select 
+                className="folder-select-mini" 
+                value={selectedFolder} 
+                onChange={(e) => { setSelectedFolder(e.target.value); setSelectedCustomersList([]); }}
+              >
+                {folders.map(f => <option key={f} value={f}>{f}</option>)}
+              </select>
+            )}
             {displayCustomers.length > 0 && (
               <button 
                 className="select-all-btn" 
@@ -228,16 +248,7 @@ export default function MapPage() {
         </div>
       </div>
 
-      {selectedCustomersList.length > 0 && (
-        <div className="floating-actions animated-up shadow-lg">
-          <div className="action-info">{selectedCustomersList.length}명 선택됨</div>
-          <div className="btns">
-            <button className="act-btn" onClick={() => handleBulkStatusChange('작업미완료')}>미완료</button>
-            <button className="act-btn complete" onClick={() => handleBulkStatusChange('작업완료')}>완료</button>
-            <button className="act-btn danger" onClick={() => handleBulkStatusChange('삭제됨')}>삭제</button>
-          </div>
-        </div>
-      )}
+
 
       <style jsx>{`
         .map-page { height: 100%; display: flex; flex-direction: column; overflow: hidden; background: #fff; }
@@ -286,15 +297,13 @@ export default function MapPage() {
         .row-addr { font-size: 0.75rem; color: #94a3b8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
         .detail-btn { font-size: 0.75rem; padding: 6px 12px; border: 1px solid #e2e8f0; border-radius: 8px; background: #fff; color: #666; font-weight: 600; }
         
-        .floating-actions { position: fixed; bottom: 80px; left: 15px; right: 15px; background: #1e293b; padding: 15px; border-radius: 20px; display: flex; align-items: center; justify-content: space-between; z-index: 1000; }
-        .action-info { color: #94a3b8; font-size: 0.8rem; font-weight: 600; padding-left: 5px; }
-        .btns { display: flex; gap: 10px; }
-        .act-btn { background: #334155; color: #fff; border: none; padding: 8px 15px; border-radius: 10px; font-size: 0.8rem; font-weight: 700; cursor: pointer; }
-        .act-btn.complete { background: #10b981; }
-        .act-btn.danger { background: #ef4444; }
-        
-        .animated-up { animation: slideUp 0.3s ease-out; }
-        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .header-actions { display: flex; gap: 6px; }
+        .act-btn-mini { background: #f1f5f9; color: #475569; border: none; padding: 4px 10px; border-radius: 8px; font-size: 0.75rem; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+        .act-btn-mini:active { transform: scale(0.95); }
+        .act-btn-mini.folder { background: #fef3c7; color: #92400e; }
+        .act-btn-mini.reserved { background: #eef2ff; color: #3730a3; }
+        .act-btn-mini.complete { background: #d1fae5; color: #065f46; }
+        .act-btn-mini.danger { background: #fee2e2; color: #991b1b; }
       `}</style>
     </div>
   )

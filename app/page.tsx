@@ -11,6 +11,50 @@ export default function HomePage() {
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
 
+  const getModelTypeBadge = (modelName?: string) => {
+    if (!modelName) return null
+    const lower = modelName.toLowerCase()
+    let text = ''
+    let typeClass = ''
+    if (lower.startsWith('cp')) {
+      text = '정수기'
+      typeClass = 'purifier'
+    } else if (lower.startsWith('ac')) {
+      text = '공기청정기'
+      typeClass = 'air-cleaner'
+    } else if (lower.startsWith('cbt')) {
+      text = '비데'
+      typeClass = 'bidet'
+    } else {
+      return null
+    }
+
+    return (
+      <span className={`model-badge ${typeClass}`}>
+        {text}
+      </span>
+    )
+  }
+
+  const getElapsedMonthsBadge = (contractDate?: string) => {
+    if (!contractDate) return null
+    const start = new Date(contractDate)
+    const end = new Date()
+    if (isNaN(start.getTime())) return null
+
+    let diff = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth())
+    if (end.getDate() < start.getDate()) {
+      diff--
+    }
+    const months = Math.max(0, diff)
+
+    return (
+      <span className="model-badge elapsed-months">
+        {months}개월
+      </span>
+    )
+  }
+
   const uniqueStatuses = useMemo(() => {
     const statuses = Array.from(new Set(customers.map(c => c.status)))
     const priority = ['작업미완료', '예약완료', '작업완료', '삭제됨']
@@ -61,7 +105,8 @@ export default function HomePage() {
         (c.고객명_상호 && c.고객명_상호.toLowerCase().includes(lowerTerm)) ||
         (c.전화번호 && c.전화번호.includes(lowerTerm)) ||
         (c.설치주소 && c.설치주소.toLowerCase().includes(lowerTerm)) ||
-        (c.주소 && c.주소.toLowerCase().includes(lowerTerm))
+        (c.주소 && c.주소.toLowerCase().includes(lowerTerm)) ||
+        (c.모델명 && c.모델명.toLowerCase().includes(lowerTerm))
       )
     }
     return list
@@ -131,7 +176,7 @@ export default function HomePage() {
           <Search size={18} className="search-icon" />
           <input 
             type="text" 
-            placeholder="이름, 전화번호, 주소로 검색" 
+            placeholder="이름, 전화번호, 주소, 모델명으로 검색" 
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -161,6 +206,8 @@ export default function HomePage() {
                   <div className="item-title-row">
                     <p className="font-bold">{customer.고객명_상호}</p>
                     <span className={`folder-badge status-${customer.status}`}>{customer.status}</span>
+                    {getModelTypeBadge(customer.모델명)}
+                    {getElapsedMonthsBadge(customer.계약일자)}
                   </div>
                   <p className="text-xs text-sub">{customer.전화번호} | {customer.설치주소 || customer.주소}</p>
                 </div>
@@ -173,23 +220,7 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* Floating Action Bar */}
-      {selectedIds.length > 0 && (
-        <div className="floating-bar animated-up shadow-lg">
-          <div className="selection-info"><span className="count">{selectedIds.length}</span>명</div>
-          <div className="action-buttons">
-            <button className="action-btn" onClick={() => router.push('/map')}><Map size={18} /> 지도</button>
-            <div className="divider"></div>
-            <button className="action-btn folder-btn" onClick={handleCreateFolder}><FolderPlus size={18} /> 폴더</button>
-            <div className="divider"></div>
-            <button className="action-btn status-btn" onClick={() => handleBulkStatusChange('작업미완료')}>미완료</button>
-            <button className="action-btn status-btn reserved" onClick={() => handleBulkStatusChange('예약완료')}>예약</button>
-            <button className="action-btn status-btn complete" onClick={() => handleBulkStatusChange('작업완료')}>완료</button>
-            <div className="divider"></div>
-            <button className="action-btn delete-btn" onClick={() => handleBulkStatusChange('삭제됨')}><Trash2 size={18} /> 삭제</button>
-          </div>
-        </div>
-      )}
+
 
       <style jsx>{`
         .home-page { padding: 0; padding-bottom: 100px; background: #f8fafc; min-height: 100%; }
@@ -217,28 +248,23 @@ export default function HomePage() {
         .folder-badge.status-작업완료 { background: #ecfdf5; color: #10b981; }
         .folder-badge.status-예약완료 { background: #eef2ff; color: #4f46e5; }
         .folder-badge.status-작업미완료 { background: #f5f5f5; color: #888; }
+        :global(.model-badge) { font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; font-weight: 700; white-space: nowrap; display: inline-flex; align-items: center; }
+        :global(.model-badge.purifier) { background: #eff6ff; color: #3b82f6; }
+        :global(.model-badge.air-cleaner) { background: #ecfdf5; color: #10b981; }
+        :global(.model-badge.bidet) { background: #fff7ed; color: #ea580c; }
+        :global(.model-badge.elapsed-months) { background: #f1f5f9; color: #475569; }
         .item-main p { margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .item-actions { display: flex; align-items: center; gap: 6px; }
         .action-circle-btn { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; text-decoration: none; transition: all 0.2s; }
         .action-circle-btn:active { transform: scale(0.9); }
         .action-circle-btn.phone { background: #10b981; }
         .go-detail-mini-btn { padding: 8px 12px; background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; font-size: 0.75rem; font-weight: 700; color: #64748b; display: flex; align-items: center; gap: 2px; }
-        .floating-bar { position: fixed; bottom: 85px; left: 5px; right: 5px; background: #2c3e50; color: #fff; padding: 12px 10px; border-radius: 20px; display: flex; align-items: center; justify-content: space-between; z-index: 1000; box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
-        .selection-info { font-size: 0.75rem; white-space: nowrap; padding-left: 5px; }
-        .selection-info .count { font-weight: 800; color: #3498db; margin-right: 2px; }
-        .action-buttons { display: flex; align-items: center; gap: 8px; }
-        .action-btn { background: transparent; color: #fff; border: none; font-size: 0.7rem; font-weight: 600; display: flex; align-items: center; gap: 3px; cursor: pointer; white-space: nowrap; }
-        .action-btn.folder-btn { color: #f1c40f; }
-        .action-btn.reserved { color: #a5b4fc; }
-        .action-btn.complete { color: #2ecc71; }
-        .action-btn.delete-btn { color: #ff4d4f; }
-        .divider { width: 1px; height: 14px; background: rgba(255,255,255,0.2); }
+
         .empty-state { text-align: center; padding: 40px 0; color: #999; font-size: 0.9rem; }
         .font-bold { font-weight: 700; }
         .text-xs { font-size: 0.75rem; }
         .flex-between { display: flex; align-items: center; justify-content: space-between; }
-        .animated-up { animation: slideUp 0.3s ease-out; }
-        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
         .search-section { padding: 0 20px 20px 20px; }
         .search-box { display: flex; align-items: center; background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 10px 15px; }
         .search-icon { color: #94a3b8; margin-right: 10px; }

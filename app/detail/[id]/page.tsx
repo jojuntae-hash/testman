@@ -4,6 +4,8 @@ import React, { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useData } from '@/lib/DataContext'
 import { Info, FileText, MapPin, MessageSquare, ChevronLeft, Phone, Save } from 'lucide-react'
+import { supabase } from '@/lib/supabase'
+import VisitLogModal from '@/components/VisitLogModal'
 
 export default function DetailPage() {
   const { id } = useParams()
@@ -12,17 +14,46 @@ export default function DetailPage() {
   
   const customer = customers.find(c => c.id === id)
   const [memo, setMemo] = useState('')
+  const [isVisitModalOpen, setIsVisitModalOpen] = useState(false)
 
   useEffect(() => {
     if (id) {
-      const savedMemo = localStorage.getItem(`memo_${id}`)
-      if (savedMemo) setMemo(savedMemo)
+      loadMemo()
     }
   }, [id])
 
-  const handleSaveMemo = () => {
-    localStorage.setItem(`memo_${id}`, memo)
-    alert('메모가 저장되었습니다.')
+  const loadMemo = async () => {
+    const { data, error } = await supabase
+      .from('memos')
+      .select('*')
+      .eq('customer_id', id)
+      .order('updated_at', { ascending: false })
+      .limit(1)
+    
+    if (data && data.length > 0 && !data[0].is_deleted) {
+      setMemo(data[0].content || '')
+    } else {
+      setMemo('')
+    }
+  }
+
+  const handleSaveMemo = async () => {
+    const { data: existing, error: selectError } = await supabase.from('memos').select('id, is_deleted').eq('customer_id', id).limit(1)
+    
+    if (selectError) {
+      alert(`조회 오류: ${selectError.message}`);
+      return;
+    }
+
+    if (existing && existing.length > 0) {
+      const { error } = await supabase.from('memos').update({ content: memo, is_deleted: false, updated_at: new Date().toISOString() }).eq('id', existing[0].id)
+      if (!error) alert('메모가 저장되었습니다.')
+      else alert(`메모 저장에 실패했습니다: ${error.message || JSON.stringify(error)}`)
+    } else {
+      const { error } = await supabase.from('memos').insert([{ customer_id: id, content: memo, is_deleted: false }])
+      if (!error) alert('메모가 저장되었습니다.')
+      else alert(`메모 저장에 실패했습니다: ${error.message || JSON.stringify(error)}`)
+    }
   }
 
   if (!customer) {
@@ -211,11 +242,17 @@ export default function DetailPage() {
       </div>
 
       <div className="action-area">
-        <button className="submit-btn">
+        <button className="submit-btn" onClick={() => setIsVisitModalOpen(true)}>
           <MessageSquare size={18} />
           방문 관리 기록 작성
         </button>
       </div>
+
+      <VisitLogModal 
+        customerId={id as string} 
+        isOpen={isVisitModalOpen} 
+        onClose={() => setIsVisitModalOpen(false)} 
+      />
 
       <style jsx>{`
         .detail-page {

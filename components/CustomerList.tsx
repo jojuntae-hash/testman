@@ -17,7 +17,8 @@ export default function CustomerList() {
       (c.고객명_상호.includes(searchTerm) || 
        c.전화번호.includes(searchTerm) || 
        (c.설치주소 && c.설치주소.includes(searchTerm)) || 
-       (c.주소 && c.주소.includes(searchTerm)))
+       (c.주소 && c.주소.includes(searchTerm)) ||
+       (c.모델명 && c.모델명.includes(searchTerm)))
     )
   }, [customers, searchTerm])
 
@@ -62,7 +63,7 @@ export default function CustomerList() {
           <Search size={18} className="search-icon" />
           <input 
             type="text" 
-            placeholder="이름, 전화번호, 주소 검색..." 
+            placeholder="이름, 전화번호, 주소, 모델명 검색..." 
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -104,23 +105,7 @@ export default function CustomerList() {
         {filteredCustomers.length === 0 && <div className="empty-state">검색 결과가 없습니다.</div>}
       </div>
 
-      {/* Floating Action Bar */}
-      {selectedIds.length > 0 && (
-        <div className="floating-bar animated-up shadow-lg">
-          <div className="selection-info"><span className="count">{selectedIds.length}</span>명</div>
-          <div className="action-buttons">
-            <button className="action-btn" onClick={() => router.push('/map')}><Map size={18} /> 지도</button>
-            <div className="divider"></div>
-            <button className="action-btn folder-btn" onClick={handleCreateFolder}><FolderPlus size={18} /> 폴더</button>
-            <div className="divider"></div>
-            <button className="action-btn status-btn" onClick={() => handleBulkStatusChange('작업미완료')}>미완료</button>
-            <button className="action-btn status-btn reserved" onClick={() => handleBulkStatusChange('예약완료')}>예약</button>
-            <button className="action-btn status-btn complete" onClick={() => handleBulkStatusChange('작업완료')}>완료</button>
-            <div className="divider"></div>
-            <button className="action-btn delete-btn" onClick={() => handleBulkStatusChange('삭제됨')}><Trash2 size={18} /> 삭제</button>
-          </div>
-        </div>
-      )}
+
 
       <style jsx>{`
         .customer-list-container { padding: 15px; padding-bottom: 120px; }
@@ -143,19 +128,9 @@ export default function CustomerList() {
         .customer-addr { font-size: 0.75rem; color: #999; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; height: 32px; }
         .card-actions { margin-top: auto; border-top: 1px solid #f0f0f0; padding-top: 8px; }
         .view-detail-btn { width: 100%; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; color: var(--primary-color); font-weight: 600; }
-        .floating-bar { position: fixed; bottom: 85px; left: 5px; right: 5px; background: #2c3e50; color: #fff; padding: 12px 10px; border-radius: 20px; display: flex; align-items: center; justify-content: space-between; z-index: 1000; box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
-        .selection-info { font-size: 0.75rem; white-space: nowrap; padding-left: 5px; }
-        .selection-info .count { font-weight: 800; color: #3498db; margin-right: 2px; }
-        .action-buttons { display: flex; align-items: center; gap: 8px; }
-        .action-btn { background: transparent; color: #fff; border: none; font-size: 0.7rem; font-weight: 600; display: flex; align-items: center; gap: 3px; cursor: pointer; white-space: nowrap; }
-        .action-btn.folder-btn { color: #f1c40f; }
-        .action-btn.reserved { color: #a5b4fc; }
-        .action-btn.complete { color: #2ecc71; }
-        .action-btn.delete-btn { color: #ff4d4f; }
-        .divider { width: 1px; height: 14px; background: rgba(255,255,255,0.2); }
+
         .empty-state { grid-column: span 2; padding: 40px 0; text-align: center; color: #999; }
-        .animated-up { animation: slideUp 0.3s ease-out; }
-        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
         .flex-between { display: flex; align-items: center; justify-content: space-between; }
       `}</style>
     </div>
