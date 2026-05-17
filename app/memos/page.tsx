@@ -85,7 +85,7 @@ export default function MemosPage() {
       const groupMap = new Map<string, GroupedCustomer>()
 
       // 메모 처리
-      memos?.forEach(memo => {
+      memos?.forEach((memo: any) => {
         if (memo.is_deleted) return
         if (!memo.content || memo.content.trim() === '') return
         if (!groupMap.has(memo.customer_id)) {
@@ -112,7 +112,7 @@ export default function MemosPage() {
       })
 
       // 방문 기록 처리
-      visits?.forEach(visit => {
+      visits?.forEach((visit: any) => {
         if (visit.is_deleted) return
         if (!visit.content || visit.content.trim() === '') return
         if (!groupMap.has(visit.customer_id)) {

@@ -62,7 +62,7 @@ export default function TrashPage() {
 
       // 메모 매핑
       const mappedMemos: DeletedRecord[] = (memos || [])
-        .map(memo => {
+        .map((memo: any) => {
           const customer = customers.find(c => c.id === memo.customer_id)
           return {
             id: memo.id,
@@ -72,11 +72,11 @@ export default function TrashPage() {
             customerName: customer ? customer.고객명_상호 : '알 수 없는 고객'
           }
         })
-        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+        .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime())
 
       // 방문 기록 매핑
       const mappedVisits: DeletedRecord[] = (visits || [])
-        .map(visit => {
+        .map((visit: any) => {
           const customer = customers.find(c => c.id === visit.customer_id)
           return {
             id: visit.id,
@@ -86,7 +86,7 @@ export default function TrashPage() {
             customerName: customer ? customer.고객명_상호 : '알 수 없는 고객'
           }
         })
-        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+        .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime())
 
       setDeletedMemos(mappedMemos)
       setDeletedVisits(mappedVisits)
