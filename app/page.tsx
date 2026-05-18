@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { useData } from '@/lib/DataContext'
 import { useRouter } from 'next/navigation'
 import { Folder, Clock, Calendar, CheckCircle2, ChevronRight, Trash2, FolderPlus, Map, ClipboardList, Search, Phone } from 'lucide-react'
@@ -8,8 +8,24 @@ import { Folder, Clock, Calendar, CheckCircle2, ChevronRight, Trash2, FolderPlus
 export default function HomePage() {
   const { customers, setCustomers, selectedIds, setSelectedIds } = useData()
   const router = useRouter()
-  const [selectedFolder, setSelectedFolder] = useState<string | null>(null)
+  const [selectedFolder, setSelectedFolder] = useState<string | null>('전체리스트')
   const [searchTerm, setSearchTerm] = useState('')
+
+  // 마운트 시 이전에 선택했던 폴더 복구
+  useEffect(() => {
+    const savedFolder = localStorage.getItem('lastSelectedFolder')
+    if (savedFolder) {
+      setSelectedFolder(savedFolder)
+    } else {
+      setSelectedFolder('전체리스트')
+    }
+  }, [])
+
+  const handleFolderSelect = (status: string) => {
+    setSelectedFolder(status)
+    localStorage.setItem('lastSelectedFolder', status)
+    setSelectedIds([])
+  }
 
   const getModelTypeBadge = (modelName?: string) => {
     if (!modelName) return null
@@ -159,7 +175,7 @@ export default function HomePage() {
           <div 
             key={stat.status} 
             className={`folder-card ${selectedFolder === stat.status ? 'active' : ''}`}
-            onClick={() => { setSelectedFolder(stat.status); setSelectedIds([]); }}
+            onClick={() => handleFolderSelect(stat.status)}
             style={{ '--folder-color': stat.color, '--folder-bg': stat.bgColor } as any}
           >
             <div className="folder-icon" style={{ color: stat.color, background: stat.bgColor }}>{stat.icon}</div>

@@ -1,6 +1,7 @@
 'use client'
 
 import React, { createContext, useContext, useState, useEffect } from 'react'
+import { supabase } from './supabase'
 
 export interface CustomerData {
   id: string
@@ -41,6 +42,7 @@ interface DataContextType {
   updateCustomerCoords: (id: string, lat: number, lng: number) => void
   resetToDefault: () => void
   clearAllCustomers: () => void
+  refreshData: () => Promise<void>
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined)
@@ -65,41 +67,72 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     return s
   }
 
-  // Load from localStorage on mount
-  useEffect(() => {
-    const savedCustomers = localStorage.getItem('customers')
-    if (savedCustomers) {
+  // Supabase 및 로컬 스토리지로부터 데이터를 가져오는 동기화 로직
+  const refreshData = async () => {
+    let loadedCustomers: CustomerData[] = []
+    const isSupabaseConfigured = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+    // 1. Supabase 연동 시도
+    if (isSupabaseConfigured) {
       try {
-        const parsed = JSON.parse(savedCustomers)
-        // 로드할 때 모든 연락처 필드 보정
-        const fixed = parsed.map((c: any) => ({
-          ...c,
-          전화번호: fixPhoneNumber(c.전화번호),
-          핸드폰번호: fixPhoneNumber(c.핸드폰번호),
-          설치전화번호: fixPhoneNumber(c.설치전화번호),
-          설치핸드폰번호: fixPhoneNumber(c.설치핸드폰번호)
-        }))
-        setCustomersState(fixed)
-        // 보정된 데이터를 다시 저장하여 영구 반영
-        localStorage.setItem('customers', JSON.stringify(fixed))
-      } catch (e) {
-        setCustomersState(initialCustomers)
+        const { data, error } = await supabase
+          .from('customers')
+          .select('*')
+        if (!error && data && data.length > 0) {
+          loadedCustomers = data as CustomerData[]
+        } else if (error) {
+          console.error('Supabase load error:', error)
+        }
+      } catch (err) {
+        console.error('Failed to query Supabase:', err)
       }
-    } else {
-      const initialFixed = initialCustomers.map((c: any) => ({
-        ...c,
-        전화번호: fixPhoneNumber(c.전화번호),
-        핸드폰번호: fixPhoneNumber(c.핸드폰번호),
-        설치전화번호: fixPhoneNumber(c.설치전화번호),
-        설치핸드폰번호: fixPhoneNumber(c.설치핸드폰번호)
-      }))
-      setCustomersState(initialFixed)
     }
-    setIsInitialized(true)
+
+    // 2. Supabase에 데이터가 없거나 비활성화 시 로컬 스토리지 사용
+    if (loadedCustomers.length === 0) {
+      const savedCustomers = localStorage.getItem('customers')
+      if (savedCustomers) {
+        try {
+          loadedCustomers = JSON.parse(savedCustomers)
+        } catch (e) {
+          loadedCustomers = initialCustomers
+        }
+      } else {
+        loadedCustomers = initialCustomers
+      }
+    }
+
+    // 3. 연락처 보정 적용
+    const fixed = loadedCustomers.map((c: any) => ({
+      ...c,
+      전화번호: fixPhoneNumber(c.전화번호),
+      핸드폰번호: fixPhoneNumber(c.핸드폰번호),
+      설치전화번호: fixPhoneNumber(c.설치전화번호),
+      설치핸드폰번호: fixPhoneNumber(c.설치핸드폰번호)
+    }))
+
+    setCustomersState(fixed)
+    localStorage.setItem('customers', JSON.stringify(fixed))
+
+    // Supabase가 설정되어 있고 원격 데이터가 비어있었다면 초기 로컬 데이터를 업로드
+    if (isSupabaseConfigured && loadedCustomers.length === 0) {
+      try {
+        await supabase.from('customers').upsert(fixed)
+      } catch (err) {
+        console.error('Failed to sync initial data to Supabase:', err)
+      }
+    }
+  }
+
+  // Load data on mount
+  useEffect(() => {
+    refreshData().then(() => {
+      setIsInitialized(true)
+    })
   }, [])
 
-  // Save to localStorage whenever customers change
-  const setCustomers = (data: CustomerData[]) => {
+  // Save to localStorage and Supabase whenever customers change
+  const setCustomers = async (data: CustomerData[]) => {
     // 저장 전에도 보정 적용
     const fixedData = data.map(c => ({
       ...c,
@@ -108,21 +141,48 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       설치전화번호: fixPhoneNumber(c.설치전화번호),
       설치핸드폰번호: fixPhoneNumber(c.설치핸드폰번호)
     }))
+    
     setCustomersState(fixedData)
     localStorage.setItem('customers', JSON.stringify(fixedData))
+
+    const isSupabaseConfigured = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    if (isSupabaseConfigured) {
+      try {
+        // 기존 원격 데이터를 upsert를 통해 동기화
+        const { error } = await supabase.from('customers').upsert(fixedData)
+        if (error) {
+          console.error('Supabase upsert error:', error)
+        }
+      } catch (err) {
+        console.error('Supabase sync error:', err)
+      }
+    }
   }
 
-  // 좌표 업데이트 함수
-  const updateCustomerCoords = (id: string, lat: number, lng: number) => {
+  // 좌표 업데이트 함수 및 동기화
+  const updateCustomerCoords = async (id: string, lat: number, lng: number) => {
+    let updated: CustomerData[] = []
     setCustomersState(prev => {
-      const updated = prev.map(c => c.id === id ? { ...c, lat, lng } : c)
+      updated = prev.map(c => c.id === id ? { ...c, lat, lng } : c)
       localStorage.setItem('customers', JSON.stringify(updated))
       return updated
     })
+
+    const isSupabaseConfigured = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    if (isSupabaseConfigured) {
+      try {
+        const target = updated.find(c => c.id === id)
+        if (target) {
+          await supabase.from('customers').upsert([target])
+        }
+      } catch (err) {
+        console.error('Supabase coords sync error:', err)
+      }
+    }
   }
 
-  // 샘플 데이터로 리셋
-  const resetToDefault = () => {
+  // 샘플 데이터로 리셋 및 동기화
+  const resetToDefault = async () => {
     const initialFixed = initialCustomers.map((c: any) => ({
       ...c,
       전화번호: fixPhoneNumber(c.전화번호),
@@ -130,12 +190,33 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       설치전화번호: fixPhoneNumber(c.설치전화번호),
       설치핸드폰번호: fixPhoneNumber(c.설치핸드폰번호)
     }))
-    setCustomers(initialFixed)
+
+    // Supabase 테이블 데이터 전체 삭제 후 초기 데이터 삽입
+    const isSupabaseConfigured = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    if (isSupabaseConfigured) {
+      try {
+        await supabase.from('customers').delete().neq('id', '')
+      } catch (err) {
+        console.error('Supabase clear before reset error:', err)
+      }
+    }
+
+    await setCustomers(initialFixed)
   }
 
-  // 모든 데이터 삭제
-  const clearAllCustomers = () => {
-    setCustomers([])
+  // 모든 데이터 삭제 및 동기화
+  const clearAllCustomers = async () => {
+    setCustomersState([])
+    localStorage.removeItem('customers')
+
+    const isSupabaseConfigured = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    if (isSupabaseConfigured) {
+      try {
+        await supabase.from('customers').delete().neq('id', '')
+      } catch (err) {
+        console.error('Supabase delete all error:', err)
+      }
+    }
   }
 
   // Prevent hydration mismatch by not rendering children until initialized
@@ -149,7 +230,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       setSelectedIds, 
       updateCustomerCoords, 
       resetToDefault, 
-      clearAllCustomers 
+      clearAllCustomers,
+      refreshData
     }}>
       {children}
     </DataContext.Provider>
