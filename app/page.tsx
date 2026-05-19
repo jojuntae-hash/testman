@@ -290,6 +290,18 @@ export default function HomePage() {
         .folder-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; }
         .folder-label { font-size: 0.85rem; color: #666; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 80px; }
         .folder-count { font-size: 1.2rem; font-weight: 800; }
+
+        @media (max-width: 480px) {
+          .folder-grid { padding: 0 16px; gap: 10px; margin-bottom: 20px; }
+          .folder-card { padding: 12px 14px; gap: 10px; border-radius: 16px; }
+          .folder-icon { width: 38px; height: 38px; border-radius: 10px; }
+          .folder-icon :global(svg) { width: 18px !important; height: 18px !important; }
+          .folder-label { font-size: 0.75rem; max-width: 70px; }
+          .folder-count { font-size: 1.05rem; }
+          .customer-list-section { padding: 0 16px; }
+          .search-section { padding: 0 16px 16px 16px; }
+        }
+
         .list-title { margin-bottom: 15px; align-items: flex-end; }
         .title-with-btn { display: flex; flex-direction: column; gap: 5px; }
         .select-all-mini-btn { align-self: flex-start; background: #f1f5f9; border: 1px solid #e2e8f0; padding: 2px 8px; border-radius: 6px; font-size: 0.7rem; font-weight: 700; color: #64748b; cursor: pointer; }
