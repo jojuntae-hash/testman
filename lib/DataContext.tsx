@@ -15,6 +15,7 @@ export interface CustomerData {
   당월작업: string
   최종작업내용: string
   status: string // '작업미완료' | '예약완료' | '작업완료' | '삭제됨' 및 사용자 정의 폴더명
+  작업완료일?: string
   // 02. 계약정보
   계약자구분: string
   고객명_상호: string
@@ -42,12 +43,21 @@ interface DataContextType {
   updateCustomerCoords: (id: string, lat: number, lng: number) => void
   resetToDefault: () => void
   clearAllCustomers: () => void
+  changeCustomerStatus: (ids: string[], newStatus: string) => Promise<void>
   refreshData: () => Promise<void>
+  completionModal?: {
+    isOpen: boolean
+    targetIds: string[]
+    newStatus: string
+    close: () => void
+    confirm: (date: string) => Promise<void>
+  }
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined)
 
 import { initialCustomers } from './initialData'
+import WorkCompletionModal from '@/components/WorkCompletionModal'
 
 export function DataProvider({ children }: { children: React.ReactNode }) {
   const [customers, setCustomersState] = useState<CustomerData[]>([])
@@ -204,6 +214,76 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     await setCustomers(initialFixed)
   }
 
+  const [completionModalState, setCompletionModalState] = useState<{
+    isOpen: boolean
+    targetIds: string[]
+    newStatus: string
+  }>({
+    isOpen: false,
+    targetIds: [],
+    newStatus: ''
+  })
+
+  const closeCompletionModal = () => {
+    setCompletionModalState({
+      isOpen: false,
+      targetIds: [],
+      newStatus: ''
+    })
+  }
+
+  // 실제 상태 변경 실행 함수
+  const executeStatusChange = async (ids: string[], newStatus: string, completedDate?: string) => {
+    let updated: CustomerData[] = []
+    setCustomersState(prev => {
+      updated = prev.map(c => {
+        if (ids.includes(c.id)) {
+          return {
+            ...c,
+            status: newStatus,
+            작업완료일: newStatus === '작업완료' ? completedDate : undefined
+          }
+        }
+        return c
+      })
+      localStorage.setItem('customers', JSON.stringify(updated))
+      return updated
+    })
+
+    const isSupabaseConfigured = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    if (isSupabaseConfigured) {
+      try {
+        const targets = updated.filter(c => ids.includes(c.id))
+        if (targets.length > 0) {
+          const { error } = await supabase.from('customers').upsert(targets)
+          if (error) {
+            console.error('Supabase status change sync error:', error)
+          }
+        }
+      } catch (err) {
+        console.error('Supabase status change sync error:', err)
+      }
+    }
+  }
+
+  // 상태 변경 및 동기화 함수
+  const changeCustomerStatus = async (ids: string[], newStatus: string) => {
+    if (newStatus === '작업완료') {
+      setCompletionModalState({
+        isOpen: true,
+        targetIds: ids,
+        newStatus
+      })
+      return
+    }
+    await executeStatusChange(ids, newStatus)
+  }
+
+  const confirmCompletion = async (date: string) => {
+    await executeStatusChange(completionModalState.targetIds, completionModalState.newStatus, date)
+    closeCompletionModal()
+  }
+
   // 모든 데이터 삭제 및 동기화
   const clearAllCustomers = async () => {
     setCustomersState([])
@@ -231,9 +311,18 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       updateCustomerCoords, 
       resetToDefault, 
       clearAllCustomers,
-      refreshData
+      changeCustomerStatus,
+      refreshData,
+      completionModal: {
+        isOpen: completionModalState.isOpen,
+        targetIds: completionModalState.targetIds,
+        newStatus: completionModalState.newStatus,
+        close: closeCompletionModal,
+        confirm: confirmCompletion
+      }
     }}>
       {children}
+      <WorkCompletionModal />
     </DataContext.Provider>
   )
 }

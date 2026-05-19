@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useData } from '@/lib/DataContext'
 import { supabase } from '@/lib/supabase'
-import { Search, ChevronRight, FileText, Calendar, Clock, X, Trash2 } from 'lucide-react'
+import { Search, ChevronRight, FileText, Calendar, Clock, X, Trash2, Edit2 } from 'lucide-react'
 
 type AggregatedRecord = {
   id: string
@@ -29,6 +29,47 @@ export default function MemosPage() {
   const [groupedData, setGroupedData] = useState<GroupedCustomer[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc')
+
+  const [editingRecord, setEditingRecord] = useState<AggregatedRecord | null>(null)
+  const [editContent, setEditContent] = useState('')
+
+  const handleOpenEdit = (record: AggregatedRecord) => {
+    setEditingRecord(record)
+    setEditContent(record.content)
+  }
+
+  const handleSaveEdit = async () => {
+    if (!editingRecord) return
+    if (!editContent.trim()) {
+      alert('내용을 입력해주세요.')
+      return
+    }
+    
+    const typeKor = editingRecord.type === 'memo' ? '메모' : '방문기록'
+    
+    try {
+      if (editingRecord.type === 'memo') {
+        const { error } = await supabase
+          .from('memos')
+          .update({ content: editContent.trim(), updated_at: new Date().toISOString() })
+          .eq('id', editingRecord.id)
+        if (error) throw error
+      } else {
+        const { error } = await supabase
+          .from('visit_logs')
+          .update({ content: editContent.trim() })
+          .eq('id', editingRecord.id)
+        if (error) throw error
+      }
+      
+      alert(`${typeKor}가 수정되었습니다.`)
+      setEditingRecord(null)
+      fetchData()
+    } catch (err: any) {
+      console.error(err)
+      alert(`수정 중 오류가 발생했습니다: ${err.message || err}`)
+    }
+  }
 
   const handleDeleteRecord = async (recordId: string, type: 'memo' | 'visit_log') => {
     const typeKor = type === 'memo' ? '메모' : '방문기록'
@@ -222,7 +263,7 @@ export default function MemosPage() {
                 className="card-header"
                 onClick={() => router.push(`/detail/${group.customerId}`)}
               >
-                <div>
+                <div className="customer-info-row">
                   <h2 className="customer-name">{group.customerName}</h2>
                   <span className="customer-num">고객번호: {group.customerNumber}</span>
                 </div>
@@ -259,6 +300,13 @@ export default function MemosPage() {
                             {new Date(record.date).toLocaleDateString()} {new Date(record.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                           </span>
                           <button 
+                            className="edit-record-btn" 
+                            onClick={() => handleOpenEdit(record)}
+                            title="수정"
+                          >
+                            <Edit2 size={12} />
+                          </button>
+                          <button 
                             className="delete-record-btn" 
                             onClick={() => handleDeleteRecord(record.id, record.type)}
                             title="삭제"
@@ -276,6 +324,38 @@ export default function MemosPage() {
           ))
         )}
       </div>
+
+      {/* 메모 수정 모달 */}
+      {editingRecord && (
+        <div className="edit-modal-overlay" onClick={() => setEditingRecord(null)}>
+          <div className="edit-modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>{editingRecord.type === 'memo' ? '메모 수정' : '방문기록 수정'}</h3>
+              <button className="modal-close-btn" onClick={() => setEditingRecord(null)}>
+                <X size={18} />
+              </button>
+            </div>
+            <div className="modal-body">
+              <textarea
+                className="edit-textarea"
+                value={editContent}
+                onChange={(e) => setEditContent(e.target.value)}
+                placeholder="내용을 입력하세요..."
+                rows={4}
+                autoFocus
+              />
+            </div>
+            <div className="modal-footer">
+              <button className="cancel-btn" onClick={() => setEditingRecord(null)}>
+                취소
+              </button>
+              <button className="save-btn" onClick={handleSaveEdit}>
+                저장하기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <style jsx>{`
         .memos-page {
@@ -352,7 +432,7 @@ export default function MemosPage() {
         .card-header {
           display: flex;
           justify-content: space-between;
-          align-items: flex-start;
+          align-items: center;
           margin-bottom: 16px;
           padding-bottom: 12px;
           border-bottom: 1px dashed #e2e8f0;
@@ -369,15 +449,25 @@ export default function MemosPage() {
         .card-header:hover .customer-name {
           color: #3b82f6;
         }
+        .customer-info-row {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          flex-wrap: wrap;
+        }
         .customer-name {
           font-size: 1.1rem;
           font-weight: 800;
           color: #0f172a;
-          margin: 0 0 4px 0;
+          margin: 0;
         }
         .customer-num {
-          font-size: 0.8rem;
+          font-size: 0.75rem;
           color: #64748b;
+          background: #f1f5f9;
+          padding: 2px 8px;
+          border-radius: 6px;
+          font-weight: 600;
         }
         .detail-btn {
           background: #eff6ff;
@@ -475,6 +565,131 @@ export default function MemosPage() {
         .delete-record-btn:hover {
           color: #ef4444;
           background: #fee2e2;
+        }
+        .edit-record-btn {
+          background: transparent;
+          border: none;
+          color: #94a3b8;
+          cursor: pointer;
+          padding: 2px;
+          border-radius: 4px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.2s;
+        }
+        .edit-record-btn:hover {
+          color: #3b82f6;
+          background: #eff6ff;
+        }
+        
+        /* 수정 모달 스타일 */
+        .edit-modal-overlay {
+          position: absolute;
+          top: 0; left: 0; right: 0; bottom: 0;
+          background: rgba(15, 23, 42, 0.3);
+          backdrop-filter: blur(4px);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 2000;
+          padding: 20px;
+        }
+        .edit-modal-card {
+          background: #fff;
+          border-radius: 20px;
+          width: 100%;
+          max-width: 440px;
+          box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+          border: 1px solid #e2e8f0;
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+          animation: modalPop 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        @keyframes modalPop {
+          0% { transform: scale(0.95); opacity: 0; }
+          100% { transform: scale(1); opacity: 1; }
+        }
+        .modal-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 16px 20px;
+          border-bottom: 1px solid #f1f5f9;
+        }
+        .modal-header h3 {
+          margin: 0;
+          font-size: 1rem;
+          font-weight: 800;
+          color: #0f172a;
+        }
+        .modal-close-btn {
+          color: #94a3b8;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 4px;
+          border-radius: 50%;
+          transition: all 0.2s;
+        }
+        .modal-close-btn:hover {
+          background: #f1f5f9;
+          color: #475569;
+        }
+        .modal-body {
+          padding: 20px;
+        }
+        .edit-textarea {
+          width: 100%;
+          padding: 12px;
+          border-radius: 12px;
+          border: 1px solid #e2e8f0;
+          background: #f8fafc;
+          font-size: 0.95rem;
+          color: #334155;
+          outline: none;
+          resize: none;
+          font-family: inherit;
+          line-height: 1.5;
+          transition: all 0.2s;
+        }
+        .edit-textarea:focus {
+          border-color: #3b82f6;
+          background: #fff;
+          box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        .modal-footer {
+          display: flex;
+          justify-content: flex-end;
+          gap: 10px;
+          padding: 12px 20px 20px;
+          border-top: 1px solid #f1f5f9;
+        }
+        .modal-footer button {
+          padding: 10px 18px;
+          border-radius: 10px;
+          font-size: 0.85rem;
+          font-weight: 700;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+        .cancel-btn {
+          background: #f1f5f9;
+          color: #475569;
+          border: 1px solid #e2e8f0;
+        }
+        .cancel-btn:hover {
+          background: #e2e8f0;
+        }
+        .save-btn {
+          background: #3b82f6;
+          color: #fff;
+          border: none;
+        }
+        .save-btn:hover {
+          background: #2563eb;
         }
         .record-text {
           font-size: 0.9rem;

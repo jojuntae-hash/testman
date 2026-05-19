@@ -8,7 +8,7 @@ import { Map, CustomOverlayMap } from 'react-kakao-maps-sdk'
 import Script from 'next/script'
 
 export default function MapPage() {
-  const { customers, setCustomers, selectedIds, updateCustomerCoords } = useData()
+  const { customers, setCustomers, selectedIds, updateCustomerCoords, changeCustomerStatus } = useData()
   const router = useRouter()
   
   // 상태 관리
@@ -20,6 +20,9 @@ export default function MapPage() {
   const [mapShowNames, setMapShowNames] = useState(false)
   const [kakaoKey, setKakaoKey] = useState('bcf159529047078b426216b892689408') // 기본 키로 초기화
   const [isExpanded, setIsExpanded] = useState(false)
+  const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number }>({ lat: 37.5665, lng: 126.9780 })
+  const [mapRef, setMapRef] = useState<any>(null)
+  const [currentPosition, setCurrentPosition] = useState<{ lat: number; lng: number } | null>(null)
 
   // 초기 설정 로드
   useEffect(() => {
@@ -125,28 +128,56 @@ export default function MapPage() {
     }
   }
 
-  const handleBulkStatusChange = (newStatus: string) => {
+  const handleBulkStatusChange = async (newStatus: string) => {
     if (selectedCustomersList.length === 0) return
     const msg = newStatus === '삭제됨' ? '선택한 고객을 삭제하시겠습니까?' : '상태를 변경하시겠습니까?'
     if (confirm(msg)) {
       const selectedListIds = selectedCustomersList.map(c => c.id)
-      const updated = customers.map(c => selectedListIds.includes(c.id) ? { ...c, status: newStatus } : c)
-      setCustomers(updated as any)
+      await changeCustomerStatus(selectedListIds, newStatus)
       setSelectedCustomersList([])
     }
   }
 
-  const handleCreateFolder = () => {
+  const handleCreateFolder = async () => {
     if (selectedCustomersList.length === 0) return
     const folderName = prompt('새로운 폴더 이름을 입력해 주세요.')
     if (!folderName || folderName.trim() === '') return
     const selectedListIds = selectedCustomersList.map(c => c.id)
-    const updated = customers.map(c => selectedListIds.includes(c.id) ? { ...c, status: folderName.trim() } : c)
-    setCustomers(updated as any)
+    await changeCustomerStatus(selectedListIds, folderName.trim())
     setSelectedCustomersList([])
   }
 
-  const center = markers.length > 0 ? { lat: markers[0].lat, lng: markers[0].lng } : { lat: 37.5665, lng: 126.9780 }
+  useEffect(() => {
+    if (markers.length > 0) {
+      setMapCenter({ lat: markers[0].lat, lng: markers[0].lng })
+    }
+  }, [markers])
+
+  const moveToCurrentLocation = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const lat = position.coords.latitude
+          const lng = position.coords.longitude
+          
+          setCurrentPosition({ lat, lng })
+          
+          if (mapRef) {
+            const moveLatLng = new window.kakao.maps.LatLng(lat, lng)
+            mapRef.setCenter(moveLatLng)
+          } else {
+            setMapCenter({ lat, lng })
+          }
+        },
+        (error) => {
+          alert('현재 위치를 가져올 수 없습니다. 위치 권한을 확인해 주세요.')
+        },
+        { enableHighAccuracy: true }
+      )
+    } else {
+      alert('이 브라우저에서는 위치 서비스를 지원하지 않습니다.')
+    }
+  }
 
   return (
     <div className="map-page">
@@ -173,20 +204,39 @@ export default function MapPage() {
             <p>지도를 불러오는 중...</p>
           </div>
         ) : (
-          <Map center={center} style={{ width: "100%", height: "100%" }} level={mapDefaultZoom}>
-            {markers.map((marker) => (
-              <CustomOverlayMap key={marker.id} position={{ lat: marker.lat, lng: marker.lng }}>
-                <div 
-                  className={`marker-wrapper ${isSelected(marker.id) ? 'active' : ''}`} 
-                  onClick={() => toggleCustomerSelection(marker.customer)} 
-                  style={{ '--m-color': getMarkerColor(marker.customer.status) } as any}
-                >
-                  <div className="marker-pin"><div className="marker-core"></div></div>
-                  {(isSelected(marker.id) || mapShowNames) && <div className="marker-tooltip">{marker.customer.고객명_상호}</div>}
-                </div>
-              </CustomOverlayMap>
-            ))}
-          </Map>
+          <>
+            <Map 
+              ref={setMapRef}
+              center={mapCenter} 
+              style={{ width: "100%", height: "100%" }} 
+              level={mapDefaultZoom}
+            >
+              {markers.map((marker) => (
+                <CustomOverlayMap key={marker.id} position={{ lat: marker.lat, lng: marker.lng }}>
+                  <div 
+                    className={`marker-wrapper ${isSelected(marker.id) ? 'active' : ''}`} 
+                    onClick={() => toggleCustomerSelection(marker.customer)} 
+                    style={{ '--m-color': getMarkerColor(marker.customer.status) } as any}
+                  >
+                    <div className="marker-pin"><div className="marker-core"></div></div>
+                    {(isSelected(marker.id) || mapShowNames) && <div className="marker-tooltip">{marker.customer.고객명_상호}</div>}
+                  </div>
+                </CustomOverlayMap>
+              ))}
+              
+              {currentPosition && (
+                <CustomOverlayMap position={currentPosition}>
+                  <div className="current-location-marker">
+                    <div className="pulse-ring"></div>
+                    <div className="center-dot"></div>
+                  </div>
+                </CustomOverlayMap>
+              )}
+            </Map>
+            <button className="current-location-btn" onClick={moveToCurrentLocation} title="현재 위치 보기">
+              <LocateFixed size={20} />
+            </button>
+          </>
         )}
       </div>
 
@@ -259,6 +309,15 @@ export default function MapPage() {
         .header-text p { font-size: 0.7rem; color: #999; margin: 0; }
         
         .map-area { flex: 1; position: relative; background: #f8f9fa; }
+        .current-location-btn { position: absolute; bottom: 145px; right: 15px; z-index: 10; width: 42px; height: 42px; border-radius: 50%; background: #fff; border: 1px solid #e2e8f0; box-shadow: 0 4px 10px rgba(0,0,0,0.15); display: flex; align-items: center; justify-content: center; cursor: pointer; color: #475569; transition: all 0.2s; }
+        .current-location-btn:hover { color: #3b82f6; background: #f8fafc; transform: scale(1.05); }
+        .current-location-btn:active { transform: scale(0.95); }
+        
+        .current-location-marker { position: relative; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; }
+        .center-dot { width: 12px; height: 12px; background: #3b82f6; border: 2px solid #fff; border-radius: 50%; box-shadow: 0 0 10px rgba(59, 130, 246, 0.8); z-index: 2; }
+        .pulse-ring { position: absolute; width: 36px; height: 36px; background: rgba(59, 130, 246, 0.4); border-radius: 50%; animation: pulse-ring-anim 1.5s cubic-bezier(0.24, 0, 0.38, 1) infinite; z-index: 1; }
+        @keyframes pulse-ring-anim { 0% { transform: scale(0.5); opacity: 1; } 100% { transform: scale(1.5); opacity: 0; } }
+
         .loading-map { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #999; gap: 10px; }
         .loading-spinner { width: 30px; height: 30px; border: 3px solid #f3f3f3; border-top: 3px solid #3b82f6; border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }

@@ -9,12 +9,31 @@ import VisitLogModal from '@/components/VisitLogModal'
 
 export default function DetailPage() {
   const { id } = useParams()
-  const { customers } = useData()
+  const { customers, changeCustomerStatus } = useData()
   const router = useRouter()
   
   const customer = customers.find(c => c.id === id)
   const [memo, setMemo] = useState('')
   const [isVisitModalOpen, setIsVisitModalOpen] = useState(false)
+
+  const uniqueFolders = React.useMemo(() => {
+    const statuses = Array.from(new Set(customers.map(c => c.status)))
+    const base = ['작업미완료', '예약완료', '작업완료']
+    const customs = statuses.filter(s => !['작업미완료', '예약완료', '작업완료', '삭제됨'].includes(s))
+    return [...base, ...customs]
+  }, [customers])
+
+  const handleFolderChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newStatus = e.target.value
+    if (newStatus === '__NEW__') {
+      const newFolder = prompt('새로운 폴더 이름을 입력하세요.')
+      if (newFolder && newFolder.trim() !== '') {
+        await changeCustomerStatus([customer.id], newFolder.trim())
+      }
+    } else {
+      await changeCustomerStatus([customer.id], newStatus)
+    }
+  }
 
   useEffect(() => {
     if (id) {
@@ -76,7 +95,24 @@ export default function DetailPage() {
       </header>
 
       <div className="customer-title-section">
-        <span className="badge-simple">정기 관리 대상</span>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <span className="badge-simple">정기 관리 대상</span>
+          <div className="folder-select-container">
+            <label style={{ fontSize: '0.75rem', color: '#666', marginRight: 6, fontWeight: 700 }}>폴더 이동:</label>
+            <select 
+              value={customer.status} 
+              onChange={handleFolderChange}
+              className="folder-select-detail"
+            >
+              {uniqueFolders.map(folder => (
+                <option key={folder} value={folder}>
+                  {folder === '작업미완료' ? '작업 미완료' : folder === '예약완료' ? '예약 완료' : folder === '작업완료' ? '작업 완료' : folder}
+                </option>
+              ))}
+              <option value="__NEW__">+ 새 폴더 만들기</option>
+            </select>
+          </div>
+        </div>
         <div className="title-row">
           <h2 className="customer-name">{customer.고객명_상호}</h2>
           {customer.전화번호 && (
@@ -122,6 +158,12 @@ export default function DetailPage() {
             <label>당월작업</label>
             <span>{customer.당월작업}</span>
           </div>
+          {customer.status === '작업완료' && customer.작업완료일 && (
+            <div className="info-item" style={{ borderLeft: '3px solid #10b981', paddingLeft: 8 }}>
+              <label style={{ color: '#10b981', fontWeight: 700 }}>작업 완료일</label>
+              <span style={{ color: '#10b981', fontWeight: 700 }}>{customer.작업완료일}</span>
+            </div>
+          )}
           <div className="info-item full">
             <label>최종작업내용</label>
             <span>{customer.최종작업내용}</span>
@@ -341,6 +383,22 @@ export default function DetailPage() {
         .value-with-action { display: flex; align-items: center; gap: 8px; }
         .mini-call-btn { width: 24px; height: 24px; background: #ecfdf5; color: #10b981; border: 1px solid #d1fae5; border-radius: 6px; display: flex; align-items: center; justify-content: center; text-decoration: none; transition: all 0.2s; }
         .mini-call-btn:active { transform: scale(0.9); }
+        .folder-select-container {
+          display: flex;
+          align-items: center;
+          background: #f1f5f9;
+          padding: 4px 10px;
+          border-radius: 8px;
+        }
+        .folder-select-detail {
+          border: none;
+          background: transparent;
+          font-size: 0.8rem;
+          font-weight: 700;
+          color: #3b82f6;
+          outline: none;
+          cursor: pointer;
+        }
       `}</style>
     </div>
   )

@@ -14,13 +14,15 @@ import {
   Trash2,
   Clock,
   Calendar,
-  CheckCircle2
+  CheckCircle2,
+  MoreHorizontal
 } from 'lucide-react'
 
 export default function BottomNav() {
   const pathname = usePathname()
   const router = useRouter()
-  const { customers, setCustomers, selectedIds, setSelectedIds } = useData()
+  const { customers, setCustomers, selectedIds, setSelectedIds, changeCustomerStatus } = useData()
+  const [isMoreOpen, setIsMoreOpen] = React.useState(false)
 
   // 모달 관련 상태
   const [isFolderModalOpen, setIsFolderModalOpen] = React.useState(false)
@@ -32,12 +34,11 @@ export default function BottomNav() {
       .filter(status => !['작업미완료', '예약완료', '작업완료', '삭제됨'].includes(status))
   }, [customers])
 
-  const handleBulkStatusChange = (newStatus: string) => {
+  const handleBulkStatusChange = async (newStatus: string) => {
     if (selectedIds.length === 0) return
     const msg = newStatus === '삭제됨' ? '선택한 고객을 삭제하시겠습니까?' : `선택한 고객을 '${newStatus}' 상태로 변경하시겠습니까?`
     if (confirm(msg)) {
-      const updated = customers.map(c => selectedIds.includes(c.id) ? { ...c, status: newStatus } : c)
-      setCustomers(updated as any)
+      await changeCustomerStatus(selectedIds, newStatus)
       setSelectedIds([])
     }
   }
@@ -62,7 +63,7 @@ export default function BottomNav() {
   }
 
   // 선택된 항목이 있을 때 렌더링할 선택 모드 액션 바
-  if (selectedIds.length > 0) {
+  if (pathname === '/' && selectedIds.length > 0) {
     return (
       <nav className="bottom-nav selection-mode">
         <div className="selection-info-container">
@@ -368,29 +369,107 @@ export default function BottomNav() {
     )
   }
 
+  const isMoreActive = ['/route', '/memos', '/settings'].includes(pathname)
+
   // 일반 내비게이션 바
   return (
-    <nav className="bottom-nav">
-      <Link href="/" className={`nav-item ${pathname === '/' ? 'active' : ''}`}>
-        <LayoutGrid size={22} />
-        <span>리스트</span>
-      </Link>
-      <Link href="/map" className={`nav-item ${pathname === '/map' ? 'active' : ''}`}>
-        <Map size={22} />
-        <span>지도</span>
-      </Link>
-      <Link href="/route" className={`nav-item ${pathname === '/route' ? 'active' : ''}`}>
-        <Navigation size={22} />
-        <span>경로</span>
-      </Link>
-      <Link href="/memos" className={`nav-item ${pathname === '/memos' ? 'active' : ''}`}>
-        <FileText size={22} />
-        <span>메모</span>
-      </Link>
-      <Link href="/settings" className={`nav-item ${pathname === '/settings' ? 'active' : ''}`}>
-        <Settings size={22} />
-        <span>설정</span>
-      </Link>
-    </nav>
+    <>
+      {isMoreOpen && (
+        <div className="more-menu-overlay" onClick={() => setIsMoreOpen(false)}>
+          <div className="more-menu-container animated-slide-up" onClick={(e) => e.stopPropagation()}>
+            <Link href="/route" className={`more-menu-item ${pathname === '/route' ? 'active' : ''}`} onClick={() => setIsMoreOpen(false)}>
+              <Navigation size={18} />
+              <span>경로</span>
+            </Link>
+            <Link href="/memos" className={`more-menu-item ${pathname === '/memos' ? 'active' : ''}`} onClick={() => setIsMoreOpen(false)}>
+              <FileText size={18} />
+              <span>메모</span>
+            </Link>
+            <Link href="/settings" className={`more-menu-item ${pathname === '/settings' ? 'active' : ''}`} onClick={() => setIsMoreOpen(false)}>
+              <Settings size={18} />
+              <span>설정</span>
+            </Link>
+          </div>
+        </div>
+      )}
+
+      <nav className="bottom-nav">
+        <Link href="/" className={`nav-item ${pathname === '/' ? 'active' : ''}`}>
+          <LayoutGrid size={22} />
+          <span>리스트</span>
+        </Link>
+        <Link href="/map" className={`nav-item ${pathname === '/map' ? 'active' : ''}`}>
+          <Map size={22} />
+          <span>지도</span>
+        </Link>
+        <Link href="/completed" className={`nav-item ${pathname === '/completed' ? 'active' : ''}`}>
+          <CheckCircle2 size={22} />
+          <span>작업완료</span>
+        </Link>
+        <button 
+          className={`nav-item nav-btn ${isMoreActive ? 'active' : ''} ${isMoreOpen ? 'open' : ''}`}
+          onClick={() => setIsMoreOpen(!isMoreOpen)}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', outline: 'none' }}
+        >
+          <MoreHorizontal size={22} />
+          <span>더보기</span>
+        </button>
+      </nav>
+
+      <style jsx>{`
+        .more-menu-overlay {
+          position: absolute;
+          top: 0; left: 0; right: 0; bottom: 0;
+          background: rgba(15, 23, 42, 0.08);
+          backdrop-filter: blur(1.5px);
+          z-index: 9999;
+        }
+        .more-menu-container {
+          position: absolute;
+          bottom: 80px;
+          right: 20px;
+          background: rgba(255, 255, 255, 0.95);
+          backdrop-filter: blur(12px);
+          border-radius: 16px;
+          box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+          border: 1px solid rgba(226, 232, 240, 0.8);
+          padding: 8px;
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+          width: 140px;
+          z-index: 10000;
+        }
+        .animated-slide-up {
+          animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        @keyframes slideUp {
+          0% { transform: translateY(10px) scale(0.96); opacity: 0; }
+          100% { transform: translateY(0) scale(1); opacity: 1; }
+        }
+        :global(.more-menu-item) {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 10px 14px;
+          border-radius: 10px;
+          color: #475569;
+          text-decoration: none;
+          font-size: 0.85rem;
+          font-weight: 700;
+          transition: all 0.2s;
+        }
+        :global(.more-menu-item:active) {
+          background: #f1f5f9;
+        }
+        :global(.more-menu-item.active) {
+          background: #eff6ff;
+          color: #3b82f6;
+        }
+        .nav-btn.open {
+          color: #3b82f6;
+        }
+      `}</style>
+    </>
   )
 }

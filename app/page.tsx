@@ -10,6 +10,7 @@ export default function HomePage() {
   const router = useRouter()
   const [selectedFolder, setSelectedFolder] = useState<string | null>('전체리스트')
   const [searchTerm, setSearchTerm] = useState('')
+  const [completedSortOrder, setCompletedSortOrder] = useState<'desc' | 'asc'>('desc')
 
   // 마운트 시 이전에 선택했던 폴더 복구
   useEffect(() => {
@@ -125,8 +126,26 @@ export default function HomePage() {
         (c.모델명 && c.모델명.toLowerCase().includes(lowerTerm))
       )
     }
+
+    if (selectedFolder === '작업완료') {
+      list.sort((a, b) => {
+        const dateA = a.작업완료일 || ''
+        const dateB = b.작업완료일 || ''
+        
+        if (dateA === dateB) {
+          return (a.고객명_상호 || '').localeCompare(b.고객명_상호 || '')
+        }
+        
+        if (completedSortOrder === 'desc') {
+          return dateB.localeCompare(dateA)
+        } else {
+          return dateA.localeCompare(dateB)
+        }
+      })
+    }
+
     return list
-  }, [customers, selectedFolder, searchTerm])
+  }, [customers, selectedFolder, searchTerm, completedSortOrder])
 
   const toggleSelect = (id: string, e: React.MouseEvent) => {
     e.stopPropagation()
@@ -207,7 +226,21 @@ export default function HomePage() {
               {filteredCustomers.length > 0 && selectedIds.length === filteredCustomers.length ? '전체 해제' : '전체 선택'}
             </button>
           </div>
-          <span className="count-badge">총 {filteredCustomers.length}건</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {selectedFolder === '작업완료' && (
+              <div className="sort-box">
+                <select 
+                  value={completedSortOrder} 
+                  onChange={(e) => setCompletedSortOrder(e.target.value as 'desc' | 'asc')}
+                  className="sort-select"
+                >
+                  <option value="desc">완료일 최신순</option>
+                  <option value="asc">완료일 오래된순</option>
+                </select>
+              </div>
+            )}
+            <span className="count-badge">총 {filteredCustomers.length}건</span>
+          </div>
         </div>
 
         <div className="status-customer-list">
@@ -221,7 +254,13 @@ export default function HomePage() {
                 <div className="item-main">
                   <div className="item-title-row">
                     <p className="font-bold">{customer.고객명_상호}</p>
-                    <span className={`folder-badge status-${customer.status}`}>{customer.status}</span>
+                    {customer.status === '작업완료' ? (
+                      <span className="model-badge completed-date">
+                        {customer.작업완료일 ? `${customer.작업완료일.substring(5)} 완료` : '완료'}
+                      </span>
+                    ) : (
+                      <span className={`folder-badge status-${customer.status}`}>{customer.status}</span>
+                    )}
                     {getModelTypeBadge(customer.모델명)}
                     {getElapsedMonthsBadge(customer.계약일자)}
                   </div>
@@ -254,6 +293,8 @@ export default function HomePage() {
         .list-title { margin-bottom: 15px; align-items: flex-end; }
         .title-with-btn { display: flex; flex-direction: column; gap: 5px; }
         .select-all-mini-btn { align-self: flex-start; background: #f1f5f9; border: 1px solid #e2e8f0; padding: 2px 8px; border-radius: 6px; font-size: 0.7rem; font-weight: 700; color: #64748b; cursor: pointer; }
+        .sort-box { display: flex; align-items: center; background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 4px 8px; }
+        .sort-select { border: none; outline: none; font-size: 0.75rem; font-weight: 700; color: #475569; background: transparent; cursor: pointer; }
         .count-badge { background: #f0f0f0; padding: 2px 8px; border-radius: 10px; font-size: 0.75rem; font-weight: 700; }
         .status-customer-list { display: flex; flex-direction: column; gap: 10px; }
         .status-customer-item { background: #fff; padding: 18px 20px; border-radius: 18px; border: 1px solid var(--border-color); display: flex; align-items: center; gap: 12px; cursor: pointer; transition: all 0.2s; }
@@ -269,6 +310,7 @@ export default function HomePage() {
         :global(.model-badge.air-cleaner) { background: #ecfdf5; color: #10b981; }
         :global(.model-badge.bidet) { background: #fff7ed; color: #ea580c; }
         :global(.model-badge.elapsed-months) { background: #f1f5f9; color: #475569; }
+        :global(.model-badge.completed-date) { background: #ecfdf5; color: #10b981; border: 1px solid #a7f3d0; }
         .item-main p { margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .item-actions { display: flex; align-items: center; gap: 6px; }
         .action-circle-btn { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; text-decoration: none; transition: all 0.2s; }
