@@ -24,6 +24,7 @@ export default function DetailPage() {
   }, [customers])
 
   const handleFolderChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+    if (!customer) return
     const newStatus = e.target.value
     if (newStatus === '__NEW__') {
       const newFolder = prompt('새로운 폴더 이름을 입력하세요.')
