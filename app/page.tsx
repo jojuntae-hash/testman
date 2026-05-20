@@ -145,6 +145,24 @@ export default function HomePage() {
           return dateA.localeCompare(dateB)
         }
       })
+    } else if (selectedFolder === '예약완료') {
+      list.sort((a, b) => {
+        const dateA = a.예약일자 || ''
+        const dateB = b.예약일자 || ''
+        
+        if (!dateA && !dateB) return (a.고객명_상호 || '').localeCompare(b.고객명_상호 || '')
+        if (!dateA) return 1
+        if (!dateB) return -1
+        
+        if (dateA === dateB) {
+          return (a.고객명_상호 || '').localeCompare(b.고객명_상호 || '')
+        }
+        return dateA.localeCompare(dateB)
+      })
+    } else if (selectedFolder === '작업미완료') {
+      list.sort((a, b) => {
+        return (a.고객명_상호 || '').localeCompare(b.고객명_상호 || '')
+      })
     }
 
     return list

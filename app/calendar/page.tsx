@@ -323,11 +323,12 @@ export default function CalendarPage() {
     const startStr = toUtcString(startDate)
     const endStr = toUtcString(endDate)
 
-    const title = `[방문점검] ${customer.고객명_상호} (${customer.모델명 || ''})`
+    const title = `${customer.고객명_상호}`
     const location = customer.설치주소 || customer.주소 || ''
-    const details = `고객번호: ${customer.고객번호 || ''}\n당월작업: ${customer.당월작업 || ''}\n특이사항: ${customer.설치시특이사항 || ''}`
+    const details = `고객번호: ${customer.고객번호 || ''}\n당월작업: ${customer.당월작업 || ''}\n모델명: ${customer.모델명 || ''}`
 
-    return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${startStr}/${endStr}&details=${encodeURIComponent(details)}&location=${encodeURIComponent(location)}`
+    // src=캘린더ID → '예약고객' 캘린더에 직접 등록
+    return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${startStr}/${endStr}&details=${encodeURIComponent(details)}&location=${encodeURIComponent(location)}&src=137de0a07ebdb855f85fd0e902b1d814b6f7fb4a63a426b89f1c1f2b817dc127%40group.calendar.google.com`
   }
 
   return (
