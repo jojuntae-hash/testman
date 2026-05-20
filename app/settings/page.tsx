@@ -19,6 +19,7 @@ export default function SettingsPage() {
   const [mapShowNames, setMapShowNames] = useState(false)
   const [kakaoKey, setKakaoKey] = useState('')
   const [isKeyLocked, setIsKeyLocked] = useState(true)
+  const [navigationApp, setNavigationApp] = useState('tmap')
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -28,6 +29,7 @@ export default function SettingsPage() {
       setMapDefaultZoom(parseInt(localStorage.getItem('map_default_zoom') || '4', 10))
       setMapShowNames(localStorage.getItem('map_show_names') === 'true')
       setKakaoKey(localStorage.getItem('kakao_app_key') || 'bcf159529047078b426216b892689408')
+      setNavigationApp(localStorage.getItem('navigation_app') || 'tmap')
     }
   }, [])
 
@@ -38,6 +40,7 @@ export default function SettingsPage() {
     localStorage.setItem('map_default_zoom', mapDefaultZoom.toString())
     localStorage.setItem('map_show_names', mapShowNames.toString())
     localStorage.setItem('kakao_app_key', kakaoKey)
+    localStorage.setItem('navigation_app', navigationApp)
     alert('설정이 저장되었습니다.')
   }
 
@@ -288,6 +291,24 @@ export default function SettingsPage() {
                   {isKeyLocked ? <Lock size={16} /> : <Unlock size={16} />}
                 </button>
               </div>
+            </div>
+          </div>
+
+          <div className="setting-card">
+            <div className="setting-info">
+              <h3>주소 연결 지도 앱</h3>
+              <p>주소 클릭 시 연결할 지도 서비스입니다.</p>
+            </div>
+            <div className="setting-control">
+              <select 
+                className="setting-select"
+                value={navigationApp}
+                onChange={(e) => setNavigationApp(e.target.value)}
+              >
+                <option value="tmap">티맵 (TMAP)</option>
+                <option value="kakao">카카오맵</option>
+                <option value="naver">네이버 지도</option>
+              </select>
             </div>
           </div>
 

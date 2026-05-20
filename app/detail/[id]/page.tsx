@@ -76,6 +76,34 @@ export default function DetailPage() {
     }
   }
 
+  const openMap = (address: string) => {
+    if (!address) return
+    const encoded = encodeURIComponent(address)
+    const selectedMap = localStorage.getItem('navigation_app') || 'tmap'
+
+    if (selectedMap === 'tmap') {
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+      if (isMobile) {
+        const isAndroid = /Android/i.test(navigator.userAgent)
+        if (isAndroid) {
+          window.location.href = `intent://search?name=${encoded}#Intent;scheme=tmap;package=com.skt.tmap.phone;end`
+        } else {
+          window.location.href = `tmap://search?name=${encoded}`
+          setTimeout(() => {
+            window.location.href = 'https://apps.apple.com/kr/app/id431298388'
+          }, 1500)
+        }
+      } else {
+        alert('Tmap은 모바일 기기에서만 실행 가능합니다. 카카오맵으로 연결합니다.')
+        window.open(`https://map.kakao.com/link/search/${encoded}`, '_blank')
+      }
+    } else if (selectedMap === 'naver') {
+      window.open(`https://map.naver.com/v5/search/${encoded}`, '_blank')
+    } else {
+      window.open(`https://map.kakao.com/link/search/${encoded}`, '_blank')
+    }
+  }
+
   if (!customer) {
     return (
       <div style={{ padding: '40px', textAlign: 'center' }}>
@@ -215,7 +243,16 @@ export default function DetailPage() {
           </div>
           <div className="info-item full">
             <label>주소</label>
-            <span>{customer.주소}</span>
+            <div className="value-with-action">
+              <span className="clickable-address" onClick={() => openMap(customer.주소)} style={{ cursor: 'pointer', color: 'var(--accent-blue)', textDecoration: 'underline' }}>
+                {customer.주소}
+              </span>
+              {customer.주소 && (
+                <button className="mini-map-btn" onClick={() => openMap(customer.주소)}>
+                  <MapPin size={12} />
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -252,7 +289,16 @@ export default function DetailPage() {
           </div>
           <div className="info-item full">
             <label>주소</label>
-            <span>{customer.설치주소}</span>
+            <div className="value-with-action">
+              <span className="clickable-address" onClick={() => openMap(customer.설치주소)} style={{ cursor: 'pointer', color: 'var(--accent-blue)', textDecoration: 'underline' }}>
+                {customer.설치주소}
+              </span>
+              {customer.설치주소 && (
+                <button className="mini-map-btn" onClick={() => openMap(customer.설치주소)}>
+                  <MapPin size={12} />
+                </button>
+              )}
+            </div>
           </div>
           <div className="info-item full memo">
             <label>설치시 특이사항</label>
@@ -384,6 +430,8 @@ export default function DetailPage() {
         .value-with-action { display: flex; align-items: center; gap: 8px; }
         .mini-call-btn { width: 24px; height: 24px; background: #ecfdf5; color: #10b981; border: 1px solid #d1fae5; border-radius: 6px; display: flex; align-items: center; justify-content: center; text-decoration: none; transition: all 0.2s; }
         .mini-call-btn:active { transform: scale(0.9); }
+        .mini-map-btn { width: 24px; height: 24px; background: #eff6ff; color: #3b82f6; border: 1px solid #dbeafe; border-radius: 6px; display: flex; align-items: center; justify-content: center; text-decoration: none; transition: all 0.2s; cursor: pointer; }
+        .mini-map-btn:active { transform: scale(0.9); }
         .folder-select-container {
           display: flex;
           align-items: center;
