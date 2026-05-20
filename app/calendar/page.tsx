@@ -84,24 +84,21 @@ export default function CalendarPage() {
     return kstToday.toISOString().split('T')[0]
   }, [])
 
-  // 이번 주의 일요일부터 토요일까지 7일 날짜 리스트 생성
+  // 기준일(currentDate)부터 연속된 4일 날짜 리스트 생성 (빽빽함 해결)
   const weekDays = useMemo(() => {
-    const startOfWeek = new Date(currentDate)
-    const day = startOfWeek.getDay() // 0: 일요일, 1: 월요일, ...
-    startOfWeek.setDate(startOfWeek.getDate() - day)
-
     const days = []
-    for (let i = 0; i < 7; i++) {
-      const d = new Date(startOfWeek)
-      d.setDate(startOfWeek.getDate() + i)
+    for (let i = 0; i < 4; i++) {
+      const d = new Date(currentDate)
+      d.setDate(currentDate.getDate() + i)
       days.push(d)
     }
     return days
   }, [currentDate])
 
   const dateRangeText = useMemo(() => {
+    if (weekDays.length === 0) return ''
     const start = weekDays[0]
-    const end = weekDays[6]
+    const end = weekDays[weekDays.length - 1]
     const format = (d: Date) => `${d.getFullYear()}.${(d.getMonth() + 1).toString().padStart(2, '0')}.${d.getDate().toString().padStart(2, '0')}`
     return `${format(start)} ~ ${format(end)}`
   }, [weekDays])
@@ -131,21 +128,139 @@ export default function CalendarPage() {
     return reservations.filter(r => r.timeInfo.date === dateStr && r.timeInfo.hour === hour)
   }
 
-  // 주 이동 헬퍼
+  // 4일 단위로 주 이동
   const handlePrevWeek = () => {
     const prev = new Date(currentDate)
-    prev.setDate(prev.getDate() - 7)
+    prev.setDate(prev.getDate() - 4)
     setCurrentDate(prev)
   }
 
   const handleNextWeek = () => {
     const next = new Date(currentDate)
-    next.setDate(next.getDate() + 7)
+    next.setDate(next.getDate() + 4)
     setCurrentDate(next)
   }
 
   const handleGoToday = () => {
     setCurrentDate(new Date())
+  }
+
+  // 드래그 앤 드롭 상태 및 레퍼런스
+  const [draggingId, setDraggingId] = useState<string | null>(null)
+  const [isLongPressed, setIsLongPressed] = useState(false)
+  const [activeDropCell, setActiveDropCell] = useState<{ date: string; hour: number } | null>(null)
+  const longPressTimer = React.useRef<any>(null)
+  const touchStartPos = React.useRef({ x: 0, y: 0 })
+
+  const handlePointerDown = (e: React.PointerEvent, customerId: string) => {
+    // 마우스의 경우 오직 좌클릭만 반응
+    if (e.pointerType === 'mouse' && e.button !== 0) return
+
+    touchStartPos.current = { x: e.clientX, y: e.clientY }
+    setIsLongPressed(false)
+
+    // 마우스는 지연 없이 드래그 시작, 터치는 1초(1000ms) 롱프레스 조건
+    const delay = e.pointerType === 'touch' ? 1000 : 0
+
+    if (longPressTimer.current) clearTimeout(longPressTimer.current)
+
+    longPressTimer.current = setTimeout(() => {
+      setDraggingId(customerId)
+      setIsLongPressed(true)
+      if (navigator.vibrate) {
+        navigator.vibrate(50) // 햅틱 진동 알림
+      }
+    }, delay)
+
+    // 타겟 엘리먼트에 포인터 캡처 지정 (화면 밖으로 포인터가 나가도 추적)
+    e.currentTarget.setPointerCapture(e.pointerId)
+  }
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!longPressTimer.current) return
+
+    // 롱프레스 전에 포인터가 10px 이상 과도하게 움직이면 스크롤로 인지하여 타이머 파기
+    const dist = Math.hypot(e.clientX - touchStartPos.current.x, e.clientY - touchStartPos.current.y)
+    if (!isLongPressed && dist > 10) {
+      clearTimeout(longPressTimer.current)
+      longPressTimer.current = null
+      return
+    }
+
+    // 롱프레스가 활성화되었을 때 드롭 대상 그리드 셀을 계산하여 하이라이트
+    if (isLongPressed && draggingId) {
+      const targetElement = document.elementFromPoint(e.clientX, e.clientY)
+      const gridCell = targetElement?.closest('.grid-cell') as HTMLElement
+      if (gridCell) {
+        const date = gridCell.getAttribute('data-date')
+        const hour = gridCell.getAttribute('data-hour')
+        if (date && hour) {
+          setActiveDropCell({ date, hour: parseInt(hour, 10) })
+        } else {
+          setActiveDropCell(null)
+        }
+      } else {
+        setActiveDropCell(null)
+      }
+    }
+  }
+
+  const handlePointerUp = (e: React.PointerEvent) => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current)
+      longPressTimer.current = null
+    }
+
+    e.currentTarget.releasePointerCapture(e.pointerId)
+
+    if (isLongPressed && draggingId) {
+      const targetElement = document.elementFromPoint(e.clientX, e.clientY)
+      const gridCell = targetElement?.closest('.grid-cell') as HTMLElement
+      if (gridCell) {
+        const targetDateStr = gridCell.getAttribute('data-date')
+        const targetHourStr = gridCell.getAttribute('data-hour')
+        
+        if (targetDateStr && targetHourStr) {
+          const targetHour = parseInt(targetHourStr, 10)
+          const targetCustomer = customers.find(c => c.id === draggingId)
+          let targetMinute = 0
+          if (targetCustomer) {
+            const timeInfo = parseReservationTime(targetCustomer)
+            if (timeInfo) targetMinute = timeInfo.minute
+          }
+
+          const pad = (n: number) => n.toString().padStart(2, '0')
+          const newDateTimeStr = `${targetDateStr} ${pad(targetHour)}:${pad(targetMinute)}`
+
+          const updated = customers.map(c => {
+            if (c.id === draggingId) {
+              return {
+                ...c,
+                예약일자: newDateTimeStr,
+                status: c.status === '작업미완료' ? '예약완료' : c.status
+              }
+            }
+            return c
+          })
+
+          setCustomers(updated as any)
+        }
+      }
+    }
+
+    setDraggingId(null)
+    setIsLongPressed(false)
+    setActiveDropCell(null)
+  }
+
+  const handlePointerCancel = (e: React.PointerEvent) => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current)
+      longPressTimer.current = null
+    }
+    setDraggingId(null)
+    setIsLongPressed(false)
+    setActiveDropCell(null)
   }
 
   // 모달 열기
@@ -288,21 +403,37 @@ export default function CalendarPage() {
                 {/* 각 시간 셀 */}
                 {HOURS.map(hour => {
                   const dayReservations = getReservationsFor(date, hour)
+                  const isOver = activeDropCell && activeDropCell.date === date.toISOString().split('T')[0] && activeDropCell.hour === hour
+                  
                   return (
-                    <div key={hour} className="grid-cell">
-                      {dayReservations.map(({ customer, timeInfo }) => (
-                        <div 
-                          key={customer.id} 
-                          className="reservation-card"
-                          onClick={() => handleOpenDetail(customer, timeInfo)}
-                        >
-                          <div className="res-title">{customer.고객명_상호}</div>
-                          <div className="res-time">
-                            {timeInfo.hour.toString().padStart(2, '0')}:{timeInfo.minute.toString().padStart(2, '0')}
+                    <div 
+                      key={hour} 
+                      className={`grid-cell ${isOver ? 'drag-over' : ''}`}
+                      data-date={date.toISOString().split('T')[0]}
+                      data-hour={hour}
+                    >
+                      {dayReservations.map(({ customer, timeInfo }) => {
+                        const isDraggingThis = draggingId === customer.id
+                        return (
+                          <div 
+                            key={customer.id} 
+                            className={`reservation-card ${isDraggingThis ? 'dragging' : ''}`}
+                            onClick={() => handleOpenDetail(customer, timeInfo)}
+                            onPointerDown={e => handlePointerDown(e, customer.id)}
+                            onPointerMove={handlePointerMove}
+                            onPointerUp={handlePointerUp}
+                            onPointerCancel={handlePointerCancel}
+                            style={{ touchAction: 'none' }}
+                          >
+                            <div className="res-inline-info">
+                              <span className="res-name">{customer.고객명_상호}</span>
+                              <span className="res-time-pill">
+                                {timeInfo.hour.toString().padStart(2, '0')}:{timeInfo.minute.toString().padStart(2, '0')}
+                              </span>
+                            </div>
                           </div>
-                          <div className="res-meta">{customer.모델명 ? customer.모델명.split('(')[0] : ''}</div>
-                        </div>
-                      ))}
+                        )
+                      })}
                     </div>
                   )
                 })}
@@ -324,7 +455,32 @@ export default function CalendarPage() {
             <div className="modal-body">
               <div className="info-section">
                 <div className="customer-info-header">
-                  <span className="customer-title">{selectedCustomer.고객명_상호}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span className="customer-title">{selectedCustomer.고객명_상호}</span>
+                    <button 
+                      onClick={() => {
+                        setIsModalOpen(false)
+                        router.push(`/detail/${selectedCustomer.id}`)
+                      }}
+                      style={{
+                        padding: '4px 8px',
+                        background: '#f8fafc',
+                        border: '1px solid #cbd5e1',
+                        borderRadius: '6px',
+                        fontSize: '0.7rem',
+                        fontWeight: 700,
+                        color: '#475569',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      <ExternalLink size={10} />
+                      상세보기
+                    </button>
+                  </div>
                   <span className={`status-badge status-${selectedCustomer.status}`}>{selectedCustomer.status}</span>
                 </div>
                 <div className="info-detail-item">
@@ -594,50 +750,85 @@ export default function CalendarPage() {
         .grid-cell {
           height: 80px;
           border-bottom: 1px solid #f1f5f9;
-          padding: 3px;
+          padding: 4px;
           display: flex;
           flex-direction: column;
-          gap: 2px;
+          gap: 4px;
           overflow-y: auto;
           background: #fff;
           min-height: 80px;
+          transition: background 0.15s, border 0.15s;
+        }
+        .grid-cell.drag-over {
+          background: #f0fdf4 !important;
+          border: 2px dashed #10b981 !important;
         }
         
-        /* 예약 카드 */
+        /* 예약 카드 (1줄 컴팩트 레이아웃) */
         .reservation-card {
           background: #eff6ff;
           border-left: 3px solid #3b82f6;
           border-radius: 6px;
           padding: 4px 6px;
-          cursor: pointer;
+          cursor: grab;
           transition: all 0.2s;
-          min-height: 48px;
+          min-height: 28px;
+          display: flex;
+          align-items: center;
+          user-select: none;
+        }
+        .reservation-card:active {
+          cursor: grabbing;
         }
         .reservation-card:hover {
           background: #dbeafe;
-          transform: translateY(-1px);
         }
-        .res-title {
-          font-size: 0.7rem;
+        .reservation-card.dragging {
+          opacity: 0.65;
+          transform: scale(1.05);
+          box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+          border: 1px dashed #3b82f6;
+          animation: cardShake 0.15s infinite alternate;
+          z-index: 999;
+        }
+        @keyframes cardShake {
+          0% { transform: translate(1px, 1px) rotate(0deg); }
+          100% { transform: translate(-1px, -1px) rotate(-0.5deg); }
+        }
+        
+        .res-inline-info {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          width: 100%;
+          gap: 6px;
+        }
+        /* 모바일: 시간 뱃지 숨기고 이름만 한 줄 */
+        @media (max-width: 640px) {
+          .res-time-pill {
+            display: none;
+          }
+          .res-name {
+            font-size: 0.75rem;
+          }
+        }
+        .res-name {
+          font-size: 0.72rem;
           font-weight: 800;
           color: #1e40af;
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
+          flex: 1;
         }
-        .res-time {
+        .res-time-pill {
           font-size: 0.6rem;
           font-weight: 700;
           color: #2563eb;
-          margin-top: 1px;
-        }
-        .res-meta {
-          font-size: 0.55rem;
-          color: #64748b;
+          background: #dbeafe;
+          padding: 1px 4px;
+          border-radius: 4px;
           white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          margin-top: 1px;
         }
 
         /* 모달 팝업 */

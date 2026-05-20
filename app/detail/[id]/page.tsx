@@ -3,18 +3,59 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useData } from '@/lib/DataContext'
-import { Info, FileText, MapPin, MessageSquare, ChevronLeft, Phone, Save } from 'lucide-react'
+import { Info, FileText, MapPin, MessageSquare, ChevronLeft, Phone, Save, Calendar, Clock } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import VisitLogModal from '@/components/VisitLogModal'
 
 export default function DetailPage() {
   const { id } = useParams()
-  const { customers, changeCustomerStatus } = useData()
+  const { customers, setCustomers, changeCustomerStatus } = useData()
   const router = useRouter()
   
   const customer = customers.find(c => c.id === id)
   const [memo, setMemo] = useState('')
   const [isVisitModalOpen, setIsVisitModalOpen] = useState(false)
+  const [isResModalOpen, setIsResModalOpen] = useState(false)
+  const [editDateTime, setEditDateTime] = useState('')
+
+  const handleOpenResModal = () => {
+    if (!customer) return
+    let initVal = ''
+    if (customer.예약일자) {
+      const val = customer.예약일자.replace(' ', 'T')
+      if (val.includes('T')) {
+        initVal = val
+      } else {
+        initVal = `${val}T09:00`
+      }
+    } else {
+      const today = new Date()
+      const yyyy = today.getFullYear()
+      const mm = (today.getMonth() + 1).toString().padStart(2, '0')
+      const dd = today.getDate().toString().padStart(2, '0')
+      initVal = `${yyyy}-${mm}-${dd}T09:00`
+    }
+    setEditDateTime(initVal)
+    setIsResModalOpen(true)
+  }
+
+  const handleSaveResDateTime = () => {
+    if (!customer || !editDateTime) return
+    const newDateTimeStr = editDateTime.replace('T', ' ')
+    const updated = customers.map(c => {
+      if (c.id === customer.id) {
+        return {
+          ...c,
+          예약일자: newDateTimeStr,
+          status: c.status === '작업미완료' ? '예약완료' : c.status
+        }
+      }
+      return c
+    })
+    setCustomers(updated as any)
+    alert('예약 일정이 저장되었습니다.')
+    setIsResModalOpen(false)
+  }
 
   const uniqueFolders = React.useMemo(() => {
     const statuses = Array.from(new Set(customers.map(c => c.status)))
@@ -174,7 +215,30 @@ export default function DetailPage() {
           </div>
           <div className="info-item">
             <label>예약일자</label>
-            <span>{customer.예약일자 || '-'}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ fontWeight: 700, color: customer.예약일자 ? '#1e293b' : '#94a3b8' }}>
+                {customer.예약일자 || '미지정'}
+              </span>
+              <button 
+                onClick={handleOpenResModal}
+                style={{ 
+                  padding: '4px 8px', 
+                  background: '#eff6ff', 
+                  border: '1px solid #dbeafe', 
+                  borderRadius: '6px', 
+                  fontSize: '0.75rem', 
+                  fontWeight: 700, 
+                  color: '#2563eb',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '3px',
+                  cursor: 'pointer'
+                }}
+              >
+                <Calendar size={12} />
+                설정
+              </button>
+            </div>
           </div>
           <div className="info-item">
             <label>당월작업</label>
@@ -332,6 +396,57 @@ export default function DetailPage() {
         onClose={() => setIsVisitModalOpen(false)} 
       />
 
+      {/* 예약 일정 설정/수정 모달 */}
+      {isResModalOpen && (
+        <div className="modal-overlay" onClick={() => setIsResModalOpen(false)}>
+          <div className="modal-content animated-slide-up" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>예약 일정 설정</h2>
+              <button className="close-btn" onClick={() => setIsResModalOpen(false)}>×</button>
+            </div>
+            
+            <div className="modal-body" style={{ padding: '20px' }}>
+              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '14px' }}>
+                <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Clock size={16} /> 예약 날짜 및 시간 선택
+                </div>
+                <input 
+                  type="datetime-local" 
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    border: '1px solid #cbd5e1',
+                    borderRadius: '8px',
+                    fontSize: '0.85rem',
+                    fontWeight: 600,
+                    outline: 'none',
+                    color: '#334155',
+                    background: '#fff'
+                  }}
+                  value={editDateTime}
+                  onChange={e => setEditDateTime(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="modal-footer" style={{ padding: '16px 20px', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+              <button 
+                onClick={() => setIsResModalOpen(false)} 
+                style={{ padding: '10px 16px', background: '#f1f5f9', border: '1px solid #cbd5e1', color: '#475569', borderRadius: '10px', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer' }}
+              >
+                취소
+              </button>
+              <button 
+                onClick={handleSaveResDateTime} 
+                style={{ padding: '10px 20px', background: '#0f172a', color: '#fff', border: 'none', borderRadius: '10px', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                <Save size={14} /> 저장
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <style jsx>{`
         .detail-page {
           padding-bottom: 20px;
@@ -421,6 +536,57 @@ export default function DetailPage() {
         .mini-call-btn:active { transform: scale(0.9); }
         .mini-map-btn { width: 24px; height: 24px; background: #eff6ff; color: #3b82f6; border: 1px solid #dbeafe; border-radius: 6px; display: flex; align-items: center; justify-content: center; text-decoration: none; transition: all 0.2s; cursor: pointer; }
         .mini-map-btn:active { transform: scale(0.9); }
+        
+        /* 모달 공통 스타일 */
+        .modal-overlay {
+          position: fixed;
+          top: 0; left: 0; right: 0; bottom: 0;
+          background: rgba(15, 23, 42, 0.4);
+          backdrop-filter: blur(4px);
+          z-index: 1000;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 20px;
+        }
+        .modal-content {
+          background: #fff;
+          width: 100%;
+          max-width: 400px;
+          border-radius: 20px;
+          box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15);
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+        }
+        .animated-slide-up {
+          animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        @keyframes slideUp {
+          0% { transform: translateY(15px) scale(0.97); opacity: 0; }
+          100% { transform: translateY(0) scale(1); opacity: 1; }
+        }
+        .modal-header {
+          padding: 16px 20px;
+          border-bottom: 1px solid #e2e8f0;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+        }
+        .modal-header h2 {
+          font-size: 1rem;
+          font-weight: 800;
+          color: #1e293b;
+          margin: 0;
+        }
+        .close-btn {
+          background: none;
+          border: none;
+          font-size: 1.3rem;
+          color: #94a3b8;
+          cursor: pointer;
+        }
+
         .folder-select-container {
           display: flex;
           align-items: center;
