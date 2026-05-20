@@ -402,6 +402,10 @@ export default function BottomNav() {
           <Map size={22} />
           <span>지도</span>
         </Link>
+        <Link href="/calendar" className={`nav-item ${pathname === '/calendar' ? 'active' : ''}`}>
+          <Calendar size={22} />
+          <span>일정</span>
+        </Link>
         <Link href="/completed" className={`nav-item ${pathname === '/completed' ? 'active' : ''}`}>
           <CheckCircle2 size={22} />
           <span>작업완료</span>
