@@ -502,6 +502,8 @@ export default function CalendarPage() {
           border-radius: 20px;
           margin: 15px;
           overflow: hidden;
+          min-width: 0;
+          width: calc(100% - 30px);
         }
         .time-axis {
           width: 65px;
@@ -536,15 +538,14 @@ export default function CalendarPage() {
         .weeks-scroll {
           flex: 1;
           display: flex;
-          overflow-x: auto;
-          scrollbar-width: none; /* Firefox */
+          min-width: 0;
         }
         .weeks-scroll::-webkit-scrollbar {
           display: none; /* Safari, Chrome */
         }
         .day-column {
-          width: 90px;
-          flex-shrink: 0;
+          flex: 1;
+          min-width: 0;
           display: flex;
           flex-direction: column;
           border-right: 1px solid #f1f5f9;
