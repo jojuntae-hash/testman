@@ -6,11 +6,13 @@ import { useData, CustomerData } from '@/lib/DataContext'
 import { ChevronLeft, ChevronRight, Calendar, Phone, MapPin, ExternalLink, Save, Clock } from 'lucide-react'
 
 // 예약 정보의 시간 정보를 파싱하는 헬퍼 함수
+// 예약일자에 날짜+시간이 명시된 경우(YYYY-MM-DD HH:mm)만 파싱.
+// 메모·방문기록 등 다른 필드는 무시.
 function parseReservationTime(customer: CustomerData) {
   const dateStr = customer.예약일자
   if (!dateStr) return null
 
-  // 1. 예약일자 자체에 YYYY-MM-DD HH:mm 패턴이 있는지 확인
+  // 예약일자에 YYYY-MM-DD HH:mm 형식이 있어야만 캘린더에 표시
   const dateTimeRegex = /^(\d{4}-\d{2}-\d{2})\s+(\d{1,2}):(\d{2})/
   const match = dateStr.match(dateTimeRegex)
   if (match) {
@@ -22,49 +24,23 @@ function parseReservationTime(customer: CustomerData) {
     }
   }
 
-  // 2. 예약일자는 날짜만 있고(YYYY-MM-DD), 설치시특이사항 등 메모에서 시간 파싱
-  const dateOnlyRegex = /^(\d{4}-\d{2}-\d{2})$/
-  const dateMatch = dateStr.match(dateOnlyRegex)
-  if (dateMatch) {
-    const memo = customer.설치시특이사항 || ''
-    // 정규식 예: '10시30분', '오전 10시', '오후 2시 30분', '13시'
-    const timeRegex = /(오전|오후)?\s*(\d{1,2})시(?:\s*(\d{1,2})분)?/
-    const timeMatch = memo.match(timeRegex)
-    if (timeMatch) {
-      const ampm = timeMatch[1]
-      let hour = parseInt(timeMatch[2], 10)
-      const minute = timeMatch[3] ? parseInt(timeMatch[3], 10) : 0
-
-      if (ampm === '오후' && hour < 12) {
-        hour += 12
-      } else if (ampm === '오전' && hour === 12) {
-        hour = 0
-      } else if (!ampm && hour < 9) {
-        // 오전/오후 구분이 없고 9시 이전이면 대개 오후일 가능성이 높음 (근무시간 고려)
-        if (hour >= 1 && hour <= 7) {
-          hour += 12
-        }
-      }
-
-      return {
-        date: dateMatch[1],
-        hour,
-        minute,
-        rawTime: `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`
-      }
-    }
-
-    // 시간 파싱 안 될 경우 기본값: 오전 9시
-    return {
-      date: dateMatch[1],
-      hour: 9,
-      minute: 0,
-      rawTime: '09:00'
-    }
-  }
-
+  // 날짜만 있거나 시간이 없으면 캘린더에 표시하지 않음
   return null
 }
+
+// 커스텀 시간 피커용 헬퍼: 오전 8시~오후 8시(8~20) 슬롯 생성
+const TIME_SLOTS = (() => {
+  const slots: { label: string; hour: number; minute: number }[] = []
+  for (let h = 8; h <= 20; h++) {
+    const ampm = h < 12 ? '오전' : h === 12 ? '오후' : '오후'
+    const display = h <= 12 ? h : h - 12
+    slots.push({ label: `${ampm} ${display}시 00분`, hour: h, minute: 0 })
+    if (h < 20) {
+      slots.push({ label: `${ampm} ${display}시 30분`, hour: h, minute: 30 })
+    }
+  }
+  return slots
+})()
 
 export default function CalendarPage() {
   const router = useRouter()
@@ -74,7 +50,10 @@ export default function CalendarPage() {
   // 모달 상태
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerData | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [editDateTime, setEditDateTime] = useState('')
+  // 커스텀 피커: 날짜(YYYY-MM-DD) + 시(hour) + 분(minute)
+  const [editDate, setEditDate] = useState('')
+  const [editHour, setEditHour] = useState(9)
+  const [editMinute, setEditMinute] = useState(0)
 
   // 오늘 날짜 구하기 (KST 기준)
   const todayStr = useMemo(() => {
@@ -120,12 +99,14 @@ export default function CalendarPage() {
       .filter(item => item.timeInfo !== null) as Array<{ customer: CustomerData; timeInfo: { date: string; hour: number; minute: number; rawTime: string } }>
   }, [customers])
 
-  // 특정 날짜 및 시간대의 예약 목록 필터링
+  // 특정 날짜 및 시간대의 예약 목록 필터링 (분 기준 오름차순 정렬)
   const getReservationsFor = (date: Date, hour: number) => {
     const offset = date.getTimezoneOffset() * 60000
     const dateStr = new Date(date.getTime() - offset).toISOString().split('T')[0]
     
-    return reservations.filter(r => r.timeInfo.date === dateStr && r.timeInfo.hour === hour)
+    return reservations
+      .filter(r => r.timeInfo.date === dateStr && r.timeInfo.hour === hour)
+      .sort((a, b) => a.timeInfo.minute - b.timeInfo.minute)
   }
 
   // 4일 단위로 주 이동
@@ -266,10 +247,12 @@ export default function CalendarPage() {
   // 모달 열기
   const handleOpenDetail = (customer: CustomerData, timeInfo: any) => {
     setSelectedCustomer(customer)
-    // input type="datetime-local" 형식에 맞게 세팅 (YYYY-MM-DDTHH:mm)
-    const pad = (n: number) => n.toString().padStart(2, '0')
-    const formatted = `${timeInfo.date}T${pad(timeInfo.hour)}:${pad(timeInfo.minute)}`
-    setEditDateTime(formatted)
+    setEditDate(timeInfo.date)
+    // 가장 가까운 유효 시간(8~20, 0/30분)으로 반올림
+    const clampedHour = Math.min(20, Math.max(8, timeInfo.hour))
+    const clampedMinute = timeInfo.minute >= 30 ? 30 : 0
+    setEditHour(clampedHour)
+    setEditMinute(clampedMinute)
     setIsModalOpen(true)
   }
 
@@ -277,15 +260,15 @@ export default function CalendarPage() {
   const handleSaveDateTime = () => {
     if (!selectedCustomer) return
 
-    // 'YYYY-MM-DDTHH:mm' -> 'YYYY-MM-DD HH:mm'
-    const newDateTimeStr = editDateTime.replace('T', ' ')
+    const pad = (n: number) => n.toString().padStart(2, '0')
+    const newDateTimeStr = `${editDate} ${pad(editHour)}:${pad(editMinute)}`
     
     const updated = customers.map(c => {
       if (c.id === selectedCustomer.id) {
         return {
           ...c,
           예약일자: newDateTimeStr,
-          status: c.status === '작업미완료' ? '예약완료' : c.status // 예약을 수정하면 예약완료 상태로 이동 가능
+          status: c.status === '작업미완료' ? '예약완료' : c.status
         }
       }
       return c
@@ -525,15 +508,33 @@ export default function CalendarPage() {
                 )}
               </div>
 
-              {/* 예약 시간 편집 */}
+              {/* 예약 시간 편집 - 커스텀 피커 */}
               <div className="edit-section">
                 <div className="section-title"><Clock size={16} /> 예약 일정 편집</div>
+                {/* 날짜 선택 */}
                 <input 
-                  type="datetime-local" 
+                  type="date" 
                   className="datetime-input"
-                  value={editDateTime}
-                  onChange={e => setEditDateTime(e.target.value)}
+                  value={editDate}
+                  onChange={e => setEditDate(e.target.value)}
+                  style={{ marginBottom: '8px' }}
                 />
+                {/* 시간 선택: 오전 8시 ~ 오후 8시, 00/30분만 */}
+                <select
+                  className="datetime-input time-select"
+                  value={`${editHour}:${editMinute}`}
+                  onChange={e => {
+                    const [h, m] = e.target.value.split(':').map(Number)
+                    setEditHour(h)
+                    setEditMinute(m)
+                  }}
+                >
+                  {TIME_SLOTS.map(slot => (
+                    <option key={`${slot.hour}:${slot.minute}`} value={`${slot.hour}:${slot.minute}`}>
+                      {slot.label}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
 
@@ -987,10 +988,17 @@ export default function CalendarPage() {
           outline: none;
           color: #334155;
           background: #fff;
+          box-sizing: border-box;
+          display: block;
         }
         .datetime-input:focus {
           border-color: #3b82f6;
           box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        .time-select {
+          cursor: pointer;
+          appearance: auto;
+          font-family: inherit;
         }
 
         .modal-footer {

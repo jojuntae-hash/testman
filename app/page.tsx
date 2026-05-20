@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useEffect } from 'react'
 import { useData } from '@/lib/DataContext'
 import { useRouter } from 'next/navigation'
-import { Folder, Clock, Calendar, CheckCircle2, ChevronRight, Trash2, FolderPlus, Map, ClipboardList, Search, Phone } from 'lucide-react'
+import { Folder, Clock, Calendar, CheckCircle2, ChevronRight, Trash2, FolderPlus, Map, ClipboardList, Search, Phone, Pencil, X, Check } from 'lucide-react'
 
 export default function HomePage() {
   const { customers, setCustomers, selectedIds, setSelectedIds } = useData()
@@ -11,6 +11,9 @@ export default function HomePage() {
   const [selectedFolder, setSelectedFolder] = useState<string | null>('전체리스트')
   const [searchTerm, setSearchTerm] = useState('')
   const [completedSortOrder, setCompletedSortOrder] = useState<'desc' | 'asc'>('desc')
+  // 폴더 이름 변경 상태
+  const [renamingFolder, setRenamingFolder] = useState<string | null>(null)
+  const [renameValue, setRenameValue] = useState('')
 
   // 마운트 시 이전에 선택했던 폴더 복구
   useEffect(() => {
@@ -172,6 +175,38 @@ export default function HomePage() {
     setCustomers(updated as any); setSelectedIds([]);
   }
 
+  // 폴더 이름 변경 함수
+  const SYSTEM_FOLDERS = ['작업미완료', '예약완료', '작업완료', '삭제됨']
+
+  const handleStartRename = (folderStatus: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setRenamingFolder(folderStatus)
+    setRenameValue(folderStatus)
+  }
+
+  const handleConfirmRename = (e: React.MouseEvent | React.KeyboardEvent) => {
+    e.stopPropagation()
+    const newName = renameValue.trim()
+    if (!newName || !renamingFolder || newName === renamingFolder) {
+      setRenamingFolder(null)
+      return
+    }
+    // 해당 폴더의 모든 고객 status를 새 이름으로 변경
+    const updated = customers.map(c => c.status === renamingFolder ? { ...c, status: newName } : c)
+    setCustomers(updated as any)
+    // 현재 선택된 폴더이면 선택값도 업데이트
+    if (selectedFolder === renamingFolder) {
+      setSelectedFolder(newName)
+      localStorage.setItem('lastSelectedFolder', newName)
+    }
+    setRenamingFolder(null)
+  }
+
+  const handleCancelRename = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setRenamingFolder(null)
+  }
+
   const toggleSelectAll = () => {
     if (filteredCustomers.length > 0 && selectedIds.length === filteredCustomers.length) {
       setSelectedIds([])
@@ -190,20 +225,54 @@ export default function HomePage() {
       </div>
 
       <div className="folder-grid">
-        {stats.map((stat) => (
-          <div 
-            key={stat.status} 
-            className={`folder-card ${selectedFolder === stat.status ? 'active' : ''}`}
-            onClick={() => handleFolderSelect(stat.status)}
-            style={{ '--folder-color': stat.color, '--folder-bg': stat.bgColor } as any}
-          >
-            <div className="folder-icon" style={{ color: stat.color, background: stat.bgColor }}>{stat.icon}</div>
-            <div className="folder-info">
-              <span className="folder-label">{stat.label}</span>
-              <span className="folder-count">{stat.count}</span>
+        {stats.map((stat) => {
+          const isCustomFolder = !['작업미완료', '예약완료', '작업완료', '삭제됨', '전체리스트'].includes(stat.status)
+          const isRenaming = renamingFolder === stat.status
+          return (
+            <div
+              key={stat.status}
+              className={`folder-card ${selectedFolder === stat.status ? 'active' : ''}`}
+              onClick={() => { if (!isRenaming) handleFolderSelect(stat.status) }}
+              style={{ '--folder-color': stat.color, '--folder-bg': stat.bgColor } as any}
+            >
+              <div className="folder-icon" style={{ color: stat.color, background: stat.bgColor }}>{stat.icon}</div>
+              <div className="folder-info" style={{ flex: 1, minWidth: 0 }}>
+                {isRenaming ? (
+                  <div className="rename-inline" onClick={e => e.stopPropagation()}>
+                    <input
+                      className="rename-input"
+                      value={renameValue}
+                      autoFocus
+                      onChange={e => setRenameValue(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') handleConfirmRename(e)
+                        if (e.key === 'Escape') handleCancelRename(e as any)
+                      }}
+                    />
+                    <div className="rename-actions">
+                      <button className="rename-ok-btn" onClick={handleConfirmRename}><Check size={13} /></button>
+                      <button className="rename-cancel-btn" onClick={handleCancelRename}><X size={13} /></button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <span className="folder-label">{stat.label}</span>
+                    <span className="folder-count">{stat.count}</span>
+                  </>
+                )}
+              </div>
+              {isCustomFolder && !isRenaming && (
+                <button
+                  className="folder-rename-btn"
+                  title="폴더 이름 변경"
+                  onClick={e => handleStartRename(stat.status, e)}
+                >
+                  <Pencil size={13} />
+                </button>
+              )}
             </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
 
       <div className="search-section">
@@ -285,11 +354,21 @@ export default function HomePage() {
         .header-text p { font-size: 0.8rem; color: #94a3b8; margin: 0; font-weight: 500; }
         .folder-grid { padding: 0 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 30px; }
         .customer-list-section { padding: 0 20px; }
-        .folder-card { background: #fff; border: 1px solid var(--border-color); padding: 20px; border-radius: 20px; display: flex; align-items: center; gap: 15px; transition: all 0.2s; cursor: pointer; }
+        .folder-card { background: #fff; border: 1px solid var(--border-color); padding: 20px; border-radius: 20px; display: flex; align-items: center; gap: 15px; transition: all 0.2s; cursor: pointer; position: relative; }
         .folder-card.active { border-color: var(--folder-color); background: var(--folder-bg); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
-        .folder-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; }
+        .folder-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .folder-info { display: flex; flex-direction: column; flex: 1; min-width: 0; }
         .folder-label { font-size: 0.85rem; color: #666; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 80px; }
         .folder-count { font-size: 1.2rem; font-weight: 800; }
+        .folder-rename-btn { position: absolute; top: 8px; right: 8px; width: 26px; height: 26px; border-radius: 6px; background: rgba(255,255,255,0.9); border: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: center; color: #94a3b8; cursor: pointer; transition: all 0.15s; opacity: 0; }
+        .folder-card:hover .folder-rename-btn { opacity: 1; }
+        .folder-card.active .folder-rename-btn { opacity: 1; background: rgba(255,255,255,0.95); }
+        .folder-rename-btn:hover { color: #3b82f6; border-color: #3b82f6; background: #eff6ff; }
+        .rename-inline { display: flex; flex-direction: column; gap: 4px; width: 100%; }
+        .rename-input { width: 100%; border: 1.5px solid #3b82f6; border-radius: 6px; padding: 3px 7px; font-size: 0.82rem; font-weight: 700; outline: none; color: #1e293b; background: #fff; box-sizing: border-box; }
+        .rename-actions { display: flex; gap: 4px; }
+        .rename-ok-btn { flex: 1; padding: 3px; background: #3b82f6; color: #fff; border: none; border-radius: 5px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .rename-cancel-btn { flex: 1; padding: 3px; background: #f1f5f9; color: #64748b; border: 1px solid #e2e8f0; border-radius: 5px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
 
         @media (max-width: 480px) {
           .folder-grid { padding: 0 16px; gap: 10px; margin-bottom: 20px; }

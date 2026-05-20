@@ -23,8 +23,10 @@ export default function MapPage() {
   const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number }>({ lat: 37.5665, lng: 126.9780 })
   const [mapRef, setMapRef] = useState<any>(null)
   const [currentPosition, setCurrentPosition] = useState<{ lat: number; lng: number } | null>(null)
+  // 상태 복원 완료 여부 (복원 전에 markers 이펙트 중복 실행 방지)
+  const [stateRestored, setStateRestored] = useState(false)
 
-  // 초기 설정 로드
+  // 초기 설정 로드 + sessionStorage에서 이전 상태 복원
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const savedZoom = localStorage.getItem('map_default_zoom')
@@ -34,7 +36,16 @@ export default function MapPage() {
       
       const savedKey = localStorage.getItem('kakao_app_key')
       if (savedKey) setKakaoKey(savedKey)
+
+      // 이전에 선택했던 폴더 복원
+      const savedFolder = sessionStorage.getItem('map_selected_folder')
+      if (savedFolder) setSelectedFolder(savedFolder)
+
+      // 리스트 패널 확장 상태 복원
+      const savedExpanded = sessionStorage.getItem('map_is_expanded')
+      if (savedExpanded === 'true') setIsExpanded(true)
     }
+    setStateRestored(true)
   }, [])
 
   // 카카오맵 SDK 로드 확인 로직
@@ -62,8 +73,9 @@ export default function MapPage() {
     return customers.filter(c => c.status === selectedFolder)
   }, [customers, selectedIds, selectedFolder])
 
-  // 주소를 좌표로 변환
+  // 주소를 좌표로 변환 (상태 복원 완료 후 실행)
   useEffect(() => {
+    if (!stateRestored) return
     if (isMapReady && window.kakao && window.kakao.maps.services) {
       const geocoder = new window.kakao.maps.services.Geocoder()
       const newMarkers: any[] = []
@@ -108,7 +120,7 @@ export default function MapPage() {
         })
       })
     }
-  }, [isMapReady, displayCustomers])
+  }, [isMapReady, displayCustomers, stateRestored])
 
   const toggleCustomerSelection = (customer: CustomerData) => {
     setSelectedCustomersList(prev => {
@@ -147,9 +159,35 @@ export default function MapPage() {
     setSelectedCustomersList([])
   }
 
+  // markers가 준비되면 지도 중심 이동 + 이전에 선택했던 마커들 복원
   useEffect(() => {
     if (markers.length > 0) {
-      setMapCenter({ lat: markers[0].lat, lng: markers[0].lng })
+      // 이전에 선택된 마커 ID들 복원
+      const savedIds = sessionStorage.getItem('map_selected_ids')
+      if (savedIds) {
+        try {
+          const ids: string[] = JSON.parse(savedIds)
+          const restored = markers
+            .filter(m => ids.includes(m.id))
+            .map(m => m.customer)
+          if (restored.length > 0) {
+            setSelectedCustomersList(restored)
+            // 복원된 마커 중 첫 번째로 지도 중심 이동
+            const firstRestored = markers.find(m => ids.includes(m.id))
+            if (firstRestored) setMapCenter({ lat: firstRestored.lat, lng: firstRestored.lng })
+          } else {
+            setMapCenter({ lat: markers[0].lat, lng: markers[0].lng })
+          }
+        } catch {
+          setMapCenter({ lat: markers[0].lat, lng: markers[0].lng })
+        }
+        // 한 번 복원하면 삭제 (다음 진입 시 초기화)
+        sessionStorage.removeItem('map_selected_ids')
+        sessionStorage.removeItem('map_selected_folder')
+        sessionStorage.removeItem('map_is_expanded')
+      } else {
+        setMapCenter({ lat: markers[0].lat, lng: markers[0].lng })
+      }
     }
   }, [markers])
 
@@ -290,7 +328,13 @@ export default function MapPage() {
                     <div className="row-name">{customer.고객명_상호}</div>
                     <div className="row-addr">{customer.설치주소 || customer.주소}</div>
                   </div>
-                  <button className="detail-btn" onClick={() => router.push(`/detail/${customer.id}`)}>상세</button>
+                  <button className="detail-btn" onClick={() => {
+                    // 상세 페이지 이동 전 현재 상태 sessionStorage에 저장
+                    sessionStorage.setItem('map_selected_folder', selectedFolder)
+                    sessionStorage.setItem('map_selected_ids', JSON.stringify(selectedCustomersList.map(c => c.id)))
+                    sessionStorage.setItem('map_is_expanded', String(isExpanded))
+                    router.push(`/detail/${customer.id}`)
+                  }}>상세</button>
                 </div>
               ))}
             </div>

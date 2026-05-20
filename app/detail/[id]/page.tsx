@@ -7,6 +7,20 @@ import { Info, FileText, MapPin, MessageSquare, ChevronLeft, Phone, Save, Calend
 import { supabase } from '@/lib/supabase'
 import VisitLogModal from '@/components/VisitLogModal'
 
+// 오전 8시 ~ 오후 8시, 00/30분 슬롯
+const TIME_SLOTS = (() => {
+  const slots: { label: string; hour: number; minute: number }[] = []
+  for (let h = 8; h <= 20; h++) {
+    const ampm = h < 12 ? '오전' : '오후'
+    const display = h <= 12 ? h : h - 12
+    slots.push({ label: `${ampm} ${display}시 00분`, hour: h, minute: 0 })
+    if (h < 20) {
+      slots.push({ label: `${ampm} ${display}시 30분`, hour: h, minute: 30 })
+    }
+  }
+  return slots
+})()
+
 export default function DetailPage() {
   const { id } = useParams()
   const { customers, setCustomers, changeCustomerStatus } = useData()
@@ -16,32 +30,44 @@ export default function DetailPage() {
   const [memo, setMemo] = useState('')
   const [isVisitModalOpen, setIsVisitModalOpen] = useState(false)
   const [isResModalOpen, setIsResModalOpen] = useState(false)
-  const [editDateTime, setEditDateTime] = useState('')
+  // 커스텀 피커 상태
+  const [editDate, setEditDate] = useState('')
+  const [editHour, setEditHour] = useState(9)
+  const [editMinute, setEditMinute] = useState(0)
 
   const handleOpenResModal = () => {
     if (!customer) return
-    let initVal = ''
+    // 기존 예약일자 파싱
+    let initDate = ''
+    let initHour = 9
+    let initMinute = 0
     if (customer.예약일자) {
-      const val = customer.예약일자.replace(' ', 'T')
-      if (val.includes('T')) {
-        initVal = val
-      } else {
-        initVal = `${val}T09:00`
+      const parts = customer.예약일자.replace('T', ' ').split(' ')
+      initDate = parts[0] || ''
+      if (parts[1]) {
+        const [hStr, mStr] = parts[1].split(':')
+        const parsedH = parseInt(hStr, 10)
+        const parsedM = parseInt(mStr, 10)
+        initHour = Math.min(20, Math.max(8, isNaN(parsedH) ? 9 : parsedH))
+        initMinute = parsedM >= 30 ? 30 : 0
       }
     } else {
       const today = new Date()
       const yyyy = today.getFullYear()
       const mm = (today.getMonth() + 1).toString().padStart(2, '0')
       const dd = today.getDate().toString().padStart(2, '0')
-      initVal = `${yyyy}-${mm}-${dd}T09:00`
+      initDate = `${yyyy}-${mm}-${dd}`
     }
-    setEditDateTime(initVal)
+    setEditDate(initDate)
+    setEditHour(initHour)
+    setEditMinute(initMinute)
     setIsResModalOpen(true)
   }
 
   const handleSaveResDateTime = () => {
-    if (!customer || !editDateTime) return
-    const newDateTimeStr = editDateTime.replace('T', ' ')
+    if (!customer || !editDate) return
+    const pad = (n: number) => n.toString().padStart(2, '0')
+    const newDateTimeStr = `${editDate} ${pad(editHour)}:${pad(editMinute)}`
     const updated = customers.map(c => {
       if (c.id === customer.id) {
         return {
@@ -410,8 +436,9 @@ export default function DetailPage() {
                 <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <Clock size={16} /> 예약 날짜 및 시간 선택
                 </div>
-                <input 
-                  type="datetime-local" 
+                {/* 날짜 선택 */}
+                <input
+                  type="date"
                   style={{
                     width: '100%',
                     padding: '8px 12px',
@@ -421,11 +448,45 @@ export default function DetailPage() {
                     fontWeight: 600,
                     outline: 'none',
                     color: '#334155',
-                    background: '#fff'
+                    background: '#fff',
+                    boxSizing: 'border-box',
+                    display: 'block',
+                    marginBottom: '8px'
                   }}
-                  value={editDateTime}
-                  onChange={e => setEditDateTime(e.target.value)}
+                  value={editDate}
+                  onChange={e => setEditDate(e.target.value)}
                 />
+                {/* 시간 선택: 오전 8시 ~ 오후 8시, 00/30분만 */}
+                <select
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    border: '1px solid #cbd5e1',
+                    borderRadius: '8px',
+                    fontSize: '0.85rem',
+                    fontWeight: 600,
+                    outline: 'none',
+                    color: '#334155',
+                    background: '#fff',
+                    boxSizing: 'border-box',
+                    display: 'block',
+                    cursor: 'pointer',
+                    fontFamily: 'inherit',
+                    appearance: 'auto'
+                  }}
+                  value={`${editHour}:${editMinute}`}
+                  onChange={e => {
+                    const [h, m] = e.target.value.split(':').map(Number)
+                    setEditHour(h)
+                    setEditMinute(m)
+                  }}
+                >
+                  {TIME_SLOTS.map(slot => (
+                    <option key={`${slot.hour}:${slot.minute}`} value={`${slot.hour}:${slot.minute}`}>
+                      {slot.label}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
 
