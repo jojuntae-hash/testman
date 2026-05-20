@@ -42,7 +42,7 @@ export default function DetailPage() {
     let initHour = 9
     let initMinute = 0
     if (customer.예약일자) {
-      const parts = customer.예약일자.replace('T', ' ').split(' ')
+      const parts = String(customer.예약일자).replace('T', ' ').split(' ')
       initDate = parts[0] || ''
       if (parts[1]) {
         const [hStr, mStr] = parts[1].split(':')
@@ -205,7 +205,7 @@ export default function DetailPage() {
         <div className="title-row">
           <h2 className="customer-name">{customer.고객명_상호}</h2>
           {customer.전화번호 && (
-            <a href={`tel:${customer.전화번호.replace(/[^0-9]/g, '')}`} className="action-circle-btn phone">
+            <a href={`tel:${String(customer.전화번호).replace(/[^0-9]/g, '')}`} className="action-circle-btn phone">
               <Phone size={18} />
             </a>
           )}
@@ -307,7 +307,7 @@ export default function DetailPage() {
             <div className="value-with-action">
               <span>{customer.전화번호}</span>
               {customer.전화번호 && (
-                <a href={`tel:${customer.전화번호.replace(/[^0-9]/g, '')}`} className="mini-call-btn">
+                <a href={`tel:${String(customer.전화번호).replace(/[^0-9]/g, '')}`} className="mini-call-btn">
                   <Phone size={12} />
                 </a>
               )}
@@ -318,7 +318,7 @@ export default function DetailPage() {
             <div className="value-with-action">
               <span>{customer.핸드폰번호}</span>
               {customer.핸드폰번호 && (
-                <a href={`tel:${customer.핸드폰번호.replace(/[^0-9]/g, '')}`} className="mini-call-btn">
+                <a href={`tel:${String(customer.핸드폰번호).replace(/[^0-9]/g, '')}`} className="mini-call-btn">
                   <Phone size={12} />
                 </a>
               )}
@@ -362,7 +362,7 @@ export default function DetailPage() {
             <div className="value-with-action">
               <span>{customer.설치전화번호}</span>
               {customer.설치전화번호 && (
-                <a href={`tel:${customer.설치전화번호.replace(/[^0-9]/g, '')}`} className="mini-call-btn">
+                <a href={`tel:${String(customer.설치전화번호).replace(/[^0-9]/g, '')}`} className="mini-call-btn">
                   <Phone size={12} />
                 </a>
               )}

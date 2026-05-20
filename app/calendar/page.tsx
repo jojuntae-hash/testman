@@ -9,7 +9,7 @@ import { ChevronLeft, ChevronRight, Calendar, Phone, MapPin, ExternalLink, Save,
 // 예약일자에 날짜+시간이 명시된 경우(YYYY-MM-DD HH:mm)만 파싱.
 // 메모·방문기록 등 다른 필드는 무시.
 function parseReservationTime(customer: CustomerData) {
-  const dateStr = customer.예약일자
+  const dateStr = customer.예약일자 ? String(customer.예약일자) : ''
   if (!dateStr) return null
 
   // 예약일자에 YYYY-MM-DD HH:mm 형식이 있어야만 캘린더에 표시
@@ -484,7 +484,7 @@ export default function CalendarPage() {
                     <label>연락처</label>
                     <div className="row-action">
                       <span>{selectedCustomer.전화번호}</span>
-                      <a href={`tel:${selectedCustomer.전화번호.replace(/[^0-9]/g, '')}`} className="action-circle-btn phone">
+                      <a href={`tel:${String(selectedCustomer.전화번호).replace(/[^0-9]/g, '')}`} className="action-circle-btn phone">
                         <Phone size={14} />
                       </a>
                     </div>
