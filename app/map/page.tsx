@@ -25,6 +25,9 @@ export default function MapPage() {
   const [currentPosition, setCurrentPosition] = useState<{ lat: number; lng: number } | null>(null)
   // 상태 복원 완료 여부 (복원 전에 markers 이펙트 중복 실행 방지)
   const [stateRestored, setStateRestored] = useState(false)
+  // 폴더 모달 상태
+  const [isFolderModalOpen, setIsFolderModalOpen] = useState(false)
+  const [newFolderName, setNewFolderName] = useState('')
 
   // 초기 설정 로드 + sessionStorage에서 이전 상태 복원
   useEffect(() => {
@@ -61,6 +64,12 @@ export default function MapPage() {
   useEffect(() => {
     prepareMap()
   }, [kakaoKey])
+
+  // 기존 커스텀 폴더 목록
+  const uniqueFolders = useMemo(() => {
+    return Array.from(new Set(customers.map(c => c.status)))
+      .filter(s => !['작업미완료', '예약완료', '작업완료', '삭제됨'].includes(s))
+  }, [customers])
 
   const folders = useMemo(() => {
     const statuses = Array.from(new Set(customers.map(c => c.status))).filter(s => s !== '삭제됨')
@@ -150,13 +159,25 @@ export default function MapPage() {
     }
   }
 
-  const handleCreateFolder = async () => {
-    if (selectedCustomersList.length === 0) return
-    const folderName = prompt('새로운 폴더 이름을 입력해 주세요.')
-    if (!folderName || folderName.trim() === '') return
+  // 새 폴더 만들기
+  const handleCreateNewFolder = () => {
+    if (!newFolderName || newFolderName.trim() === '') return
+    const folderName = newFolderName.trim()
     const selectedListIds = selectedCustomersList.map(c => c.id)
-    await changeCustomerStatus(selectedListIds, folderName.trim())
+    const updated = customers.map(c => selectedListIds.includes(c.id) ? { ...c, status: folderName } : c)
+    setCustomers(updated as any)
     setSelectedCustomersList([])
+    setNewFolderName('')
+    setIsFolderModalOpen(false)
+  }
+
+  // 기존 폴더로 이동
+  const handleMoveToExistingFolder = (folderName: string) => {
+    const selectedListIds = selectedCustomersList.map(c => c.id)
+    const updated = customers.map(c => selectedListIds.includes(c.id) ? { ...c, status: folderName } : c)
+    setCustomers(updated as any)
+    setSelectedCustomersList([])
+    setIsFolderModalOpen(false)
   }
 
   // markers가 준비되면 지도 중심 이동 + 이전에 선택했던 마커들 복원
@@ -288,7 +309,7 @@ export default function MapPage() {
           <div className="list-controls">
             {selectedCustomersList.length > 0 ? (
               <div className="header-actions">
-                <button className="act-btn-mini folder" onClick={handleCreateFolder}>폴더</button>
+                <button className="act-btn-mini folder" onClick={() => setIsFolderModalOpen(true)}>폴더</button>
                 <button className="act-btn-mini" onClick={() => handleBulkStatusChange('작업미완료')}>미완료</button>
                 <button className="act-btn-mini reserved" onClick={() => handleBulkStatusChange('예약완료')}>예약</button>
                 <button className="act-btn-mini complete" onClick={() => handleBulkStatusChange('작업완료')}>완료</button>
@@ -343,6 +364,50 @@ export default function MapPage() {
       </div>
 
 
+
+      {/* 폴더 이동 모달 */}
+      {isFolderModalOpen && (
+        <div className="map-folder-modal-overlay" onClick={() => setIsFolderModalOpen(false)}>
+          <div className="map-folder-modal-content" onClick={e => e.stopPropagation()}>
+            <div className="map-modal-header">
+              <h3>선택한 {selectedCustomersList.length}명을 폴더로 이동</h3>
+              <button className="map-modal-close-btn" onClick={() => setIsFolderModalOpen(false)}>×</button>
+            </div>
+            <div className="map-modal-section">
+              <label className="map-section-label">새 폴더 만들기</label>
+              <div className="map-new-folder-group">
+                <input
+                  type="text"
+                  placeholder="새 폴더 이름을 입력하세요..."
+                  value={newFolderName}
+                  onChange={e => setNewFolderName(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleCreateNewFolder()}
+                />
+                <button className="map-create-submit-btn" onClick={handleCreateNewFolder}>만들기</button>
+              </div>
+            </div>
+            <div className="map-modal-section">
+              <label className="map-section-label">기존 폴더에 넣기</label>
+              {uniqueFolders.length === 0 ? (
+                <p className="map-no-folders-text">생성된 폴더가 없습니다.</p>
+              ) : (
+                <div className="map-existing-folders-list">
+                  {uniqueFolders.map(folder => (
+                    <button
+                      key={folder}
+                      className="map-existing-folder-item"
+                      onClick={() => handleMoveToExistingFolder(folder)}
+                    >
+                      <FolderPlus size={14} style={{ color: '#fbbf24', flexShrink: 0 }} />
+                      <span>{folder}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       <style jsx>{`
         .map-page { height: 100%; display: flex; flex-direction: column; overflow: hidden; background: #fff; }
@@ -407,6 +472,27 @@ export default function MapPage() {
         .act-btn-mini.reserved { background: #eef2ff; color: #3730a3; }
         .act-btn-mini.complete { background: #d1fae5; color: #065f46; }
         .act-btn-mini.danger { background: #fee2e2; color: #991b1b; }
+
+        /* 폴더 모달 */
+        .map-folder-modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15,23,42,0.6); backdrop-filter: blur(4px); z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 20px; }
+        .map-folder-modal-content { background: #fff; width: 100%; max-width: 360px; border-radius: 20px; padding: 20px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.3); animation: mapModalIn 0.2s cubic-bezier(0.16,1,0.3,1); color: #1e293b; }
+        @keyframes mapModalIn { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .map-modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+        .map-modal-header h3 { font-size: 0.95rem; font-weight: 800; margin: 0; color: #0f172a; }
+        .map-modal-close-btn { background: none; border: none; font-size: 1.3rem; color: #94a3b8; cursor: pointer; padding: 0; line-height: 1; }
+        .map-modal-section { margin-bottom: 16px; }
+        .map-modal-section:last-child { margin-bottom: 0; }
+        .map-section-label { display: block; font-size: 0.7rem; font-weight: 700; color: #64748b; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.05em; }
+        .map-new-folder-group { display: flex; gap: 6px; }
+        .map-new-folder-group input { flex: 1; padding: 8px 12px; border: 1px solid #e2e8f0; border-radius: 10px; font-size: 0.8rem; outline: none; color: #1e293b; background: #fff; }
+        .map-new-folder-group input:focus { border-color: #3b82f6; }
+        .map-create-submit-btn { background: #3b82f6; color: #fff; border: none; padding: 0 14px; border-radius: 10px; font-size: 0.8rem; font-weight: 700; cursor: pointer; white-space: nowrap; }
+        .map-create-submit-btn:hover { background: #2563eb; }
+        .map-no-folders-text { font-size: 0.75rem; color: #94a3b8; margin: 6px 0; text-align: center; }
+        .map-existing-folders-list { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; max-height: 120px; overflow-y: auto; }
+        .map-existing-folder-item { background: #f8fafc; border: 1px solid #f1f5f9; padding: 8px 10px; border-radius: 10px; font-size: 0.75rem; font-weight: 600; color: #334155; display: flex; align-items: center; gap: 6px; cursor: pointer; transition: all 0.2s; text-align: left; width: 100%; min-width: 0; }
+        .map-existing-folder-item:hover { background: #eff6ff; border-color: #bfdbfe; color: #1e3a8a; }
+        .map-existing-folder-item span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; }
       `}</style>
     </div>
   )
