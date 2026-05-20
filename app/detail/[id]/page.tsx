@@ -84,15 +84,8 @@ export default function DetailPage() {
     if (selectedMap === 'tmap') {
       const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
       if (isMobile) {
-        const isAndroid = /Android/i.test(navigator.userAgent)
-        if (isAndroid) {
-          window.location.href = `intent://search?name=${encoded}#Intent;scheme=tmap;package=com.skt.tmap.phone;end`
-        } else {
-          window.location.href = `tmap://search?name=${encoded}`
-          setTimeout(() => {
-            window.location.href = 'https://apps.apple.com/kr/app/id431298388'
-          }, 1500)
-        }
+        // intent scheme 대신 범용적인 tmap:// scheme을 사용하여 호환성 향상
+        window.location.href = `tmap://search?name=${encoded}`
       } else {
         alert('Tmap은 모바일 기기에서만 실행 가능합니다. 카카오맵으로 연결합니다.')
         window.open(`https://map.kakao.com/link/search/${encoded}`, '_blank')
@@ -244,9 +237,7 @@ export default function DetailPage() {
           <div className="info-item full">
             <label>주소</label>
             <div className="value-with-action">
-              <span className="clickable-address" onClick={() => openMap(customer.주소)} style={{ cursor: 'pointer', color: 'var(--accent-blue)', textDecoration: 'underline' }}>
-                {customer.주소}
-              </span>
+              <span>{customer.주소}</span>
               {customer.주소 && (
                 <button className="mini-map-btn" onClick={() => openMap(customer.주소)}>
                   <MapPin size={12} />
@@ -290,9 +281,7 @@ export default function DetailPage() {
           <div className="info-item full">
             <label>주소</label>
             <div className="value-with-action">
-              <span className="clickable-address" onClick={() => openMap(customer.설치주소)} style={{ cursor: 'pointer', color: 'var(--accent-blue)', textDecoration: 'underline' }}>
-                {customer.설치주소}
-              </span>
+              <span>{customer.설치주소}</span>
               {customer.설치주소 && (
                 <button className="mini-map-btn" onClick={() => openMap(customer.설치주소)}>
                   <MapPin size={12} />
