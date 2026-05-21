@@ -398,9 +398,9 @@ export default function HomePage() {
           .search-section { padding: 0 16px 16px 16px; }
         }
 
-        .list-title { margin-bottom: 15px; align-items: flex-end; }
-        .title-with-btn { display: flex; flex-direction: column; gap: 5px; }
-        .select-all-mini-btn { align-self: flex-start; background: #f1f5f9; border: 1px solid #e2e8f0; padding: 2px 8px; border-radius: 6px; font-size: 0.7rem; font-weight: 700; color: #64748b; cursor: pointer; }
+        .list-title { margin-bottom: 15px; align-items: center; }
+        .title-with-btn { display: flex; flex-direction: row; align-items: center; gap: 8px; }
+        .select-all-mini-btn { background: #f1f5f9; border: 1px solid #e2e8f0; padding: 4px 8px; border-radius: 6px; font-size: 0.7rem; font-weight: 700; color: #64748b; cursor: pointer; display: flex; align-items: center; }
         .sort-box { display: flex; align-items: center; background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 4px 8px; }
         .sort-select { border: none; outline: none; font-size: 0.75rem; font-weight: 700; color: #475569; background: transparent; cursor: pointer; }
         .count-badge { background: #f0f0f0; padding: 2px 8px; border-radius: 10px; font-size: 0.75rem; font-weight: 700; }
