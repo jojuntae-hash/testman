@@ -6,6 +6,7 @@ import { useData } from '@/lib/DataContext'
 import { ChevronLeft, Save, Trash2, Download, Upload, Map as MapIcon, Clock, Key, Home, Settings as SettingsIcon, Search, Lock, Unlock, RotateCcw } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import Script from 'next/script'
+import ManualAddModal from '@/components/ManualAddModal'
 
 export default function SettingsPage() {
   const router = useRouter()
@@ -20,6 +21,7 @@ export default function SettingsPage() {
   const [kakaoKey, setKakaoKey] = useState('')
   const [isKeyLocked, setIsKeyLocked] = useState(true)
   const [navigationApp, setNavigationApp] = useState('tmap')
+  const [isManualAddOpen, setIsManualAddOpen] = useState(false)
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -182,6 +184,12 @@ export default function SettingsPage() {
       resetToDefault()
       alert('샘플 데이터로 복구되었습니다.')
     }
+  }
+
+  const handleManualAdd = (newCustomer: any) => {
+    setCustomers([...customers, newCustomer])
+    setIsManualAddOpen(false)
+    alert('새 고객이 추가되었습니다.')
   }
 
   const handleClearAll = () => {
@@ -362,6 +370,10 @@ export default function SettingsPage() {
               데이터 복원 (파일 선택)
               <input type="file" accept=".json" onChange={handleRestore} hidden />
             </label>
+            <button className="data-btn" style={{ color: '#3b82f6' }} onClick={() => setIsManualAddOpen(true)}>
+              <Upload size={18} />
+              수동으로 고객 1건 추가
+            </button>
             <label className="data-btn excel">
               <Upload size={18} />
               엑셀/CSV 데이터 추가
@@ -378,6 +390,13 @@ export default function SettingsPage() {
           </div>
         </section>
       </div>
+
+      {isManualAddOpen && (
+        <ManualAddModal 
+          onClose={() => setIsManualAddOpen(false)} 
+          onAdd={handleManualAdd} 
+        />
+      )}
 
       <style jsx>{`
         .settings-page { min-height: 100%; background: #f8fafc; padding-bottom: 100px; }
