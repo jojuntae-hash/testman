@@ -169,7 +169,7 @@ export default function HomePage() {
         }
         return reservedSortOrder === 'res-asc' ? dateA.localeCompare(dateB) : dateB.localeCompare(dateA)
       })
-    } else if (selectedFolder === '작업미완료') {
+    } else {
       list.sort((a, b) => {
         return (a.고객명_상호 || '').localeCompare(b.고객명_상호 || '')
       })
