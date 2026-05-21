@@ -10,7 +10,7 @@ import ManualAddModal from '@/components/ManualAddModal'
 
 export default function SettingsPage() {
   const router = useRouter()
-  const { customers, setCustomers, resetToDefault, clearAllCustomers } = useData()
+  const { customers, setCustomers, addCustomer, resetToDefault, clearAllCustomers } = useData()
   
   // 기본 설정 상태
   const [defaultSource, setDefaultSource] = useState('')
@@ -186,8 +186,8 @@ export default function SettingsPage() {
     }
   }
 
-  const handleManualAdd = (newCustomer: any) => {
-    setCustomers([...customers, newCustomer])
+  const handleManualAdd = async (newCustomer: any) => {
+    await addCustomer(newCustomer)
     setIsManualAddOpen(false)
     alert('새 고객이 추가되었습니다.')
   }

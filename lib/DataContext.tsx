@@ -37,10 +37,11 @@ export interface CustomerData {
 
 interface DataContextType {
   customers: CustomerData[]
-  setCustomers: (data: CustomerData[]) => void
+  setCustomers: (data: CustomerData[]) => Promise<void>
+  addCustomer: (data: CustomerData) => Promise<void>
   selectedIds: string[]
   setSelectedIds: (ids: string[]) => void
-  updateCustomerCoords: (id: string, lat: number, lng: number) => void
+  updateCustomerCoords: (id: string, lat: number, lng: number) => Promise<void>
   resetToDefault: () => void
   clearAllCustomers: () => void
   changeCustomerStatus: (ids: string[], newStatus: string, skipModal?: boolean) => Promise<void>
@@ -162,6 +163,36 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         const { error } = await supabase.from('customers').upsert(fixedData)
         if (error) {
           console.error('Supabase upsert error:', error)
+        }
+      } catch (err) {
+        console.error('Supabase sync error:', err)
+      }
+    }
+  }
+
+  // 단일 고객 추가 및 동기화
+  const addCustomer = async (newCustomer: CustomerData) => {
+    const fixedCustomer = {
+      ...newCustomer,
+      전화번호: fixPhoneNumber(newCustomer.전화번호),
+      핸드폰번호: fixPhoneNumber(newCustomer.핸드폰번호),
+      설치전화번호: fixPhoneNumber(newCustomer.설치전화번호),
+      설치핸드폰번호: fixPhoneNumber(newCustomer.설치핸드폰번호)
+    }
+
+    setCustomersState(prev => {
+      const updated = [...prev, fixedCustomer]
+      localStorage.setItem('customers', JSON.stringify(updated))
+      return updated
+    })
+
+    const isSupabaseConfigured = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    if (isSupabaseConfigured) {
+      try {
+        const { error } = await supabase.from('customers').insert([fixedCustomer])
+        if (error) {
+          console.error('Supabase insert error:', error)
+          alert(`서버 저장 실패: ${error.message || JSON.stringify(error)}`)
         }
       } catch (err) {
         console.error('Supabase sync error:', err)
@@ -307,6 +338,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     <DataContext.Provider value={{ 
       customers, 
       setCustomers, 
+      addCustomer,
       selectedIds, 
       setSelectedIds, 
       updateCustomerCoords, 
