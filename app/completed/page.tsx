@@ -193,13 +193,13 @@ export default function CompletedPage() {
 
     // 정렬 (작업완료일 기준 또는 예약시간 기준)
     return list.sort((a, b) => {
-      if (sortOrder === 'res-asc') {
-        const timeA = a.예약일자 || '9999-99-99'
-        const timeB = b.예약일자 || '9999-99-99'
+      if (sortOrder === 'res-asc' || sortOrder === 'res-desc') {
+        const timeA = a.예약일자 || (sortOrder === 'res-asc' ? '9999-99-99' : '0000-00-00')
+        const timeB = b.예약일자 || (sortOrder === 'res-asc' ? '9999-99-99' : '0000-00-00')
         if (timeA === timeB) {
           return (a.고객명_상호 || '').localeCompare(b.고객명_상호 || '')
         }
-        return timeA.localeCompare(timeB)
+        return sortOrder === 'res-asc' ? timeA.localeCompare(timeB) : timeB.localeCompare(timeA)
       }
 
       const dateA = a.작업완료일 || ''
@@ -348,6 +348,7 @@ export default function CompletedPage() {
                 <option value="desc">최신순</option>
                 <option value="asc">오래된순</option>
                 <option value="res-asc">예약시간 빠른순</option>
+                <option value="res-desc">예약시간 오래된순</option>
               </select>
             </div>
           </div>

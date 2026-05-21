@@ -10,7 +10,8 @@ export default function HomePage() {
   const router = useRouter()
   const [selectedFolder, setSelectedFolder] = useState<string | null>('전체리스트')
   const [searchTerm, setSearchTerm] = useState('')
-  const [completedSortOrder, setCompletedSortOrder] = useState<'desc' | 'asc'>('desc')
+  const [completedSortOrder, setCompletedSortOrder] = useState<string>('desc')
+  const [reservedSortOrder, setReservedSortOrder] = useState<string>('res-asc')
   // 폴더 이름 변경 상태
   const [renamingFolder, setRenamingFolder] = useState<string | null>(null)
   const [renameValue, setRenameValue] = useState('')
@@ -132,6 +133,15 @@ export default function HomePage() {
 
     if (selectedFolder === '작업완료') {
       list.sort((a, b) => {
+        if (completedSortOrder === 'res-asc' || completedSortOrder === 'res-desc') {
+          const timeA = a.예약일자 || (completedSortOrder === 'res-asc' ? '9999-99-99' : '0000-00-00')
+          const timeB = b.예약일자 || (completedSortOrder === 'res-asc' ? '9999-99-99' : '0000-00-00')
+          if (timeA === timeB) {
+            return (a.고객명_상호 || '').localeCompare(b.고객명_상호 || '')
+          }
+          return completedSortOrder === 'res-asc' ? timeA.localeCompare(timeB) : timeB.localeCompare(timeA)
+        }
+
         const dateA = a.작업완료일 || ''
         const dateB = b.작업완료일 || ''
         
@@ -157,7 +167,7 @@ export default function HomePage() {
         if (dateA === dateB) {
           return (a.고객명_상호 || '').localeCompare(b.고객명_상호 || '')
         }
-        return dateA.localeCompare(dateB)
+        return reservedSortOrder === 'res-asc' ? dateA.localeCompare(dateB) : dateB.localeCompare(dateA)
       })
     } else if (selectedFolder === '작업미완료') {
       list.sort((a, b) => {
@@ -166,7 +176,7 @@ export default function HomePage() {
     }
 
     return list
-  }, [customers, selectedFolder, searchTerm, completedSortOrder])
+  }, [customers, selectedFolder, searchTerm, completedSortOrder, reservedSortOrder])
 
   const toggleSelect = (id: string, e: React.MouseEvent) => {
     e.stopPropagation()
@@ -318,11 +328,25 @@ export default function HomePage() {
               <div className="sort-box">
                 <select 
                   value={completedSortOrder} 
-                  onChange={(e) => setCompletedSortOrder(e.target.value as 'desc' | 'asc')}
+                  onChange={(e) => setCompletedSortOrder(e.target.value)}
                   className="sort-select"
                 >
                   <option value="desc">완료일 최신순</option>
                   <option value="asc">완료일 오래된순</option>
+                  <option value="res-asc">예약시간 빠른순</option>
+                  <option value="res-desc">예약시간 오래된순</option>
+                </select>
+              </div>
+            )}
+            {selectedFolder === '예약완료' && (
+              <div className="sort-box">
+                <select 
+                  value={reservedSortOrder} 
+                  onChange={(e) => setReservedSortOrder(e.target.value)}
+                  className="sort-select"
+                >
+                  <option value="res-asc">예약시간 빠른순</option>
+                  <option value="res-desc">예약시간 오래된순</option>
                 </select>
               </div>
             )}
