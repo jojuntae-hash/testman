@@ -592,7 +592,7 @@ export default function CalendarPage() {
                 className="google-cal-btn"
               >
                 <ExternalLink size={16} />
-                구글 캘린더 등록
+                캘린더 등록
               </a>
               
               <button className="complete-work-btn" onClick={handleSetComplete}>
@@ -981,11 +981,10 @@ export default function CalendarPage() {
         .row-action {
           display: flex;
           align-items: center;
-          justify-content: space-between;
+          justify-content: flex-start;
           gap: 10px;
         }
         .address-text {
-          flex: 1;
           line-height: 1.4;
         }
         .action-circle-btn {
@@ -1072,10 +1071,10 @@ export default function CalendarPage() {
         }
         .google-cal-btn, .save-btn, .complete-work-btn {
           flex: 1;
-          min-width: 120px;
-          padding: 14px;
-          border-radius: 12px;
-          font-size: 0.95rem;
+          min-width: 100px;
+          padding: 12px;
+          border-radius: 10px;
+          font-size: 0.9rem;
           font-weight: 700;
           cursor: pointer;
           display: flex;
@@ -1085,37 +1084,41 @@ export default function CalendarPage() {
           transition: all 0.2s;
         }
         .google-cal-btn {
-          gap: 8px;
-          cursor: pointer;
-          transition: all 0.2s;
+          background: #eff6ff;
+          color: #3b82f6;
+          border: 1px solid #bfdbfe;
+          text-decoration: none;
         }
         .google-cal-btn:hover {
-          background: #f4f8fe;
+          background: #dbeafe;
+          transform: translateY(-1px);
         }
         .google-cal-btn:active {
-          transform: scale(0.98);
+          transform: translateY(0);
+        }
+        .complete-work-btn {
+          background: #ecfdf5;
+          color: #10b981;
+          border: 1px solid #a7f3d0;
+        }
+        .complete-work-btn:hover {
+          background: #d1fae5;
+          transform: translateY(-1px);
+        }
+        .complete-work-btn:active {
+          transform: translateY(0);
         }
         .save-btn {
-          flex: 0.8;
-          background: #0f172a;
-          color: #fff;
-          border: none;
-          padding: 10px;
-          border-radius: 10px;
-          font-size: 0.85rem;
-          font-weight: 700;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 8px;
-          cursor: pointer;
-          transition: all 0.2s;
+          background: #f8fafc;
+          color: #475569;
+          border: 1px solid #cbd5e1;
         }
         .save-btn:hover {
-          background: #1e293b;
+          background: #f1f5f9;
+          transform: translateY(-1px);
         }
         .save-btn:active {
-          transform: scale(0.98);
+          transform: translateY(0);
         }
       `}</style>
     </div>

@@ -10,7 +10,7 @@ export default function CompletedPage() {
   const router = useRouter()
   
   const [searchTerm, setSearchTerm] = useState('')
-  const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc') // desc: 최신 완료일순, asc: 과거 완료일순
+  const [sortOrder, setSortOrder] = useState<string>('desc')
   const [selectedDateFilter, setSelectedDateFilter] = useState<string | null>(null) // null 이면 '전체'
 
   const scrollContainerRef = useRef<HTMLDivElement>(null)
@@ -125,6 +125,11 @@ export default function CompletedPage() {
     // 가로세로 이동 거리가 8px 미만일 때만 순수 클릭(탭)으로 판정합니다.
     if (diffX < 8 && diffY < 8) {
       setSelectedDateFilter(date)
+      if (date) {
+        setSortOrder('res-asc')
+      } else {
+        setSortOrder('desc')
+      }
     }
   }
 
@@ -186,8 +191,17 @@ export default function CompletedPage() {
       )
     }
 
-    // 정렬 (작업완료일 기준)
+    // 정렬 (작업완료일 기준 또는 예약시간 기준)
     return list.sort((a, b) => {
+      if (sortOrder === 'res-asc') {
+        const timeA = a.예약일자 || '9999-99-99'
+        const timeB = b.예약일자 || '9999-99-99'
+        if (timeA === timeB) {
+          return (a.고객명_상호 || '').localeCompare(b.고객명_상호 || '')
+        }
+        return timeA.localeCompare(timeB)
+      }
+
       const dateA = a.작업완료일 || ''
       const dateB = b.작업완료일 || ''
       
@@ -324,11 +338,12 @@ export default function CompletedPage() {
               <ArrowUpDown size={14} className="sort-icon" />
               <select 
                 value={sortOrder} 
-                onChange={(e) => setSortOrder(e.target.value as 'desc' | 'asc')}
+                onChange={(e) => setSortOrder(e.target.value)}
                 className="sort-select"
               >
                 <option value="desc">최신순</option>
                 <option value="asc">오래된순</option>
+                <option value="res-asc">예약시간 빠른순</option>
               </select>
             </div>
           </div>
