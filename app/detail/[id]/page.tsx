@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useData } from '@/lib/DataContext'
-import { Info, FileText, MapPin, MessageSquare, ChevronLeft, Phone, Save, Calendar, Clock } from 'lucide-react'
+import { Info, FileText, MapPin, MessageSquare, ChevronLeft, Phone, Save, Calendar, Clock, Copy } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import VisitLogModal from '@/components/VisitLogModal'
 
@@ -96,10 +96,32 @@ export default function DetailPage() {
     if (newStatus === '__NEW__') {
       const newFolder = prompt('새로운 폴더 이름을 입력하세요.')
       if (newFolder && newFolder.trim() !== '') {
-        await changeCustomerStatus([customer.id], newFolder.trim())
+        await changeCustomerStatus([customer.id], newFolder.trim(), true)
       }
     } else {
-      await changeCustomerStatus([customer.id], newStatus)
+      await changeCustomerStatus([customer.id], newStatus, true)
+    }
+  }
+
+  const handleCopyAddress = (address: string) => {
+    if (!address) return;
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(address).then(() => {
+        alert('주소가 복사되었습니다.');
+      });
+    } else {
+      const textArea = document.createElement("textarea");
+      textArea.value = address;
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      try {
+        document.execCommand('copy');
+        alert('주소가 복사되었습니다.');
+      } catch (err) {
+        alert('복사에 실패했습니다.');
+      }
+      document.body.removeChild(textArea);
     }
   }
 
@@ -368,17 +390,22 @@ export default function DetailPage() {
               )}
             </div>
           </div>
-          <div className="info-item full">
-            <label>주소</label>
-            <div className="value-with-action">
-              <span>{customer.설치주소}</span>
-              {customer.설치주소 && (
-                <button className="mini-map-btn" onClick={() => openMap(customer.설치주소)}>
-                  <MapPin size={12} />
-                </button>
-              )}
+          {(customer.설치주소 || customer.주소) && (
+            <div className="info-item full">
+              <label>주소</label>
+              <div className="value-with-action">
+                <span>{customer.설치주소 || customer.주소}</span>
+                <div style={{ display: 'flex', gap: '4px' }}>
+                  <button className="mini-map-btn" onClick={() => openMap(customer.설치주소 || customer.주소)}>
+                    <MapPin size={12} />
+                  </button>
+                  <button className="mini-map-btn" onClick={() => handleCopyAddress(customer.설치주소 || customer.주소)}>
+                    <Copy size={12} />
+                  </button>
+                </div>
+              </div>
             </div>
-          </div>
+          )}
           <div className="info-item full memo">
             <label>설치시 특이사항</label>
             <div className="memo-box">
@@ -556,7 +583,10 @@ export default function DetailPage() {
         }
         .info-item span {
           font-size: 0.9rem;
-          font-weight: 500;
+          font-weight: 600;
+          color: #1e293b;
+          word-break: break-all;
+          overflow-wrap: anywhere;
         }
         .memo-box {
           background: #f8faff;
@@ -592,10 +622,10 @@ export default function DetailPage() {
         .save-memo-btn { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 8px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; transition: all 0.2s; }
         .save-memo-btn:hover { background: #e2e8f0; }
         .save-memo-btn:active { transform: scale(0.98); }
-        .value-with-action { display: flex; align-items: center; gap: 8px; }
-        .mini-call-btn { width: 24px; height: 24px; background: #ecfdf5; color: #10b981; border: 1px solid #d1fae5; border-radius: 6px; display: flex; align-items: center; justify-content: center; text-decoration: none; transition: all 0.2s; }
+        .value-with-action { display: flex; align-items: center; gap: 8px; justify-content: space-between; }
+        .mini-call-btn { width: 28px; height: 28px; background: #ecfdf5; color: #10b981; border: 1px solid #d1fae5; border-radius: 6px; display: flex; align-items: center; justify-content: center; text-decoration: none; transition: all 0.2s; cursor: pointer; }
         .mini-call-btn:active { transform: scale(0.9); }
-        .mini-map-btn { width: 24px; height: 24px; background: #eff6ff; color: #3b82f6; border: 1px solid #dbeafe; border-radius: 6px; display: flex; align-items: center; justify-content: center; text-decoration: none; transition: all 0.2s; cursor: pointer; }
+        .mini-map-btn { width: 28px; height: 28px; background: #eff6ff; color: #3b82f6; border: 1px solid #dbeafe; border-radius: 6px; display: flex; align-items: center; justify-content: center; text-decoration: none; transition: all 0.2s; cursor: pointer; }
         .mini-map-btn:active { transform: scale(0.9); }
         
         /* 모달 공통 스타일 */

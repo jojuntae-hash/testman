@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useData, CustomerData } from '@/lib/DataContext'
-import { ChevronLeft, ChevronRight, Calendar, Phone, MapPin, ExternalLink, Save, Clock } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Calendar, Phone, MapPin, ExternalLink, Save, Clock, Copy, CheckCircle2 } from 'lucide-react'
 
 // 예약 정보의 시간 정보를 파싱하는 헬퍼 함수
 // 예약일자에 날짜+시간이 명시된 경우(YYYY-MM-DD HH:mm)만 파싱.
@@ -301,6 +301,46 @@ export default function CalendarPage() {
     }
   }
 
+  const handleCopyAddress = (address?: string) => {
+    if (!address) return;
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(address).then(() => {
+        alert('주소가 복사되었습니다.');
+      });
+    } else {
+      const textArea = document.createElement("textarea");
+      textArea.value = address;
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      try {
+        document.execCommand('copy');
+        alert('주소가 복사되었습니다.');
+      } catch (err) {
+        alert('복사에 실패했습니다.');
+      }
+      document.body.removeChild(textArea);
+    }
+  }
+
+  const handleSetComplete = () => {
+    if (!selectedCustomer) return;
+    const today = new Date().toLocaleDateString('sv-SE');
+    const updated = customers.map(c => {
+      if (c.id === selectedCustomer.id) {
+        return {
+          ...c,
+          status: '작업완료',
+          작업완료일: today
+        };
+      }
+      return c;
+    });
+    setCustomers(updated as any);
+    alert('작업이 완료되었습니다.');
+    setIsModalOpen(false);
+  }
+
   // 구글 캘린더 등록 링크 생성 (안 1번 구현)
   const getGoogleCalendarUrl = (customer: CustomerData) => {
     const timeInfo = parseReservationTime(customer)
@@ -495,9 +535,14 @@ export default function CalendarPage() {
                     <label>주소</label>
                     <div className="row-action">
                       <span className="address-text">{selectedCustomer.설치주소 || selectedCustomer.주소}</span>
-                      <button className="action-circle-btn map" onClick={() => handleOpenMap(selectedCustomer.설치주소 || selectedCustomer.주소)}>
-                        <MapPin size={14} />
-                      </button>
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        <button className="action-circle-btn map" onClick={() => handleOpenMap(selectedCustomer.설치주소 || selectedCustomer.주소)}>
+                          <MapPin size={14} />
+                        </button>
+                        <button className="action-circle-btn copy-btn" onClick={() => handleCopyAddress(selectedCustomer.설치주소 || selectedCustomer.주소)}>
+                          <Copy size={14} />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -550,9 +595,14 @@ export default function CalendarPage() {
                 구글 캘린더 등록
               </a>
               
+              <button className="complete-work-btn" onClick={handleSetComplete}>
+                <CheckCircle2 size={16} />
+                작업완료
+              </button>
+
               <button className="save-btn" onClick={handleSaveDateTime}>
                 <Save size={16} />
-                저장
+                일정저장
               </button>
             </div>
           </div>
@@ -954,6 +1004,17 @@ export default function CalendarPage() {
         }
         .action-circle-btn.phone { background: #10b981; }
         .action-circle-btn.map { background: #3b82f6; }
+        .action-circle-btn.map {
+          background: #eff6ff;
+          color: #3b82f6;
+          border-color: #dbeafe;
+        }
+        .action-circle-btn.copy-btn {
+          background: #f1f5f9;
+          color: #64748b;
+          border-color: #e2e8f0;
+        }
+        .action-circle-btn.copy-btn:hover { background: #e2e8f0; }
         .memo-box {
           background: #f8fafc;
           border: 1px solid #e2e8f0;
@@ -1007,19 +1068,23 @@ export default function CalendarPage() {
           border-top: 1px solid #e2e8f0;
           display: flex;
           gap: 10px;
+          flex-wrap: wrap;
         }
-        .google-cal-btn {
-          flex: 1.2;
-          background: #fff;
-          color: #4285f4;
-          border: 1px solid #4285f4;
-          padding: 10px;
-          border-radius: 10px;
-          font-size: 0.85rem;
+        .google-cal-btn, .save-btn, .complete-work-btn {
+          flex: 1;
+          min-width: 120px;
+          padding: 14px;
+          border-radius: 12px;
+          font-size: 0.95rem;
           font-weight: 700;
+          cursor: pointer;
           display: flex;
           align-items: center;
           justify-content: center;
+          gap: 6px;
+          transition: all 0.2s;
+        }
+        .google-cal-btn {
           gap: 8px;
           cursor: pointer;
           transition: all 0.2s;

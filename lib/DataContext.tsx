@@ -43,7 +43,7 @@ interface DataContextType {
   updateCustomerCoords: (id: string, lat: number, lng: number) => void
   resetToDefault: () => void
   clearAllCustomers: () => void
-  changeCustomerStatus: (ids: string[], newStatus: string) => Promise<void>
+  changeCustomerStatus: (ids: string[], newStatus: string, skipModal?: boolean) => Promise<void>
   refreshData: () => Promise<void>
   completionModal?: {
     isOpen: boolean
@@ -267,8 +267,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   }
 
   // 상태 변경 및 동기화 함수
-  const changeCustomerStatus = async (ids: string[], newStatus: string) => {
-    if (newStatus === '작업완료') {
+  const changeCustomerStatus = async (ids: string[], newStatus: string, skipModal?: boolean) => {
+    if (newStatus === '작업완료' && !skipModal) {
       setCompletionModalState({
         isOpen: true,
         targetIds: ids,
@@ -276,7 +276,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       })
       return
     }
-    await executeStatusChange(ids, newStatus)
+    const date = newStatus === '작업완료' ? new Date().toLocaleDateString('sv-SE') : undefined
+    await executeStatusChange(ids, newStatus, date)
   }
 
   const confirmCompletion = async (date: string) => {
