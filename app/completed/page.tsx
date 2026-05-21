@@ -331,9 +331,13 @@ export default function CompletedPage() {
 
       <div className="customer-list-section">
         <div className="flex-between list-title">
-          <h3>완료 고객 리스트</h3>
+          <h3>
+            {selectedDateFilter 
+              ? (dailyStats.find(s => s.rawDate === selectedDateFilter)?.dateLabel || selectedDateFilter)
+              : '전체'
+            }
+          </h3>
           <div className="list-title-actions">
-            <span className="count-badge">검색 결과 {filteredCustomers.length}건</span>
             <div className="sort-box">
               <ArrowUpDown size={14} className="sort-icon" />
               <select 

@@ -308,7 +308,7 @@ export default function HomePage() {
       <div className="customer-list-section">
         <div className="flex-between list-title">
           <div className="title-with-btn">
-            <h3>{selectedFolder === '전체리스트' ? '전체' : (selectedFolder || '전체')} 고객 목록</h3>
+            <h3>{selectedFolder === '전체리스트' ? '전체' : (selectedFolder || '전체')}</h3>
             <button className="select-all-mini-btn" onClick={toggleSelectAll}>
               {filteredCustomers.length > 0 && selectedIds.length === filteredCustomers.length ? '전체 해제' : '전체 선택'}
             </button>
@@ -326,7 +326,6 @@ export default function HomePage() {
                 </select>
               </div>
             )}
-            <span className="count-badge">총 {filteredCustomers.length}건</span>
           </div>
         </div>
 
