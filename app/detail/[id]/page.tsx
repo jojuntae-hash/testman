@@ -34,6 +34,9 @@ export default function DetailPage() {
   const [editDate, setEditDate] = useState('')
   const [editHour, setEditHour] = useState(9)
   const [editMinute, setEditMinute] = useState(0)
+  
+  const [isCompModalOpen, setIsCompModalOpen] = useState(false)
+  const [editCompDate, setEditCompDate] = useState('')
 
   const handleOpenResModal = () => {
     if (!customer) return
@@ -81,6 +84,38 @@ export default function DetailPage() {
     setCustomers(updated as any)
     alert('예약 일정이 저장되었습니다.')
     setIsResModalOpen(false)
+  }
+
+  const handleOpenCompModal = () => {
+    if (!customer) return
+    let initDate = ''
+    if (customer.작업완료일) {
+      initDate = customer.작업완료일
+    } else {
+      const today = new Date()
+      const yyyy = today.getFullYear()
+      const mm = (today.getMonth() + 1).toString().padStart(2, '0')
+      const dd = today.getDate().toString().padStart(2, '0')
+      initDate = `${yyyy}-${mm}-${dd}`
+    }
+    setEditCompDate(initDate)
+    setIsCompModalOpen(true)
+  }
+
+  const handleSaveCompDate = () => {
+    if (!customer || !editCompDate) return
+    const updated = customers.map(c => {
+      if (c.id === customer.id) {
+        return {
+          ...c,
+          작업완료일: editCompDate
+        }
+      }
+      return c
+    })
+    setCustomers(updated as any)
+    alert('작업 완료일이 저장되었습니다.')
+    setIsCompModalOpen(false)
   }
 
   const uniqueFolders = React.useMemo(() => {
@@ -292,10 +327,33 @@ export default function DetailPage() {
             <label>당월작업</label>
             <span>{customer.당월작업}</span>
           </div>
-          {customer.status === '작업완료' && customer.작업완료일 && (
+          {customer.status === '작업완료' && (
             <div className="info-item" style={{ borderLeft: '3px solid #10b981', paddingLeft: 8 }}>
               <label style={{ color: '#10b981', fontWeight: 700 }}>작업 완료일</label>
-              <span style={{ color: '#10b981', fontWeight: 700 }}>{customer.작업완료일}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ color: customer.작업완료일 ? '#10b981' : '#64748b', fontWeight: 700 }}>
+                  {customer.작업완료일 || '미지정'}
+                </span>
+                <button 
+                  onClick={handleOpenCompModal}
+                  style={{ 
+                    padding: '4px 8px', 
+                    background: '#ecfdf5', 
+                    border: '1px solid #a7f3d0', 
+                    borderRadius: '6px', 
+                    fontSize: '0.75rem', 
+                    fontWeight: 700, 
+                    color: '#059669',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '3px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <Calendar size={12} />
+                  설정
+                </button>
+              </div>
             </div>
           )}
           <div className="info-item full">
@@ -526,6 +584,59 @@ export default function DetailPage() {
               </button>
               <button 
                 onClick={handleSaveResDateTime} 
+                style={{ padding: '10px 20px', background: '#0f172a', color: '#fff', border: 'none', borderRadius: '10px', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                <Save size={14} /> 저장
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 작업 완료일 설정/수정 모달 */}
+      {isCompModalOpen && (
+        <div className="modal-overlay" onClick={() => setIsCompModalOpen(false)}>
+          <div className="modal-content animated-slide-up" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>작업 완료일 설정</h2>
+              <button className="close-btn" onClick={() => setIsCompModalOpen(false)}>×</button>
+            </div>
+            
+            <div className="modal-body" style={{ padding: '20px' }}>
+              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '14px' }}>
+                <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Calendar size={16} /> 완료 날짜 선택
+                </div>
+                <input
+                  type="date"
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    border: '1px solid #cbd5e1',
+                    borderRadius: '8px',
+                    fontSize: '0.85rem',
+                    fontWeight: 600,
+                    outline: 'none',
+                    color: '#334155',
+                    background: '#fff',
+                    boxSizing: 'border-box',
+                    display: 'block'
+                  }}
+                  value={editCompDate}
+                  onChange={e => setEditCompDate(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="modal-footer" style={{ padding: '16px 20px', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+              <button 
+                onClick={() => setIsCompModalOpen(false)} 
+                style={{ padding: '10px 16px', background: '#f1f5f9', border: '1px solid #cbd5e1', color: '#475569', borderRadius: '10px', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer' }}
+              >
+                취소
+              </button>
+              <button 
+                onClick={handleSaveCompDate} 
                 style={{ padding: '10px 20px', background: '#0f172a', color: '#fff', border: 'none', borderRadius: '10px', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
               >
                 <Save size={14} /> 저장
