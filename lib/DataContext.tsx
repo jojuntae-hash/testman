@@ -47,6 +47,9 @@ interface DataContextType {
   clearAllCustomers: () => void
   changeCustomerStatus: (ids: string[], newStatus: string, skipModal?: boolean) => Promise<void>
   refreshData: () => Promise<void>
+  folderColors: Record<string, string>
+  updateFolderColor: (folderName: string, color: string) => void
+  renameFolderColor: (oldName: string, newName: string, newColor?: string) => void
   completionModal?: {
     isOpen: boolean
     targetIds: string[]
@@ -65,6 +68,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const [customers, setCustomersState] = useState<CustomerData[]>([])
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [isInitialized, setIsInitialized] = useState(false)
+  const [folderColors, setFolderColorsState] = useState<Record<string, string>>({})
 
   // 전화번호 보정 로직 (10으로 시작하면 0 추가)
   const fixPhoneNumber = (phone: string) => {
@@ -138,10 +142,41 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
   // Load data on mount
   useEffect(() => {
+    // Load folder colors
+    const savedColors = localStorage.getItem('folderColors')
+    if (savedColors) {
+      try {
+        setFolderColorsState(JSON.parse(savedColors))
+      } catch (e) {
+        console.error('Failed to parse folder colors', e)
+      }
+    }
+
     refreshData().then(() => {
       setIsInitialized(true)
     })
   }, [])
+
+  const updateFolderColor = (folderName: string, color: string) => {
+    setFolderColorsState(prev => {
+      const updated = { ...prev, [folderName]: color }
+      localStorage.setItem('folderColors', JSON.stringify(updated))
+      return updated
+    })
+  }
+
+  const renameFolderColor = (oldName: string, newName: string, newColor?: string) => {
+    setFolderColorsState(prev => {
+      const updated = { ...prev }
+      const colorToSet = newColor || updated[oldName] || '#34495e'
+      if (oldName !== newName) {
+        delete updated[oldName]
+      }
+      updated[newName] = colorToSet
+      localStorage.setItem('folderColors', JSON.stringify(updated))
+      return updated
+    })
+  }
 
   // Save to localStorage and Supabase whenever customers change
   const setCustomers = async (data: CustomerData[]) => {
@@ -370,6 +405,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       clearAllCustomers,
       changeCustomerStatus,
       refreshData,
+      folderColors,
+      updateFolderColor,
+      renameFolderColor,
       completionModal: {
         isOpen: completionModalState.isOpen,
         targetIds: completionModalState.targetIds,

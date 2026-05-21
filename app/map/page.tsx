@@ -8,7 +8,7 @@ import { Map, CustomOverlayMap } from 'react-kakao-maps-sdk'
 import Script from 'next/script'
 
 export default function MapPage() {
-  const { customers, setCustomers, selectedIds, updateCustomerCoords, changeCustomerStatus } = useData()
+  const { customers, setCustomers, selectedIds, updateCustomerCoords, changeCustomerStatus, folderColors, updateFolderColor } = useData()
   const router = useRouter()
   
   // 상태 관리
@@ -25,9 +25,9 @@ export default function MapPage() {
   const [currentPosition, setCurrentPosition] = useState<{ lat: number; lng: number } | null>(null)
   // 상태 복원 완료 여부 (복원 전에 markers 이펙트 중복 실행 방지)
   const [stateRestored, setStateRestored] = useState(false)
-  // 폴더 모달 상태
   const [isFolderModalOpen, setIsFolderModalOpen] = useState(false)
   const [newFolderName, setNewFolderName] = useState('')
+  const [newFolderColor, setNewFolderColor] = useState('#3b82f6')
 
   // 초기 설정 로드 + sessionStorage에서 이전 상태 복원
   useEffect(() => {
@@ -145,7 +145,7 @@ export default function MapPage() {
       case '작업완료': return '#10b981';
       case '예약완료': return '#3b82f6';
       case '작업미완료': return '#64748b';
-      default: return '#cbd5e1';
+      default: return folderColors[status] || '#cbd5e1';
     }
   }
 
@@ -166,6 +166,7 @@ export default function MapPage() {
     const selectedListIds = selectedCustomersList.map(c => c.id)
     const updated = customers.map(c => selectedListIds.includes(c.id) ? { ...c, status: folderName } : c)
     setCustomers(updated as any)
+    updateFolderColor(folderName, newFolderColor)
     setSelectedCustomersList([])
     setNewFolderName('')
     setIsFolderModalOpen(false)
@@ -376,6 +377,13 @@ export default function MapPage() {
             <div className="map-modal-section">
               <label className="map-section-label">새 폴더 만들기</label>
               <div className="map-new-folder-group">
+                <input 
+                  type="color" 
+                  className="map-new-folder-color" 
+                  value={newFolderColor} 
+                  onChange={e => setNewFolderColor(e.target.value)}
+                  title="폴더 색상 선택"
+                />
                 <input
                   type="text"
                   placeholder="새 폴더 이름을 입력하세요..."
@@ -484,8 +492,11 @@ export default function MapPage() {
         .map-modal-section:last-child { margin-bottom: 0; }
         .map-section-label { display: block; font-size: 0.7rem; font-weight: 700; color: #64748b; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.05em; }
         .map-new-folder-group { display: flex; gap: 6px; }
-        .map-new-folder-group input { flex: 1; padding: 8px 12px; border: 1px solid #e2e8f0; border-radius: 10px; font-size: 0.8rem; outline: none; color: #1e293b; background: #fff; }
-        .map-new-folder-group input:focus { border-color: #3b82f6; }
+        .map-new-folder-color { width: 34px; height: 34px; padding: 0; border: 1px solid #e2e8f0; border-radius: 10px; cursor: pointer; flex-shrink: 0; background: #fff; }
+        .map-new-folder-color::-webkit-color-swatch-wrapper { padding: 0; }
+        .map-new-folder-color::-webkit-color-swatch { border: none; border-radius: 9px; }
+        .map-new-folder-group input[type="text"] { flex: 1; padding: 8px 12px; border: 1px solid #e2e8f0; border-radius: 10px; font-size: 0.8rem; outline: none; color: #1e293b; background: #fff; }
+        .map-new-folder-group input[type="text"]:focus { border-color: #3b82f6; }
         .map-create-submit-btn { background: #3b82f6; color: #fff; border: none; padding: 0 14px; border-radius: 10px; font-size: 0.8rem; font-weight: 700; cursor: pointer; white-space: nowrap; }
         .map-create-submit-btn:hover { background: #2563eb; }
         .map-no-folders-text { font-size: 0.75rem; color: #94a3b8; margin: 6px 0; text-align: center; }
