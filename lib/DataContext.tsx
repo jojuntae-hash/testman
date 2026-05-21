@@ -39,6 +39,7 @@ interface DataContextType {
   customers: CustomerData[]
   setCustomers: (data: CustomerData[]) => Promise<void>
   addCustomer: (data: CustomerData) => Promise<void>
+  deleteCustomers: (ids: string[]) => Promise<void>
   selectedIds: string[]
   setSelectedIds: (ids: string[]) => void
   updateCustomerCoords: (id: string, lat: number, lng: number) => Promise<void>
@@ -200,6 +201,28 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  // 고객 다중 삭제 로직
+  const deleteCustomers = async (ids: string[]) => {
+    setCustomersState(prev => {
+      const updated = prev.filter(c => !ids.includes(c.id))
+      localStorage.setItem('customers', JSON.stringify(updated))
+      return updated
+    })
+
+    const isSupabaseConfigured = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    if (isSupabaseConfigured) {
+      try {
+        const { error } = await supabase.from('customers').delete().in('id', ids)
+        if (error) {
+          console.error('Supabase delete error:', error)
+          alert(`서버 삭제 실패: ${error.message || JSON.stringify(error)}`)
+        }
+      } catch (err) {
+        console.error('Supabase delete sync error:', err)
+      }
+    }
+  }
+
   // 좌표 업데이트 함수 및 동기화
   const updateCustomerCoords = async (id: string, lat: number, lng: number) => {
     let updated: CustomerData[] = []
@@ -339,6 +362,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       customers, 
       setCustomers, 
       addCustomer,
+      deleteCustomers,
       selectedIds, 
       setSelectedIds, 
       updateCustomerCoords, 

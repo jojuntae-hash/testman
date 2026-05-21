@@ -8,6 +8,7 @@ interface ManualAddModalProps {
 
 export default function ManualAddModal({ onClose, onAdd }: ManualAddModalProps) {
   const [formData, setFormData] = useState({
+    고객번호: '',
     고객명_상호: '',
     전화번호: '',
     설치주소: '',
@@ -34,7 +35,7 @@ export default function ManualAddModal({ onClose, onAdd }: ManualAddModalProps) 
       status: '작업미완료',
       주소: formData.설치주소, // 주소 기본값 통일
       핸드폰번호: formData.전화번호, // 번호 기본값 통일
-      고객번호: '',
+      고객번호: formData.고객번호,
       계약일자: '',
       계약만료일자: '',
       최종점검일: '',
@@ -58,6 +59,16 @@ export default function ManualAddModal({ onClose, onAdd }: ManualAddModalProps) 
           <button className="close-btn" onClick={onClose}><X size={20} /></button>
         </div>
         <form onSubmit={handleSubmit} className="modal-body">
+          <div className="form-group">
+            <label>고객번호</label>
+            <input 
+              type="text" 
+              name="고객번호" 
+              value={formData.고객번호} 
+              onChange={handleChange} 
+              placeholder="예: 1234567"
+            />
+          </div>
           <div className="form-group">
             <label>고객명/상호 *</label>
             <input 

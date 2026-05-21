@@ -7,6 +7,7 @@ import { ChevronLeft, Save, Trash2, Download, Upload, Map as MapIcon, Clock, Key
 import * as XLSX from 'xlsx'
 import Script from 'next/script'
 import ManualAddModal from '@/components/ManualAddModal'
+import CustomerDeleteModal from '@/components/CustomerDeleteModal'
 
 export default function SettingsPage() {
   const router = useRouter()
@@ -22,6 +23,7 @@ export default function SettingsPage() {
   const [isKeyLocked, setIsKeyLocked] = useState(true)
   const [navigationApp, setNavigationApp] = useState('tmap')
   const [isManualAddOpen, setIsManualAddOpen] = useState(false)
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -374,6 +376,10 @@ export default function SettingsPage() {
               <Upload size={18} />
               수동으로 고객 1건 추가
             </button>
+            <button className="data-btn" style={{ color: '#ef4444' }} onClick={() => setIsDeleteModalOpen(true)}>
+              <Trash2 size={18} />
+              개별 고객 선택 삭제
+            </button>
             <label className="data-btn excel">
               <Upload size={18} />
               엑셀/CSV 데이터 추가
@@ -395,6 +401,12 @@ export default function SettingsPage() {
         <ManualAddModal 
           onClose={() => setIsManualAddOpen(false)} 
           onAdd={handleManualAdd} 
+        />
+      )}
+
+      {isDeleteModalOpen && (
+        <CustomerDeleteModal 
+          onClose={() => setIsDeleteModalOpen(false)}
         />
       )}
 
