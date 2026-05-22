@@ -3,6 +3,7 @@ import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import BottomNav from '@/components/BottomNav'
 import { DataProvider } from '@/lib/DataContext'
+import AuthWrapper from '@/components/AuthWrapper'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -20,10 +21,12 @@ export default function RootLayout({
     <html lang="ko">
       <body className={inter.className}>
         <DataProvider>
-          <div className="container">
-            <main>{children}</main>
-            <BottomNav />
-          </div>
+          <AuthWrapper>
+            <div className="container">
+              <main>{children}</main>
+              <BottomNav />
+            </div>
+          </AuthWrapper>
         </DataProvider>
       </body>
     </html>

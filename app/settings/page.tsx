@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useData } from '@/lib/DataContext'
-import { ChevronLeft, Save, Trash2, Download, Upload, Map as MapIcon, Clock, Key, Home, Settings as SettingsIcon, Search, Lock, Unlock, RotateCcw, Database } from 'lucide-react'
+import { ChevronLeft, Save, Trash2, Download, Upload, Map as MapIcon, Clock, Key, Home, Settings as SettingsIcon, Search, Lock, Unlock, RotateCcw, Database, LogOut } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import Script from 'next/script'
 import ManualAddModal from '@/components/ManualAddModal'
@@ -200,6 +200,14 @@ export default function SettingsPage() {
     if (confirm('정말로 모든 고객 데이터를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) {
       clearAllCustomers()
       alert('모든 데이터가 삭제되었습니다.')
+    }
+  }
+
+  const handleLogout = () => {
+    if (confirm('로그아웃 하시겠습니까?')) {
+      localStorage.removeItem('auto_login')
+      sessionStorage.removeItem('is_authenticated')
+      window.location.reload()
     }
   }
 
@@ -404,6 +412,15 @@ export default function SettingsPage() {
               </button>
               <button className="settings-list-item" onClick={handleClearAll}>
                 <div className="item-left"><Trash2 size={16} color="#ef4444" /> <span>모든 데이터 완전 삭제</span></div>
+              </button>
+            </div>
+          </div>
+
+          <div className="settings-list-group">
+            <div className="settings-list-header">계정 관리</div>
+            <div className="settings-list-items">
+              <button className="settings-list-item" onClick={handleLogout}>
+                <div className="item-left"><LogOut size={16} color="#64748b" /> <span>로그아웃</span></div>
               </button>
             </div>
           </div>
