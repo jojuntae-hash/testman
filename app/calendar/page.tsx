@@ -76,7 +76,7 @@ export default function CalendarPage() {
     }
     const { data: logsData } = await supabase.from('visit_logs').select('*').eq('customer_id', id).order('visit_date', { ascending: false })
     if (logsData) {
-      setVisitLogs(logsData.filter(log => !log.is_deleted))
+      setVisitLogs(logsData.filter((log: any) => !log.is_deleted))
     } else {
       setVisitLogs([])
     }
