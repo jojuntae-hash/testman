@@ -12,6 +12,7 @@ export default function CompletedPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [sortOrder, setSortOrder] = useState<string>('desc')
   const [selectedDateFilter, setSelectedDateFilter] = useState<string | null>(null) // null 이면 '전체'
+  const [selectedMonth, setSelectedMonth] = useState<string>('all')
 
   useEffect(() => {
     const savedState = sessionStorage.getItem('completedPageState')
@@ -28,62 +29,7 @@ export default function CompletedPage() {
     }
   }, [])
 
-  const scrollContainerRef = useRef<HTMLDivElement>(null)
-  const isDownRef = useRef(false)
-  const startXRef = useRef(0)
-  const scrollLeftRef = useRef(0)
-  const movedRef = useRef(false)
-
-  useEffect(() => {
-    const slider = scrollContainerRef.current
-    if (!slider) return
-
-    const handleMouseDown = (e: MouseEvent) => {
-      isDownRef.current = true
-      slider.classList.add('active-dragging')
-      startXRef.current = e.pageX - slider.offsetLeft
-      scrollLeftRef.current = slider.scrollLeft
-      movedRef.current = false
-    }
-
-    const handleMouseLeave = () => {
-      isDownRef.current = false
-      slider.classList.remove('active-dragging')
-    }
-
-    const handleMouseUp = () => {
-      isDownRef.current = false
-      slider.classList.remove('active-dragging')
-    }
-
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!isDownRef.current) return
-      e.preventDefault()
-      const x = e.pageX - slider.offsetLeft
-      const walk = (x - startXRef.current) * 1.5
-      slider.scrollLeft = scrollLeftRef.current - walk
-      if (Math.abs(walk) > 5) {
-        movedRef.current = true
-      }
-    }
-
-    slider.addEventListener('mousedown', handleMouseDown)
-    slider.addEventListener('mouseleave', handleMouseLeave)
-    slider.addEventListener('mouseup', handleMouseUp)
-    slider.addEventListener('mousemove', handleMouseMove)
-
-    return () => {
-      slider.removeEventListener('mousedown', handleMouseDown)
-      slider.removeEventListener('mouseleave', handleMouseLeave)
-      slider.removeEventListener('mouseup', handleMouseUp)
-      slider.removeEventListener('mousemove', handleMouseMove)
-    }
-  }, [])
-
   const handleChipClick = (e: React.MouseEvent, date: string | null) => {
-    // 마우스 드래그가 발생했다면 클릭 무시
-    if (movedRef.current) return
-
     setSelectedDateFilter(date)
     const newSortOrder = date ? 'res-asc' : 'desc'
     setSortOrder(newSortOrder)
@@ -125,11 +71,45 @@ export default function CompletedPage() {
       })
   }, [completedCustomers])
 
+  // 월 목록 추출 (YYYY-MM 형식)
+  const availableMonths = useMemo(() => {
+    const months = new Set<string>()
+    completedCustomers.forEach(c => {
+      if (c.작업완료일) {
+        months.add(c.작업완료일.substring(0, 7))
+      }
+    })
+    return Array.from(months).sort((a, b) => b.localeCompare(a))
+  }, [completedCustomers])
+
+  // 선택된 월에 해당하는 날짜 칩만 필터링
+  const filteredDailyStats = useMemo(() => {
+    return dailyStats.filter(stat => {
+      if (selectedMonth === 'all') return true
+      if (stat.rawDate === '날짜 미지정') return false // 전체보기가 아니면 날짜 미지정은 숨김
+      return stat.rawDate.startsWith(selectedMonth)
+    })
+  }, [dailyStats, selectedMonth])
+
+  // 월 필터 변경 시 일별 필터 초기화
+  const handleMonthChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setSelectedMonth(e.target.value)
+    setSelectedDateFilter(null)
+  }
+
   // 검색어 및 날짜 필터링 적용
   const filteredCustomers = useMemo(() => {
     let list = [...completedCustomers]
 
-    // 날짜 칩 필터 적용
+    // 1. 월 필터 적용
+    if (selectedMonth !== 'all') {
+      list = list.filter(c => {
+        if (!c.작업완료일) return false
+        return c.작업완료일.startsWith(selectedMonth)
+      })
+    }
+
+    // 2. 날짜 칩 필터 적용 (월 필터 내에서 특정 날짜 선택 시)
     if (selectedDateFilter) {
       list = list.filter(c => {
         const dateKey = c.작업완료일 || '날짜 미지정'
@@ -242,17 +222,38 @@ export default function CompletedPage() {
       <div className="summary-section">
         {/* 일별 완료 통계 보드 */}
         <div className="stats-board">
-          <h4>일별 완료 현황</h4>
-          <div className="stats-chips-container" ref={scrollContainerRef}>
+          <div className="stats-board-header">
+            <h4>일별 완료 현황</h4>
+            <select 
+              className="month-selector" 
+              value={selectedMonth} 
+              onChange={handleMonthChange}
+            >
+              <option value="all">모든 달 보기</option>
+              {availableMonths.map(month => {
+                const parts = month.split('-')
+                return (
+                  <option key={month} value={month}>
+                    {parts[0]}년 {parseInt(parts[1])}월
+                  </option>
+                )
+              })}
+            </select>
+          </div>
+          <div className="stats-chips-container">
             <button 
               className={`stats-chip ${selectedDateFilter === null ? 'active' : ''}`}
               onClick={(e) => handleChipClick(e, null)}
             >
-              <span className="stats-date">전체</span>
-              <span className="stats-count">{completedCustomers.length}건</span>
+              <span className="stats-date">해당 월 전체</span>
+              <span className="stats-count">
+                {selectedMonth === 'all' 
+                  ? completedCustomers.length 
+                  : completedCustomers.filter(c => c.작업완료일?.startsWith(selectedMonth)).length}건
+              </span>
             </button>
             
-            {dailyStats.map((stat) => (
+            {filteredDailyStats.map((stat) => (
               <button 
                 key={stat.rawDate} 
                 className={`stats-chip ${selectedDateFilter === stat.rawDate ? 'active' : ''}`}
@@ -363,11 +364,23 @@ export default function CompletedPage() {
         .summary-count { font-size: 1.5rem; font-weight: 800; }
         
         .stats-board { background: #fff; border: 1px solid #e2e8f0; border-radius: 20px; padding: 16px 20px; margin-top: 0px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
-        .stats-board h4 { margin: 0 0 10px 0; font-size: 0.85rem; font-weight: 800; color: #475569; }
-        .stats-chips-container { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; -webkit-overflow-scrolling: touch; touch-action: pan-x; user-select: none; }
-        .stats-chips-container::-webkit-scrollbar { height: 4px; }
-        .stats-chips-container::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
-        .stats-chip { background: #f8fafc; border: 1px solid #f1f5f9; padding: 6px 12px; border-radius: 10px; display: flex; align-items: center; gap: 6px; flex-shrink: 0; cursor: pointer; transition: all 0.2s; font-family: inherit; touch-action: pan-x; user-select: none; -webkit-user-drag: none; }
+        .stats-board-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+        .stats-board h4 { margin: 0; font-size: 0.85rem; font-weight: 800; color: #475569; }
+        
+        .month-selector { 
+          padding: 6px 10px; 
+          border-radius: 8px; 
+          border: 1px solid #e2e8f0; 
+          background: #f8fafc; 
+          font-size: 0.75rem; 
+          font-weight: 700; 
+          color: #334155; 
+          outline: none; 
+          cursor: pointer; 
+        }
+        
+        .stats-chips-container { display: flex; flex-wrap: wrap; gap: 8px; padding-bottom: 4px; user-select: none; }
+        .stats-chip { background: #f8fafc; border: 1px solid #f1f5f9; padding: 6px 12px; border-radius: 10px; display: flex; align-items: center; gap: 6px; flex-shrink: 0; cursor: pointer; transition: all 0.2s; font-family: inherit; user-select: none; -webkit-user-drag: none; }
         .stats-chip:hover { border-color: #cbd5e1; background: #f1f5f9; }
         .stats-chip.active { background: #10b981; border-color: #10b981; }
         .stats-chip.active .stats-date { color: #fff; }
