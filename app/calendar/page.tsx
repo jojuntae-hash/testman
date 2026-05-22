@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useData, CustomerData } from '@/lib/DataContext'
-import { ChevronLeft, ChevronRight, Calendar, Phone, MapPin, ExternalLink, Save, Clock, Copy, CheckCircle2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Calendar, Phone, MapPin, ExternalLink, Save, Clock, Copy, CheckCircle2, MessageCircle } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
 // 예약 정보의 시간 정보를 파싱하는 헬퍼 함수
@@ -154,12 +154,38 @@ export default function CalendarPage() {
     setCurrentDate(new Date())
   }
 
-  // 드래그 앤 드롭 상태 및 레퍼런스
   const [draggingId, setDraggingId] = useState<string | null>(null)
   const [isLongPressed, setIsLongPressed] = useState(false)
   const [activeDropCell, setActiveDropCell] = useState<{ date: string; hour: number } | null>(null)
   const longPressTimer = React.useRef<any>(null)
   const touchStartPos = React.useRef({ x: 0, y: 0 })
+
+  // 캘린더 스와이프 제스처 관련
+  const swipeStartPos = React.useRef({ x: 0, y: 0 })
+  const [isSwiping, setIsSwiping] = useState(false)
+
+  const handleCalendarTouchStart = (e: React.TouchEvent) => {
+    swipeStartPos.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }
+    setIsSwiping(true)
+  }
+
+  const handleCalendarTouchEnd = (e: React.TouchEvent) => {
+    if (!isSwiping) return
+    const endX = e.changedTouches[0].clientX
+    const endY = e.changedTouches[0].clientY
+    const diffX = endX - swipeStartPos.current.x
+    const diffY = endY - swipeStartPos.current.y
+    
+    // 수평 이동 거리가 50px 이상이고 수직 이동 거리보다 큰 경우 스와이프 처리
+    if (Math.abs(diffX) > 50 && Math.abs(diffX) > Math.abs(diffY)) {
+      if (diffX > 0) {
+        handlePrevWeek() // 오른쪽으로 스와이프 -> 이전 날짜
+      } else {
+        handleNextWeek() // 왼쪽으로 스와이프 -> 다음 날짜
+      }
+    }
+    setIsSwiping(false)
+  }
 
   const handlePointerDown = (e: React.PointerEvent, customerId: string) => {
     // 마우스의 경우 오직 좌클릭만 반응
@@ -424,8 +450,12 @@ export default function CalendarPage() {
         </button>
       </div>
 
-      {/* 캘린더 영역 */}
-      <div className="calendar-container">
+      {/* 캘린더 영역 (터치 스와이프 이벤트 추가) */}
+      <div 
+        className="calendar-container"
+        onTouchStart={handleCalendarTouchStart}
+        onTouchEnd={handleCalendarTouchEnd}
+      >
         {/* 시간 축 */}
         <div className="time-axis">
           <div className="axis-header">시간</div>
@@ -552,9 +582,14 @@ export default function CalendarPage() {
                     <label>연락처</label>
                     <div className="row-action">
                       <span>{selectedCustomer.전화번호}</span>
-                      <a href={`tel:${String(selectedCustomer.전화번호).replace(/[^0-9]/g, '')}`} className="action-circle-btn phone">
-                        <Phone size={14} />
-                      </a>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <a href={`tel:${String(selectedCustomer.전화번호).replace(/[^0-9]/g, '')}`} className="action-circle-btn phone">
+                          <Phone size={14} />
+                        </a>
+                        <a href={`sms:${String(selectedCustomer.전화번호).replace(/[^0-9]/g, '')}`} className="action-circle-btn sms">
+                          <MessageCircle size={14} />
+                        </a>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -1039,21 +1074,10 @@ export default function CalendarPage() {
         .address-text {
           line-height: 1.4;
         }
-        .action-circle-btn {
-          width: 28px;
-          height: 28px;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: #fff;
-          cursor: pointer;
-          transition: all 0.2s;
-        }
-        .action-circle-btn:active {
-          transform: scale(0.9);
-        }
+        .action-circle-btn { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; text-decoration: none; transition: all 0.2s; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3); }
+        .action-circle-btn:active { transform: scale(0.9); }
         .action-circle-btn.phone { background: #10b981; }
+        .action-circle-btn.sms { background: #3b82f6; box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3); }
         .action-circle-btn.map { background: #3b82f6; }
         .action-circle-btn.map {
           background: #eff6ff;

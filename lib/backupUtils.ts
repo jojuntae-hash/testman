@@ -1,8 +1,6 @@
 import { CustomerData } from './DataContext'
+import { supabase } from './supabase'
 
-const DB_NAME = 'testmanBackupDB'
-const DB_VERSION = 1
-const STORE_NAME = 'backups'
 const MAX_BACKUPS = 50
 
 export interface BackupItem {
@@ -12,63 +10,36 @@ export interface BackupItem {
   data: CustomerData[]
 }
 
-// IndexedDB 초기화 및 오픈
-function openDB(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, DB_VERSION)
-
-    request.onerror = (event) => reject(request.error)
-    request.onsuccess = (event) => resolve(request.result)
-
-    request.onupgradeneeded = (event) => {
-      const db = request.result
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        db.createObjectStore(STORE_NAME, { keyPath: 'id' })
-      }
-    }
-  })
-}
-
 function formatDate(date: Date): string {
-  const yyyy = date.getFullYear()
+  const yy = String(date.getFullYear()).slice(-2)
   const mm = String(date.getMonth() + 1).padStart(2, '0')
   const dd = String(date.getDate()).padStart(2, '0')
   const hh = String(date.getHours()).padStart(2, '0')
   const min = String(date.getMinutes()).padStart(2, '0')
-  const ss = String(date.getSeconds()).padStart(2, '0')
-  return `${yyyy}${mm}${dd}_${hh}${min}${ss}`
+  return `${yy}${mm}${dd}_${hh}${min}`
 }
 
 // 50개 초과 시 오래된 데이터 삭제 로직
-async function enforceMaxBackups(db: IDBDatabase): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction([STORE_NAME], 'readwrite')
-    const store = transaction.objectStore(STORE_NAME)
-    const request = store.getAll()
+async function enforceMaxBackups(): Promise<void> {
+  const { data, error } = await supabase
+    .from('backups')
+    .select('id, timestamp')
+    .order('timestamp', { ascending: true })
+  
+  if (error || !data) return
 
-    request.onsuccess = () => {
-      const allBackups = request.result as BackupItem[]
-      if (allBackups.length > MAX_BACKUPS) {
-        allBackups.sort((a, b) => a.timestamp - b.timestamp)
-        const backupsToDelete = allBackups.slice(0, allBackups.length - MAX_BACKUPS)
-        
-        for (const backup of backupsToDelete) {
-          store.delete(backup.id)
-        }
-      }
-    }
-
-    transaction.oncomplete = () => resolve()
-    transaction.onerror = () => reject(transaction.error)
-  })
+  if (data.length > MAX_BACKUPS) {
+    const toDelete = data.slice(0, data.length - MAX_BACKUPS)
+    const idsToDelete = toDelete.map((d: any) => d.id)
+    await supabase.from('backups').delete().in('id', idsToDelete)
+  }
 }
 
 // 백업 생성
 export async function saveBackup(data: CustomerData[]): Promise<void> {
-  const db = await openDB()
   const now = new Date()
   const id = Date.now().toString()
-  const name = `testman_${formatDate(now)}`
+  const name = `J_${formatDate(now)}`
 
   const backupItem: BackupItem = {
     id,
@@ -77,65 +48,49 @@ export async function saveBackup(data: CustomerData[]): Promise<void> {
     data: JSON.parse(JSON.stringify(data)), // 깊은 복사
   }
 
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction([STORE_NAME], 'readwrite')
-    const store = transaction.objectStore(STORE_NAME)
-    const request = store.add(backupItem)
+  const { error } = await supabase.from('backups').insert(backupItem)
+  if (error) {
+    console.error('Backup save error:', error)
+    throw error
+  }
 
-    request.onsuccess = () => {
-      enforceMaxBackups(db).then(resolve).catch(reject)
-    }
-    request.onerror = () => reject(request.error)
-  })
+  await enforceMaxBackups()
 }
 
-// 백업 리스트 조회 (UI 용이므로 데이터는 포함하지 않거나 포함해서 로드)
+// 백업 리스트 조회 (데이터 제외)
 export async function getBackupList(): Promise<Omit<BackupItem, 'data'>[]> {
-  const db = await openDB()
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction([STORE_NAME], 'readonly')
-    const store = transaction.objectStore(STORE_NAME)
-    const request = store.getAll()
-
-    request.onsuccess = () => {
-      const allBackups = request.result as BackupItem[]
-      const list = allBackups.map((b) => ({
-        id: b.id,
-        name: b.name,
-        timestamp: b.timestamp,
-      }))
-      list.sort((a, b) => b.timestamp - a.timestamp) // 최신순
-      resolve(list)
-    }
-    request.onerror = () => reject(request.error)
-  })
+  const { data, error } = await supabase
+    .from('backups')
+    .select('id, name, timestamp')
+    .order('timestamp', { ascending: false })
+    
+  if (error) {
+    console.error('Backup list fetch error:', error)
+    return []
+  }
+  return data as Omit<BackupItem, 'data'>[]
 }
 
 // 특정 백업 상세 데이터 가져오기
 export async function getBackupData(id: string): Promise<BackupItem | undefined> {
-  const db = await openDB()
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction([STORE_NAME], 'readonly')
-    const store = transaction.objectStore(STORE_NAME)
-    const request = store.get(id)
-
-    request.onsuccess = () => resolve(request.result)
-    request.onerror = () => reject(request.error)
-  })
+  const { data, error } = await supabase
+    .from('backups')
+    .select('*')
+    .eq('id', id)
+    .single()
+    
+  if (error) {
+    console.error('Backup data fetch error:', error)
+    return undefined
+  }
+  return data as BackupItem
 }
 
 // 여러 백업 삭제
 export async function deleteBackups(ids: string[]): Promise<void> {
-  const db = await openDB()
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction([STORE_NAME], 'readwrite')
-    const store = transaction.objectStore(STORE_NAME)
-    
-    for (const id of ids) {
-      store.delete(id)
-    }
-
-    transaction.oncomplete = () => resolve()
-    transaction.onerror = () => reject(transaction.error)
-  })
+  const { error } = await supabase.from('backups').delete().in('id', ids)
+  if (error) {
+    console.error('Backup delete error:', error)
+    throw error
+  }
 }

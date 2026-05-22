@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useData } from '@/lib/DataContext'
-import { Info, FileText, MapPin, MessageSquare, ChevronLeft, Phone, Save, Calendar, Clock, Copy } from 'lucide-react'
+import { Info, FileText, MapPin, MessageSquare, MessageCircle, ChevronLeft, Phone, Save, Calendar, Clock, Copy } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import VisitLogModal from '@/components/VisitLogModal'
 
@@ -286,9 +286,14 @@ export default function DetailPage() {
         <div className="title-row">
           <h2 className="customer-name">{customer.고객명_상호}</h2>
           {customer.전화번호 && (
-            <a href={`tel:${String(customer.전화번호).replace(/[^0-9]/g, '')}`} className="action-circle-btn phone">
-              <Phone size={18} />
-            </a>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <a href={`tel:${String(customer.전화번호).replace(/[^0-9]/g, '')}`} className="action-circle-btn phone">
+                <Phone size={18} />
+              </a>
+              <a href={`sms:${String(customer.전화번호).replace(/[^0-9]/g, '')}`} className="action-circle-btn sms">
+                <MessageCircle size={18} />
+              </a>
+            </div>
           )}
         </div>
       </div>
@@ -411,9 +416,14 @@ export default function DetailPage() {
             <div className="value-with-action">
               <span>{customer.전화번호}</span>
               {customer.전화번호 && (
-                <a href={`tel:${String(customer.전화번호).replace(/[^0-9]/g, '')}`} className="mini-call-btn">
-                  <Phone size={12} />
-                </a>
+                <div style={{ display: 'flex', gap: '4px' }}>
+                  <a href={`tel:${String(customer.전화번호).replace(/[^0-9]/g, '')}`} className="mini-call-btn">
+                    <Phone size={12} />
+                  </a>
+                  <a href={`sms:${String(customer.전화번호).replace(/[^0-9]/g, '')}`} className="mini-sms-btn">
+                    <MessageCircle size={12} />
+                  </a>
+                </div>
               )}
             </div>
           </div>
@@ -422,9 +432,14 @@ export default function DetailPage() {
             <div className="value-with-action">
               <span>{customer.핸드폰번호}</span>
               {customer.핸드폰번호 && (
-                <a href={`tel:${String(customer.핸드폰번호).replace(/[^0-9]/g, '')}`} className="mini-call-btn">
-                  <Phone size={12} />
-                </a>
+                <div style={{ display: 'flex', gap: '4px' }}>
+                  <a href={`tel:${String(customer.핸드폰번호).replace(/[^0-9]/g, '')}`} className="mini-call-btn">
+                    <Phone size={12} />
+                  </a>
+                  <a href={`sms:${String(customer.핸드폰번호).replace(/[^0-9]/g, '')}`} className="mini-sms-btn">
+                    <MessageCircle size={12} />
+                  </a>
+                </div>
               )}
             </div>
           </div>
@@ -466,9 +481,14 @@ export default function DetailPage() {
             <div className="value-with-action">
               <span>{customer.설치전화번호}</span>
               {customer.설치전화번호 && (
-                <a href={`tel:${String(customer.설치전화번호).replace(/[^0-9]/g, '')}`} className="mini-call-btn">
-                  <Phone size={12} />
-                </a>
+                <div style={{ display: 'flex', gap: '4px' }}>
+                  <a href={`tel:${String(customer.설치전화번호).replace(/[^0-9]/g, '')}`} className="mini-call-btn">
+                    <Phone size={12} />
+                  </a>
+                  <a href={`sms:${String(customer.설치전화번호).replace(/[^0-9]/g, '')}`} className="mini-sms-btn">
+                    <MessageCircle size={12} />
+                  </a>
+                </div>
               )}
             </div>
           </div>
@@ -752,6 +772,7 @@ export default function DetailPage() {
         .action-circle-btn { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; text-decoration: none; transition: all 0.2s; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3); }
         .action-circle-btn:active { transform: scale(0.9); }
         .action-circle-btn.phone { background: #10b981; }
+        .action-circle-btn.sms { background: #3b82f6; }
         .memo-textarea { width: 100%; min-height: 80px; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 0.9rem; resize: vertical; outline: none; margin-bottom: 8px; }
         .memo-textarea:focus { border-color: var(--accent-blue); }
         .save-memo-btn { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 8px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; transition: all 0.2s; }
@@ -760,6 +781,8 @@ export default function DetailPage() {
         .value-with-action { display: flex; align-items: center; gap: 8px; justify-content: flex-start; }
         .mini-call-btn { width: 28px; height: 28px; background: #ecfdf5; color: #10b981; border: 1px solid #d1fae5; border-radius: 6px; display: flex; align-items: center; justify-content: center; text-decoration: none; transition: all 0.2s; cursor: pointer; }
         .mini-call-btn:active { transform: scale(0.9); }
+        .mini-sms-btn { width: 28px; height: 28px; background: #eff6ff; color: #3b82f6; border: 1px solid #dbeafe; border-radius: 6px; display: flex; align-items: center; justify-content: center; text-decoration: none; transition: all 0.2s; cursor: pointer; }
+        .mini-sms-btn:active { transform: scale(0.9); }
         .mini-map-btn { width: 28px; height: 28px; background: #eff6ff; color: #3b82f6; border: 1px solid #dbeafe; border-radius: 6px; display: flex; align-items: center; justify-content: center; text-decoration: none; transition: all 0.2s; cursor: pointer; }
         .mini-map-btn:active { transform: scale(0.9); }
         
