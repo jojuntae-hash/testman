@@ -13,7 +13,7 @@ export default function MapPage() {
   
   // 상태 관리
   const [selectedCustomersList, setSelectedCustomersList] = useState<CustomerData[]>([])
-  const [markers, setMarkers] = useState<{ id: string; lat: number; lng: number; customer: CustomerData }[]>([])
+  const [markers, setMarkers] = useState<{ key: string; lat: number; lng: number; customers: CustomerData[]; isGroup: boolean }[]>([])
   const [selectedFolder, setSelectedFolder] = useState<string>('선택된 항목')
   const [isMapReady, setIsMapReady] = useState(false)
   const [mapDefaultZoom, setMapDefaultZoom] = useState(4)
@@ -105,7 +105,15 @@ export default function MapPage() {
             customer
           })
           processedCount++
-          if (processedCount === displayCustomers.length) setMarkers(newMarkers)
+          if (processedCount === displayCustomers.length) {
+            const grouped = newMarkers.reduce((acc: any, cur: any) => {
+              const key = `${cur.lat.toFixed(5)}_${cur.lng.toFixed(5)}`
+              if (!acc[key]) acc[key] = { key, lat: cur.lat, lng: cur.lng, customers: [] }
+              acc[key].customers.push(cur.customer)
+              return acc
+            }, {})
+            setMarkers(Object.values(grouped).map((g: any) => ({ ...g, isGroup: g.customers.length > 1 })))
+          }
           return
         }
 
@@ -124,7 +132,13 @@ export default function MapPage() {
           }
           processedCount++
           if (processedCount === displayCustomers.length) {
-            setMarkers(newMarkers)
+            const grouped = newMarkers.reduce((acc: any, cur: any) => {
+              const key = `${cur.lat.toFixed(5)}_${cur.lng.toFixed(5)}`
+              if (!acc[key]) acc[key] = { key, lat: cur.lat, lng: cur.lng, customers: [] }
+              acc[key].customers.push(cur.customer)
+              return acc
+            }, {})
+            setMarkers(Object.values(grouped).map((g: any) => ({ ...g, isGroup: g.customers.length > 1 })))
           }
         })
       })
@@ -190,13 +204,13 @@ export default function MapPage() {
         try {
           const ids: string[] = JSON.parse(savedIds)
           const restored = markers
-            .filter(m => ids.includes(m.id))
-            .map(m => m.customer)
+            .flatMap(m => m.customers)
+            .filter(c => ids.includes(c.id))
           if (restored.length > 0) {
             setSelectedCustomersList(restored)
             // 복원된 마커 중 첫 번째로 지도 중심 이동
-            const firstRestored = markers.find(m => ids.includes(m.id))
-            if (firstRestored) setMapCenter({ lat: firstRestored.lat, lng: firstRestored.lng })
+            const firstRestoredMarker = markers.find(m => m.customers.some(c => ids.includes(c.id)))
+            if (firstRestoredMarker) setMapCenter({ lat: firstRestoredMarker.lat, lng: firstRestoredMarker.lng })
           } else {
             setMapCenter({ lat: markers[0].lat, lng: markers[0].lng })
           }
@@ -271,18 +285,46 @@ export default function MapPage() {
               style={{ width: "100%", height: "100%" }} 
               level={mapDefaultZoom}
             >
-              {markers.map((marker) => (
-                <CustomOverlayMap key={marker.id} position={{ lat: marker.lat, lng: marker.lng }}>
-                  <div 
-                    className={`marker-wrapper ${isSelected(marker.id) ? 'active' : ''}`} 
-                    onClick={() => toggleCustomerSelection(marker.customer)} 
-                    style={{ '--m-color': getMarkerColor(marker.customer.status) } as any}
-                  >
-                    <div className="marker-pin"><div className="marker-core"></div></div>
-                    {(isSelected(marker.id) || mapShowNames) && <div className="marker-tooltip">{marker.customer.고객명_상호}</div>}
-                  </div>
-                </CustomOverlayMap>
-              ))}
+              {markers.map((marker) => {
+                const isActive = marker.customers.some((c: any) => isSelected(c.id))
+                return (
+                  <CustomOverlayMap key={marker.key} position={{ lat: marker.lat, lng: marker.lng }}>
+                    <div 
+                      className={`marker-wrapper ${isActive ? 'active' : ''} ${marker.isGroup ? 'group-marker' : ''}`} 
+                      onClick={() => {
+                        if (marker.isGroup) {
+                          const allSelected = marker.customers.every((c: any) => isSelected(c.id))
+                          if (allSelected) {
+                            setSelectedCustomersList(prev => prev.filter(p => !marker.customers.some((c: any) => c.id === p.id)))
+                          } else {
+                            setSelectedCustomersList(prev => {
+                              const newArr = [...prev]
+                              marker.customers.forEach((c: any) => {
+                                if (!newArr.some(p => p.id === c.id)) newArr.push(c)
+                              })
+                              return newArr
+                            })
+                            setIsExpanded(true)
+                          }
+                        } else {
+                          toggleCustomerSelection(marker.customers[0])
+                          setIsExpanded(true)
+                        }
+                      }} 
+                      style={{ '--m-color': getMarkerColor(marker.customers[0].status) } as any}
+                    >
+                      <div className="marker-pin">
+                        {marker.isGroup ? <div className="group-count">{marker.customers.length}</div> : <div className="marker-core"></div>}
+                      </div>
+                      {(isActive || mapShowNames) && (
+                        <div className="marker-tooltip">
+                          {marker.isGroup ? `${marker.customers.length}명 겹침` : marker.customers[0].고객명_상호}
+                        </div>
+                      )}
+                    </div>
+                  </CustomOverlayMap>
+                )
+              })}
               
               {currentPosition && (
                 <CustomOverlayMap position={currentPosition}>
@@ -444,6 +486,7 @@ export default function MapPage() {
         .marker-core { width: 8px; height: 8px; background: #fff; border-radius: 50%; }
         .marker-wrapper.active .marker-pin { background: #3b82f6 !important; transform: rotate(-45deg) scale(1.2); box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
         .marker-tooltip { position: absolute; top: -35px; background: #333; color: #fff; padding: 4px 10px; border-radius: 8px; font-size: 0.75rem; white-space: nowrap; font-weight: 600; z-index: 10; }
+        .group-count { color: #fff; font-size: 0.75rem; font-weight: 800; transform: rotate(45deg); display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; margin-top: -1px; margin-left: -1px; }
         
         .list-area { 
           position: absolute; bottom: 0; left: 0; right: 0; background: #fff; 

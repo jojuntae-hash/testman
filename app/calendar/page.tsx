@@ -4,6 +4,7 @@ import React, { useState, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useData, CustomerData } from '@/lib/DataContext'
 import { ChevronLeft, ChevronRight, Calendar, Phone, MapPin, ExternalLink, Save, Clock, Copy, CheckCircle2 } from 'lucide-react'
+import { supabase } from '@/lib/supabase'
 
 // 예약 정보의 시간 정보를 파싱하는 헬퍼 함수
 // 예약일자에 날짜+시간이 명시된 경우(YYYY-MM-DD HH:mm)만 파싱.
@@ -55,6 +56,33 @@ export default function CalendarPage() {
   const [editHour, setEditHour] = useState(9)
   const [editMinute, setEditMinute] = useState(0)
 
+  const [memo, setMemo] = useState<string>('')
+  const [visitLogs, setVisitLogs] = useState<any[]>([])
+  const [loadingExtra, setLoadingExtra] = useState(false)
+
+  useEffect(() => {
+    if (isModalOpen && selectedCustomer) {
+      loadExtraInfo(selectedCustomer.id)
+    }
+  }, [isModalOpen, selectedCustomer])
+
+  const loadExtraInfo = async (id: string) => {
+    setLoadingExtra(true)
+    const { data: memoData } = await supabase.from('memos').select('*').eq('customer_id', id).order('updated_at', { ascending: false }).limit(1)
+    if (memoData && memoData.length > 0 && !memoData[0].is_deleted) {
+      setMemo(memoData[0].content || '')
+    } else {
+      setMemo('')
+    }
+    const { data: logsData } = await supabase.from('visit_logs').select('*').eq('customer_id', id).order('visit_date', { ascending: false })
+    if (logsData) {
+      setVisitLogs(logsData.filter(log => !log.is_deleted))
+    } else {
+      setVisitLogs([])
+    }
+    setLoadingExtra(false)
+  }
+
   // 오늘 날짜 구하기 (KST 기준)
   const todayStr = useMemo(() => {
     const today = new Date()
@@ -88,7 +116,7 @@ export default function CalendarPage() {
   // 예약일자 포맷에 따른 데이터 가공
   const reservations = useMemo(() => {
     return customers
-      .filter(c => c.status !== '삭제됨' && c.예약일자)
+      .filter(c => c.status !== '삭제됨' && c.status !== '작업미완료' && c.예약일자)
       .map(c => {
         const timeInfo = parseReservationTime(c)
         return {
@@ -550,6 +578,30 @@ export default function CalendarPage() {
                   <div className="info-detail-item">
                     <label>특이사항</label>
                     <div className="memo-box">{selectedCustomer.설치시특이사항}</div>
+                  </div>
+                )}
+                {!loadingExtra && memo && (
+                  <div className="info-detail-item">
+                    <label>현장 메모</label>
+                    <div className="memo-box" style={{ background: '#fffbeb', border: '1px solid #fde68a' }}>{memo}</div>
+                  </div>
+                )}
+                {!loadingExtra && visitLogs.length > 0 && (
+                  <div className="info-detail-item">
+                    <label>방문 기록 ({visitLogs.length}건)</label>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      {visitLogs.slice(0, 3).map(log => (
+                        <div key={log.id} style={{ background: '#f8fafc', padding: '8px', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '0.8rem' }}>
+                          <div style={{ fontWeight: 700, color: '#334155', marginBottom: '2px' }}>{log.visit_date}</div>
+                          <div style={{ color: '#475569', whiteSpace: 'pre-wrap', lineHeight: '1.4' }}>{log.content}</div>
+                        </div>
+                      ))}
+                      {visitLogs.length > 3 && (
+                        <div style={{ fontSize: '0.75rem', color: '#64748b', textAlign: 'center', marginTop: '4px' }}>
+                          + 외 {visitLogs.length - 3}건 (상세보기에서 확인)
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
