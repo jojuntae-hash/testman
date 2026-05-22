@@ -357,48 +357,55 @@ export default function SettingsPage() {
           </div>
         </section>
 
-        {/* 데이터 관리 */}
+        {/* 데이터 관리 (간소화된 리스트 형태) */}
         <section className="settings-section">
           <div className="section-title"><SettingsIcon size={18} /> 데이터 관리</div>
-          <div className="data-action-grid">
-            <button className="data-btn" style={{ color: '#0ea5e9' }} onClick={() => setIsBackupManagerOpen(true)}>
-              <Database size={18} />
-              자동 백업 관리
-            </button>
-            <button className="data-btn backup" onClick={handleBackupJSON}>
-              <Download size={18} />
-              전체 데이터 백업 (JSON)
-            </button>
-            <button className="data-btn excel" onClick={handleBackupExcel}>
-              <Download size={18} />
-              고객 리스트 내보내기 (Excel)
-            </button>
-            <label className="data-btn restore">
-              <Upload size={18} />
-              데이터 복원 (파일 선택)
-              <input type="file" accept=".json" onChange={handleRestore} hidden />
-            </label>
-            <button className="data-btn" style={{ color: '#3b82f6' }} onClick={() => setIsManualAddOpen(true)}>
-              <Upload size={18} />
-              수동으로 고객 1건 추가
-            </button>
-            <button className="data-btn" style={{ color: '#ef4444' }} onClick={() => setIsDeleteModalOpen(true)}>
-              <Trash2 size={18} />
-              개별 고객 선택 삭제
-            </button>
-            <label className="data-btn excel">
-              <Upload size={18} />
-              엑셀/CSV 데이터 추가
-              <input type="file" accept=".xlsx, .xls, .csv" onChange={handleExcelImport} hidden />
-            </label>
-            <button className="data-btn reset" onClick={handleResetToDefault}>
-              <RotateCcw size={18} />
-              샘플 데이터로 리셋
-            </button>
-            <button className="data-btn danger" onClick={handleClearAll}>
-              <Trash2 size={18} />
-              모든 고객 데이터 삭제
-            </button>
+          
+          <div className="settings-list-group">
+            <div className="settings-list-header">데이터 가져오기 및 추가</div>
+            <div className="settings-list-items">
+              <label className="settings-list-item">
+                <div className="item-left"><Upload size={16} color="#f59e0b" /> <span>데이터 복원 (JSON 파일)</span></div>
+                <input type="file" accept=".json" onChange={handleRestore} hidden />
+              </label>
+              <label className="settings-list-item">
+                <div className="item-left"><Upload size={16} color="#10b981" /> <span>엑셀/CSV 데이터 추가</span></div>
+                <input type="file" accept=".xlsx, .xls, .csv" onChange={handleExcelImport} hidden />
+              </label>
+              <button className="settings-list-item" onClick={() => setIsManualAddOpen(true)}>
+                <div className="item-left"><Upload size={16} color="#3b82f6" /> <span>수동으로 1건 추가</span></div>
+              </button>
+            </div>
+          </div>
+
+          <div className="settings-list-group">
+            <div className="settings-list-header">데이터 백업 및 내보내기</div>
+            <div className="settings-list-items">
+              <button className="settings-list-item" onClick={() => setIsBackupManagerOpen(true)}>
+                <div className="item-left"><Database size={16} color="#0ea5e9" /> <span>자동 백업 관리</span></div>
+              </button>
+              <button className="settings-list-item" onClick={handleBackupJSON}>
+                <div className="item-left"><Download size={16} color="#8b5cf6" /> <span>전체 데이터 백업 (JSON)</span></div>
+              </button>
+              <button className="settings-list-item" onClick={handleBackupExcel}>
+                <div className="item-left"><Download size={16} color="#10b981" /> <span>고객 리스트 내보내기 (Excel)</span></div>
+              </button>
+            </div>
+          </div>
+
+          <div className="settings-list-group danger-zone">
+            <div className="settings-list-header danger">데이터 삭제 및 초기화</div>
+            <div className="settings-list-items">
+              <button className="settings-list-item" onClick={() => setIsDeleteModalOpen(true)}>
+                <div className="item-left"><Trash2 size={16} color="#f43f5e" /> <span>개별 고객 선택 삭제</span></div>
+              </button>
+              <button className="settings-list-item" onClick={handleResetToDefault}>
+                <div className="item-left"><RotateCcw size={16} color="#6366f1" /> <span>샘플 데이터로 리셋</span></div>
+              </button>
+              <button className="settings-list-item" onClick={handleClearAll}>
+                <div className="item-left"><Trash2 size={16} color="#ef4444" /> <span>모든 데이터 완전 삭제</span></div>
+              </button>
+            </div>
           </div>
         </section>
       </div>
@@ -464,14 +471,28 @@ export default function SettingsPage() {
         input:checked + .slider { background-color: #4f46e5; }
         input:checked + .slider:before { transform: translateX(22px); }
 
-        .data-action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-        .data-btn { padding: 20px 15px; border-radius: 20px; border: 1px solid #e2e8f0; background: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; font-size: 0.85rem; font-weight: 700; cursor: pointer; transition: all 0.2s; text-align: center; color: #475569; }
-        .data-btn:hover { border-color: #cbd5e1; background: #f1f5f9; transform: translateY(-2px); }
-        .data-btn.reset { color: #4f46e5; }
-        .data-btn.danger { color: #ef4444; }
-        .data-btn.backup { color: #4f46e5; }
-        .data-btn.excel { color: #10b981; }
-        .data-btn.restore { color: #f59e0b; }
+        /* 간소화된 리스트 메뉴 스타일 */
+        .settings-list-group { margin-bottom: 24px; }
+        .settings-list-header { font-size: 0.8rem; font-weight: 800; color: #64748b; margin-bottom: 8px; padding-left: 4px; }
+        .settings-list-header.danger { color: #e11d48; }
+        .settings-list-items { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; }
+        .settings-list-group.danger-zone .settings-list-items { border-color: #fecaca; background: #fffcfc; }
+        
+        .settings-list-item { display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 14px 16px; background: transparent; border: none; border-bottom: 1px solid #f1f5f9; cursor: pointer; text-align: left; transition: background 0.2s; }
+        .settings-list-group.danger-zone .settings-list-item { border-bottom-color: #fee2e2; }
+        .settings-list-item:last-child { border-bottom: none; }
+        .settings-list-item:hover { background: #f8fafc; }
+        .settings-list-group.danger-zone .settings-list-item:hover { background: #fff1f2; }
+        .settings-list-item:active { background: #f1f5f9; }
+        
+        .item-left { display: flex; align-items: center; gap: 12px; }
+        .item-left span { font-size: 0.9rem; font-weight: 600; color: #334155; }
+        .settings-list-group.danger-zone .item-left span { color: #b91c1c; }
+        
+        @media (max-width: 480px) {
+          .settings-list-item { padding: 12px 14px; }
+          .item-left span { font-size: 0.85rem; }
+        }
       `}</style>
     </div>
   )

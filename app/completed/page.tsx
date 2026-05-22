@@ -67,83 +67,27 @@ export default function CompletedPage() {
       }
     }
 
-    const handleTouchStart = (e: TouchEvent) => {
-      isDownRef.current = true
-      startXRef.current = e.touches[0].pageX - slider.offsetLeft
-      scrollLeftRef.current = slider.scrollLeft
-      movedRef.current = false
-    }
-
-    const handleTouchEnd = () => {
-      isDownRef.current = false
-    }
-
-    const handleTouchMove = (e: TouchEvent) => {
-      if (!isDownRef.current) return
-      const x = e.touches[0].pageX - slider.offsetLeft
-      const walk = x - startXRef.current
-      if (Math.abs(walk) > 5) {
-        movedRef.current = true
-      }
-    }
-
     slider.addEventListener('mousedown', handleMouseDown)
     slider.addEventListener('mouseleave', handleMouseLeave)
     slider.addEventListener('mouseup', handleMouseUp)
     slider.addEventListener('mousemove', handleMouseMove)
-    
-    slider.addEventListener('touchstart', handleTouchStart, { passive: true })
-    slider.addEventListener('touchend', handleTouchEnd, { passive: true })
-    slider.addEventListener('touchmove', handleTouchMove, { passive: true })
 
     return () => {
       slider.removeEventListener('mousedown', handleMouseDown)
       slider.removeEventListener('mouseleave', handleMouseLeave)
       slider.removeEventListener('mouseup', handleMouseUp)
       slider.removeEventListener('mousemove', handleMouseMove)
-      
-      slider.removeEventListener('touchstart', handleTouchStart)
-      slider.removeEventListener('touchend', handleTouchEnd)
-      slider.removeEventListener('touchmove', handleTouchMove)
     }
   }, [])
 
-  const touchStartXRef = useRef(0)
-  const touchStartYRef = useRef(0)
+  const handleChipClick = (e: React.MouseEvent, date: string | null) => {
+    // 마우스 드래그가 발생했다면 클릭 무시
+    if (movedRef.current) return
 
-  const handleStart = (e: React.MouseEvent | React.TouchEvent) => {
-    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX
-    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY
-    touchStartXRef.current = clientX
-    touchStartYRef.current = clientY
-  }
-
-  const handleEnd = (e: React.MouseEvent | React.TouchEvent, date: string | null) => {
-    let clientX = 0
-    let clientY = 0
-
-    if ('changedTouches' in e) {
-      if (e.changedTouches && e.changedTouches.length > 0) {
-        clientX = e.changedTouches[0].clientX
-        clientY = e.changedTouches[0].clientY
-      } else {
-        return
-      }
-    } else {
-      clientX = e.clientX
-      clientY = e.clientY
-    }
-
-    const diffX = Math.abs(clientX - touchStartXRef.current)
-    const diffY = Math.abs(clientY - touchStartYRef.current)
-
-    // 가로세로 이동 거리가 8px 미만일 때만 순수 클릭(탭)으로 판정합니다.
-    if (diffX < 8 && diffY < 8) {
-      setSelectedDateFilter(date)
-      const newSortOrder = date ? 'res-asc' : 'desc'
-      setSortOrder(newSortOrder)
-      sessionStorage.setItem('completedPageState', JSON.stringify({ date, sortOrder: newSortOrder }))
-    }
+    setSelectedDateFilter(date)
+    const newSortOrder = date ? 'res-asc' : 'desc'
+    setSortOrder(newSortOrder)
+    sessionStorage.setItem('completedPageState', JSON.stringify({ date, sortOrder: newSortOrder }))
   }
 
   // 작업완료 데이터 필터링
@@ -302,11 +246,7 @@ export default function CompletedPage() {
           <div className="stats-chips-container" ref={scrollContainerRef}>
             <button 
               className={`stats-chip ${selectedDateFilter === null ? 'active' : ''}`}
-              onMouseDown={handleStart}
-              onTouchStart={handleStart}
-              onMouseUp={(e) => handleEnd(e, null)}
-              onTouchEnd={(e) => handleEnd(e, null)}
-              onClick={(e) => e.preventDefault()}
+              onClick={(e) => handleChipClick(e, null)}
             >
               <span className="stats-date">전체</span>
               <span className="stats-count">{completedCustomers.length}건</span>
@@ -316,11 +256,7 @@ export default function CompletedPage() {
               <button 
                 key={stat.rawDate} 
                 className={`stats-chip ${selectedDateFilter === stat.rawDate ? 'active' : ''}`}
-                onMouseDown={handleStart}
-                onTouchStart={handleStart}
-                onMouseUp={(e) => handleEnd(e, stat.rawDate)}
-                onTouchEnd={(e) => handleEnd(e, stat.rawDate)}
-                onClick={(e) => e.preventDefault()}
+                onClick={(e) => handleChipClick(e, stat.rawDate)}
               >
                 <span className="stats-date">{stat.dateLabel}</span>
                 <span className="stats-count">{stat.count}건</span>
