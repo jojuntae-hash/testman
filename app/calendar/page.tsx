@@ -163,6 +163,7 @@ export default function CalendarPage() {
   // 캘린더 스와이프 제스처 관련
   const swipeStartPos = React.useRef({ x: 0, y: 0 })
   const [isSwiping, setIsSwiping] = useState(false)
+  const [slideAnim, setSlideAnim] = useState('')
 
   const handleCalendarTouchStart = (e: React.TouchEvent) => {
     swipeStartPos.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }
@@ -179,9 +180,21 @@ export default function CalendarPage() {
     // 수평 이동 거리가 50px 이상이고 수직 이동 거리보다 큰 경우 스와이프 처리
     if (Math.abs(diffX) > 50 && Math.abs(diffX) > Math.abs(diffY)) {
       if (diffX > 0) {
-        handlePrevWeek() // 오른쪽으로 스와이프 -> 이전 날짜
+        // 오른쪽으로 스와이프 -> 이전 날짜
+        setSlideAnim('slide-out-right')
+        setTimeout(() => {
+          handlePrevWeek()
+          setSlideAnim('slide-in-left')
+          setTimeout(() => setSlideAnim(''), 300)
+        }, 200)
       } else {
-        handleNextWeek() // 왼쪽으로 스와이프 -> 다음 날짜
+        // 왼쪽으로 스와이프 -> 다음 날짜
+        setSlideAnim('slide-out-left')
+        setTimeout(() => {
+          handleNextWeek()
+          setSlideAnim('slide-in-right')
+          setTimeout(() => setSlideAnim(''), 300)
+        }, 200)
       }
     }
     setIsSwiping(false)
@@ -452,7 +465,7 @@ export default function CalendarPage() {
 
       {/* 캘린더 영역 (터치 스와이프 이벤트 추가) */}
       <div 
-        className="calendar-container"
+        className={`calendar-container ${slideAnim}`}
         onTouchStart={handleCalendarTouchStart}
         onTouchEnd={handleCalendarTouchEnd}
       >

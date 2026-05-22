@@ -147,8 +147,7 @@ export default function BackupManagerModal({ onClose }: BackupManagerModalProps)
                       onChange={() => handleToggleSelect(backup.id)}
                     />
                     <div className="backup-info">
-                      <span className="backup-name">{backup.name}.json</span>
-                      <span className="backup-date">{formatDateLabel(backup.timestamp)}</span>
+                      <span className="backup-name">{backup.name}</span>
                     </div>
                   </div>
                   <button 
@@ -175,7 +174,7 @@ export default function BackupManagerModal({ onClose }: BackupManagerModalProps)
         .close-btn { background: none; border: none; cursor: pointer; color: #64748b; padding: 4px; display: flex; }
         .modal-body { padding: 20px 24px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; }
         
-        .backup-actions { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+        .backup-actions { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
         .manual-backup-btn { display: flex; align-items: center; gap: 6px; padding: 8px 12px; background: #e0f2fe; color: #0284c7; border: 1px solid #bae6fd; border-radius: 8px; font-size: 0.85rem; font-weight: 700; cursor: pointer; }
         .manual-backup-btn:hover { background: #bae6fd; }
         
