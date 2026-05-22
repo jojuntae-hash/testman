@@ -110,7 +110,7 @@ export default function BackupManagerModal({ onClose }: BackupManagerModalProps)
         <div className="modal-body">
           <div className="backup-actions">
             <button className="manual-backup-btn" onClick={handleManualBackup}>
-              <Plus size={16} /> 수동 백업 생성
+              <Plus size={16} /> 수동 백업
             </button>
             <div className="right-actions">
               <label className="select-all-label">
@@ -120,14 +120,14 @@ export default function BackupManagerModal({ onClose }: BackupManagerModalProps)
                   onChange={handleToggleSelectAll}
                   disabled={backups.length === 0}
                 />
-                전체 선택
+                전체
               </label>
               <button 
                 className="delete-selected-btn" 
                 onClick={handleDeleteSelected}
                 disabled={selectedIds.size === 0}
               >
-                <Trash2 size={16} /> 선택 삭제
+                <Trash2 size={16} /> 삭제
               </button>
             </div>
           </div>
