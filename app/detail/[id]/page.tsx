@@ -67,21 +67,45 @@ export default function DetailPage() {
     setIsResModalOpen(true)
   }
 
-  const handleSaveResDateTime = () => {
+  const handleSaveResDateTime = async () => {
     if (!customer || !editDate) return
     const pad = (n: number) => n.toString().padStart(2, '0')
     const newDateTimeStr = `${editDate} ${pad(editHour)}:${pad(editMinute)}`
+    
+    const newStatus = customer.status === '작업미완료' ? '예약완료' : customer.status
+
     const updated = customers.map(c => {
       if (c.id === customer.id) {
         return {
           ...c,
           예약일자: newDateTimeStr,
-          status: c.status === '작업미완료' ? '예약완료' : c.status
+          status: newStatus
         }
       }
       return c
     })
+    
+    // 로컬 상태 업데이트
     setCustomers(updated as any)
+    
+    // Supabase에 해당 고객만 단일 업데이트 처리
+    const isSupabaseConfigured = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    if (isSupabaseConfigured) {
+      try {
+        const { createClient } = await import('@supabase/supabase-js')
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+        const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+        const supabase = createClient(supabaseUrl, supabaseAnonKey)
+        
+        const target = updated.find(c => c.id === customer.id)
+        if (target) {
+          await supabase.from('customers').upsert([target])
+        }
+      } catch (err) {
+        console.error('Supabase save error:', err)
+      }
+    }
+
     alert('예약 일정이 저장되었습니다.')
     setIsResModalOpen(false)
   }
