@@ -57,12 +57,21 @@ interface DataContextType {
     close: () => void
     confirm: (date: string) => Promise<void>
   }
+  reservationModal?: {
+    isOpen: boolean
+    targetIds: string[]
+    newStatus: string
+    close: () => void
+    confirm: (dateTime: string) => Promise<void>
+  }
+  restoreFromBackup: (backupData: CustomerData[]) => Promise<void>
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined)
 
 import { initialCustomers } from './initialData'
 import WorkCompletionModal from '@/components/WorkCompletionModal'
+import ReservationModal from '@/components/ReservationModal'
 
 export function DataProvider({ children }: { children: React.ReactNode }) {
   const [customers, setCustomersState] = useState<CustomerData[]>([])
@@ -137,6 +146,18 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       } catch (err) {
         console.error('Failed to sync initial data to Supabase:', err)
       }
+    }
+
+    // 6시간(21,600,000ms) 경과 시 자동 백업
+    const now = Date.now()
+    const lastBackupTime = parseInt(localStorage.getItem('lastBackupTime') || '0', 10)
+    if (now - lastBackupTime >= 21600000 && fixed.length > 0) {
+      import('./backupUtils').then(({ saveBackup }) => {
+        saveBackup(fixed).then(() => {
+          localStorage.setItem('lastBackupTime', now.toString())
+          console.log('Auto backup created successfully.')
+        }).catch(err => console.error('Auto backup failed', err))
+      })
     }
   }
 
@@ -303,7 +324,32 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     await setCustomers(initialFixed)
   }
 
+  // 백업 데이터로 완전 복원
+  const restoreFromBackup = async (backupData: CustomerData[]) => {
+    const isSupabaseConfigured = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    if (isSupabaseConfigured) {
+      try {
+        // 기존 데이터 완전 삭제
+        await supabase.from('customers').delete().neq('id', '')
+      } catch (err) {
+        console.error('Supabase clear before restore error:', err)
+      }
+    }
+    // 백업 데이터로 교체 (setCustomers 내부에서 localStorage 갱신 및 Supabase upsert가 진행됨)
+    await setCustomers(backupData)
+  }
+
   const [completionModalState, setCompletionModalState] = useState<{
+    isOpen: boolean
+    targetIds: string[]
+    newStatus: string
+  }>({
+    isOpen: false,
+    targetIds: [],
+    newStatus: ''
+  })
+
+  const [reservationModalState, setReservationModalState] = useState<{
     isOpen: boolean
     targetIds: string[]
     newStatus: string
@@ -321,23 +367,31 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     })
   }
 
-  // 실제 상태 변경 실행 함수
-  const executeStatusChange = async (ids: string[], newStatus: string, completedDate?: string) => {
-    let updated: CustomerData[] = []
-    setCustomersState(prev => {
-      updated = prev.map(c => {
-        if (ids.includes(c.id)) {
-          return {
-            ...c,
-            status: newStatus,
-            작업완료일: newStatus === '작업완료' ? completedDate : undefined
-          }
-        }
-        return c
-      })
-      localStorage.setItem('customers', JSON.stringify(updated))
-      return updated
+  const closeReservationModal = () => {
+    setReservationModalState({
+      isOpen: false,
+      targetIds: [],
+      newStatus: ''
     })
+  }
+
+  // 실제 상태 변경 실행 함수
+  const executeStatusChange = async (ids: string[], newStatus: string, completedDate?: string, reservedDate?: string) => {
+    // React batching으로 인해 내부 updated 변수가 비어있는 상태로 DB 요청이 가는 것을 방지하기 위해 먼저 계산
+    const updated = customers.map(c => {
+      if (ids.includes(c.id)) {
+        return {
+          ...c,
+          status: newStatus,
+          작업완료일: newStatus === '작업완료' ? completedDate : undefined,
+          예약일자: newStatus === '예약완료' ? reservedDate : (newStatus === '작업미완료' || newStatus === '삭제됨' || newStatus === '작업완료' ? '' : c.예약일자)
+        }
+      }
+      return c
+    })
+
+    setCustomersState(updated)
+    localStorage.setItem('customers', JSON.stringify(updated))
 
     const isSupabaseConfigured = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
     if (isSupabaseConfigured) {
@@ -365,6 +419,14 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       })
       return
     }
+    if (newStatus === '예약완료' && !skipModal) {
+      setReservationModalState({
+        isOpen: true,
+        targetIds: ids,
+        newStatus
+      })
+      return
+    }
     const date = newStatus === '작업완료' ? new Date().toLocaleDateString('sv-SE') : undefined
     await executeStatusChange(ids, newStatus, date)
   }
@@ -372,6 +434,11 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const confirmCompletion = async (date: string) => {
     await executeStatusChange(completionModalState.targetIds, completionModalState.newStatus, date)
     closeCompletionModal()
+  }
+
+  const confirmReservation = async (dateTime: string) => {
+    await executeStatusChange(reservationModalState.targetIds, reservationModalState.newStatus, undefined, dateTime)
+    closeReservationModal()
   }
 
   // 모든 데이터 삭제 및 동기화
@@ -414,10 +481,19 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         newStatus: completionModalState.newStatus,
         close: closeCompletionModal,
         confirm: confirmCompletion
-      }
+      },
+      reservationModal: {
+        isOpen: reservationModalState.isOpen,
+        targetIds: reservationModalState.targetIds,
+        newStatus: reservationModalState.newStatus,
+        close: closeReservationModal,
+        confirm: confirmReservation
+      },
+      restoreFromBackup
     }}>
       {children}
       <WorkCompletionModal />
+      <ReservationModal />
     </DataContext.Provider>
   )
 }

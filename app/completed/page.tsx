@@ -13,6 +13,21 @@ export default function CompletedPage() {
   const [sortOrder, setSortOrder] = useState<string>('desc')
   const [selectedDateFilter, setSelectedDateFilter] = useState<string | null>(null) // null 이면 '전체'
 
+  useEffect(() => {
+    const savedState = sessionStorage.getItem('completedPageState')
+    if (savedState) {
+      try {
+        const parsed = JSON.parse(savedState)
+        setSelectedDateFilter(parsed.date)
+        if (parsed.sortOrder) {
+          setSortOrder(parsed.sortOrder)
+        }
+      } catch (e) {
+        console.error('Failed to parse completedPageState', e)
+      }
+    }
+  }, [])
+
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const isDownRef = useRef(false)
   const startXRef = useRef(0)
@@ -125,11 +140,9 @@ export default function CompletedPage() {
     // 가로세로 이동 거리가 8px 미만일 때만 순수 클릭(탭)으로 판정합니다.
     if (diffX < 8 && diffY < 8) {
       setSelectedDateFilter(date)
-      if (date) {
-        setSortOrder('res-asc')
-      } else {
-        setSortOrder('desc')
-      }
+      const newSortOrder = date ? 'res-asc' : 'desc'
+      setSortOrder(newSortOrder)
+      sessionStorage.setItem('completedPageState', JSON.stringify({ date, sortOrder: newSortOrder }))
     }
   }
 
@@ -342,7 +355,11 @@ export default function CompletedPage() {
               <ArrowUpDown size={14} className="sort-icon" />
               <select 
                 value={sortOrder} 
-                onChange={(e) => setSortOrder(e.target.value)}
+                onChange={(e) => {
+                  const newSort = e.target.value
+                  setSortOrder(newSort)
+                  sessionStorage.setItem('completedPageState', JSON.stringify({ date: selectedDateFilter, sortOrder: newSort }))
+                }}
                 className="sort-select"
               >
                 <option value="desc">최신순</option>

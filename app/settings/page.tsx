@@ -3,11 +3,12 @@
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useData } from '@/lib/DataContext'
-import { ChevronLeft, Save, Trash2, Download, Upload, Map as MapIcon, Clock, Key, Home, Settings as SettingsIcon, Search, Lock, Unlock, RotateCcw } from 'lucide-react'
+import { ChevronLeft, Save, Trash2, Download, Upload, Map as MapIcon, Clock, Key, Home, Settings as SettingsIcon, Search, Lock, Unlock, RotateCcw, Database } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import Script from 'next/script'
 import ManualAddModal from '@/components/ManualAddModal'
 import CustomerDeleteModal from '@/components/CustomerDeleteModal'
+import BackupManagerModal from '@/components/BackupManagerModal'
 
 export default function SettingsPage() {
   const router = useRouter()
@@ -24,6 +25,7 @@ export default function SettingsPage() {
   const [navigationApp, setNavigationApp] = useState('tmap')
   const [isManualAddOpen, setIsManualAddOpen] = useState(false)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+  const [isBackupManagerOpen, setIsBackupManagerOpen] = useState(false)
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -359,6 +361,10 @@ export default function SettingsPage() {
         <section className="settings-section">
           <div className="section-title"><SettingsIcon size={18} /> 데이터 관리</div>
           <div className="data-action-grid">
+            <button className="data-btn" style={{ color: '#0ea5e9' }} onClick={() => setIsBackupManagerOpen(true)}>
+              <Database size={18} />
+              자동 백업 관리
+            </button>
             <button className="data-btn backup" onClick={handleBackupJSON}>
               <Download size={18} />
               전체 데이터 백업 (JSON)
@@ -407,6 +413,12 @@ export default function SettingsPage() {
       {isDeleteModalOpen && (
         <CustomerDeleteModal 
           onClose={() => setIsDeleteModalOpen(false)}
+        />
+      )}
+
+      {isBackupManagerOpen && (
+        <BackupManagerModal 
+          onClose={() => setIsBackupManagerOpen(false)}
         />
       )}
 
