@@ -189,13 +189,37 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
-    // Load SMS data
-    const savedSmsQueue = localStorage.getItem('smsQueue')
-    if (savedSmsQueue) {
-      try {
-        setSmsQueue(JSON.parse(savedSmsQueue))
-      } catch (e) {}
+    const fetchSmsQueue = async () => {
+      const isSupabaseConfigured = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+      if (isSupabaseConfigured) {
+        try {
+          const { data, error } = await supabase.from('sms_queue').select('*').order('created_at', { ascending: true })
+          if (data && data.length > 0) {
+            setSmsQueue(data)
+            localStorage.setItem('smsQueue', JSON.stringify(data))
+          } else {
+            const savedSmsQueue = localStorage.getItem('smsQueue')
+            if (savedSmsQueue) {
+              const parsed = JSON.parse(savedSmsQueue)
+              setSmsQueue(parsed)
+              if (parsed.length > 0) {
+                await supabase.from('sms_queue').upsert(parsed)
+              }
+            }
+          }
+        } catch (e) {
+          console.error('Failed to fetch SMS queue:', e)
+        }
+      } else {
+        const savedSmsQueue = localStorage.getItem('smsQueue')
+        if (savedSmsQueue) {
+          try {
+            setSmsQueue(JSON.parse(savedSmsQueue))
+          } catch (e) {}
+        }
+      }
     }
+    fetchSmsQueue()
     const fetchSmsTemplates = async () => {
       const isSupabaseConfigured = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
       if (isSupabaseConfigured) {
@@ -512,31 +536,48 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   }
 
   // SMS 관리 함수
-  const addToSmsQueue = (name: string, phone: string) => {
+  const addToSmsQueue = async (name: string, phone: string) => {
     if (!phone) {
       alert('전화번호가 없습니다.')
       return
     }
+    const exists = smsQueue.some(item => item.phone === phone)
+    if (exists) return
+
+    const newItem = { id: crypto.randomUUID(), name, phone }
     setSmsQueue(prev => {
       const isExist = prev.find(item => item.phone === phone)
-      if (isExist) return prev // 중복 방지
-      const updated = [...prev, { id: crypto.randomUUID(), name, phone }]
+      if (isExist) return prev
+      const updated = [...prev, newItem]
       localStorage.setItem('smsQueue', JSON.stringify(updated))
       return updated
     })
+
+    const isSupabaseConfigured = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    if (isSupabaseConfigured) {
+      await supabase.from('sms_queue').insert([newItem])
+    }
   }
 
-  const removeFromSmsQueue = (id: string) => {
+  const removeFromSmsQueue = async (id: string) => {
     setSmsQueue(prev => {
       const updated = prev.filter(item => item.id !== id)
       localStorage.setItem('smsQueue', JSON.stringify(updated))
       return updated
     })
+    const isSupabaseConfigured = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    if (isSupabaseConfigured) {
+      await supabase.from('sms_queue').delete().eq('id', id)
+    }
   }
 
-  const clearSmsQueue = () => {
+  const clearSmsQueue = async () => {
     setSmsQueue([])
     localStorage.removeItem('smsQueue')
+    const isSupabaseConfigured = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    if (isSupabaseConfigured) {
+      await supabase.from('sms_queue').delete().neq('id', '')
+    }
   }
 
   const addSmsTemplate = async (title: string, content: string) => {
