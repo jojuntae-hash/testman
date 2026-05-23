@@ -655,7 +655,15 @@ export default function CalendarPage() {
                 )}
                 {!loadingExtra && (
                   <div className="info-detail-item">
-                    <label>현장 메모</label>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                      <label style={{ marginBottom: 0 }}>현장 메모</label>
+                      <button 
+                        onClick={handleSaveMemo}
+                        style={{ fontSize: '0.7rem', padding: '3px 8px', background: '#fef3c7', border: '1px solid #fde68a', borderRadius: '4px', cursor: 'pointer', color: '#b45309', fontWeight: 600 }}
+                      >
+                        메모 저장
+                      </button>
+                    </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                       <textarea 
                         value={memo}
@@ -663,22 +671,16 @@ export default function CalendarPage() {
                         placeholder="현장 메모를 입력하세요"
                         style={{ width: '100%', minHeight: '80px', padding: '12px', border: '1px solid #fde68a', borderRadius: '8px', background: '#fffbeb', resize: 'vertical', fontSize: '0.9rem', outline: 'none' }}
                       />
-                      <button 
-                        onClick={handleSaveMemo}
-                        style={{ alignSelf: 'flex-end', background: '#fef3c7', color: '#b45309', border: '1px solid #fde68a', padding: '6px 12px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer' }}
-                      >
-                        메모 저장
-                      </button>
                     </div>
                   </div>
                 )}
                 {!loadingExtra && (
                   <div className="info-detail-item">
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                       <label style={{ marginBottom: 0 }}>방문 기록 ({visitLogs.length}건)</label>
                       <button 
                         onClick={() => setIsVisitLogModalOpen(true)}
-                        style={{ fontSize: '0.75rem', padding: '4px 8px', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '4px', cursor: 'pointer', color: '#475569', fontWeight: 600 }}
+                        style={{ fontSize: '0.7rem', padding: '3px 8px', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '4px', cursor: 'pointer', color: '#475569', fontWeight: 600 }}
                       >
                         기록 관리
                       </button>
