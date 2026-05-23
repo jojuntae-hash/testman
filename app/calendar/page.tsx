@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useData, CustomerData } from '@/lib/DataContext'
 import { ChevronLeft, ChevronRight, Calendar, Phone, MapPin, ExternalLink, Save, Clock, Copy, CheckCircle2, MessageCircle, ListPlus } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import VisitLogModal from '@/components/VisitLogModal'
 
 // 예약 정보의 시간 정보를 파싱하는 헬퍼 함수
 // 예약일자에 날짜+시간이 명시된 경우(YYYY-MM-DD HH:mm)만 파싱.
@@ -55,10 +56,24 @@ export default function CalendarPage() {
   const [editDate, setEditDate] = useState('')
   const [editHour, setEditHour] = useState(9)
   const [editMinute, setEditMinute] = useState(0)
+  const [isVisitLogModalOpen, setIsVisitLogModalOpen] = useState(false)
 
   const [memo, setMemo] = useState<string>('')
   const [visitLogs, setVisitLogs] = useState<any[]>([])
   const [loadingExtra, setLoadingExtra] = useState(false)
+
+  const handleSaveMemo = async () => {
+    if (!selectedCustomer) return
+    const { data: existing } = await supabase.from('memos').select('id').eq('customer_id', selectedCustomer.id).limit(1)
+    if (existing && existing.length > 0) {
+      await supabase.from('memos').update({ content: memo, is_deleted: !memo.trim(), updated_at: new Date().toISOString() }).eq('id', existing[0].id)
+    } else {
+      if (memo.trim()) {
+        await supabase.from('memos').insert([{ customer_id: selectedCustomer.id, content: memo, is_deleted: false }])
+      }
+    }
+    alert('메모가 저장되었습니다.')
+  }
 
   useEffect(() => {
     if (isModalOpen && selectedCustomer) {
@@ -638,28 +653,53 @@ export default function CalendarPage() {
                     <div className="memo-box">{selectedCustomer.설치시특이사항}</div>
                   </div>
                 )}
-                {!loadingExtra && memo && (
+                {!loadingExtra && (
                   <div className="info-detail-item">
                     <label>현장 메모</label>
-                    <div className="memo-box" style={{ background: '#fffbeb', border: '1px solid #fde68a' }}>{memo}</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <textarea 
+                        value={memo}
+                        onChange={(e) => setMemo(e.target.value)}
+                        placeholder="현장 메모를 입력하세요"
+                        style={{ width: '100%', minHeight: '80px', padding: '12px', border: '1px solid #fde68a', borderRadius: '8px', background: '#fffbeb', resize: 'vertical', fontSize: '0.9rem', outline: 'none' }}
+                      />
+                      <button 
+                        onClick={handleSaveMemo}
+                        style={{ alignSelf: 'flex-end', background: '#fef3c7', color: '#b45309', border: '1px solid #fde68a', padding: '6px 12px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer' }}
+                      >
+                        메모 저장
+                      </button>
+                    </div>
                   </div>
                 )}
-                {!loadingExtra && visitLogs.length > 0 && (
+                {!loadingExtra && (
                   <div className="info-detail-item">
-                    <label>방문 기록 ({visitLogs.length}건)</label>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                      {visitLogs.slice(0, 3).map(log => (
-                        <div key={log.id} style={{ background: '#f8fafc', padding: '8px', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '0.8rem' }}>
-                          <div style={{ fontWeight: 700, color: '#334155', marginBottom: '2px' }}>{log.visit_date}</div>
-                          <div style={{ color: '#475569', whiteSpace: 'pre-wrap', lineHeight: '1.4' }}>{log.content}</div>
-                        </div>
-                      ))}
-                      {visitLogs.length > 3 && (
-                        <div style={{ fontSize: '0.75rem', color: '#64748b', textAlign: 'center', marginTop: '4px' }}>
-                          + 외 {visitLogs.length - 3}건 (상세보기에서 확인)
-                        </div>
-                      )}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                      <label style={{ marginBottom: 0 }}>방문 기록 ({visitLogs.length}건)</label>
+                      <button 
+                        onClick={() => setIsVisitLogModalOpen(true)}
+                        style={{ fontSize: '0.75rem', padding: '4px 8px', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '4px', cursor: 'pointer', color: '#475569', fontWeight: 600 }}
+                      >
+                        기록 관리
+                      </button>
                     </div>
+                    {visitLogs.length > 0 ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        {visitLogs.slice(0, 3).map(log => (
+                          <div key={log.id} style={{ background: '#f8fafc', padding: '8px', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '0.8rem' }}>
+                            <div style={{ fontWeight: 700, color: '#334155', marginBottom: '2px' }}>{log.visit_date}</div>
+                            <div style={{ color: '#475569', whiteSpace: 'pre-wrap', lineHeight: '1.4' }}>{log.content}</div>
+                          </div>
+                        ))}
+                        {visitLogs.length > 3 && (
+                          <div style={{ fontSize: '0.75rem', color: '#64748b', textAlign: 'center', marginTop: '4px' }}>
+                            + 외 {visitLogs.length - 3}건 (상세보기에서 확인)
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: '0.85rem', color: '#94a3b8', textAlign: 'center', padding: '10px 0', background: '#f8fafc', borderRadius: '6px' }}>등록된 방문 기록이 없습니다.</div>
+                    )}
                   </div>
                 )}
               </div>
@@ -717,6 +757,17 @@ export default function CalendarPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {selectedCustomer && (
+        <VisitLogModal 
+          customerId={selectedCustomer.id}
+          isOpen={isVisitLogModalOpen}
+          onClose={() => {
+            setIsVisitLogModalOpen(false)
+            loadExtraInfo(selectedCustomer.id)
+          }}
+        />
       )}
 
       <style jsx>{`
