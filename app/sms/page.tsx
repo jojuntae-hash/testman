@@ -370,6 +370,11 @@ export default function SmsPage() {
           color: #475569;
           white-space: pre-wrap;
           line-height: 1.4;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
 
         .send-btn {
