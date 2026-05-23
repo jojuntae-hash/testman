@@ -15,7 +15,8 @@ import {
   Clock,
   Calendar,
   CheckCircle2,
-  MoreHorizontal
+  MoreHorizontal,
+  MessageSquare
 } from 'lucide-react'
 
 export default function BottomNav() {
@@ -369,7 +370,7 @@ export default function BottomNav() {
     )
   }
 
-  const isMoreActive = ['/route', '/memos', '/settings'].includes(pathname)
+  const isMoreActive = ['/sms', '/memos', '/settings'].includes(pathname)
 
   // 일반 내비게이션 바
   return (
@@ -377,9 +378,9 @@ export default function BottomNav() {
       {isMoreOpen && (
         <div className="more-menu-overlay" onClick={() => setIsMoreOpen(false)}>
           <div className="more-menu-container animated-slide-up" onClick={(e) => e.stopPropagation()}>
-            <Link href="/route" className={`more-menu-item ${pathname === '/route' ? 'active' : ''}`} onClick={() => setIsMoreOpen(false)}>
-              <Navigation size={18} />
-              <span>경로</span>
+            <Link href="/sms" className={`more-menu-item ${pathname === '/sms' ? 'active' : ''}`} onClick={() => setIsMoreOpen(false)}>
+              <MessageSquare size={18} />
+              <span>문자</span>
             </Link>
             <Link href="/memos" className={`more-menu-item ${pathname === '/memos' ? 'active' : ''}`} onClick={() => setIsMoreOpen(false)}>
               <FileText size={18} />

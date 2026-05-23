@@ -7,6 +7,11 @@ import { ChevronLeft, ChevronRight, X, Phone, MapPin, ExternalLink, FolderPlus, 
 import { Map, CustomOverlayMap } from 'react-kakao-maps-sdk'
 import Script from 'next/script'
 
+const formatShortAddress = (addr: string) => {
+  if (!addr) return ''
+  return addr.replace(/^(?:[가-힣]+(?:시|도)\s+)?(?:[가-힣]+(?:구|군|시)\s+)?/, '').trim()
+}
+
 export default function MapPage() {
   const { customers, setCustomers, selectedIds, updateCustomerCoords, changeCustomerStatus, folderColors, updateFolderColor } = useData()
   const router = useRouter()
@@ -390,7 +395,7 @@ export default function MapPage() {
                   <div className="row-info">
                     <div className="row-badge" style={{ background: getMarkerColor(customer.status) }}>{customer.status}</div>
                     <div className="row-name">{customer.고객명_상호}</div>
-                    <div className="row-addr">{customer.설치주소 || customer.주소}</div>
+                    <div className="row-addr">{formatShortAddress(customer.설치주소 || customer.주소 || '')}</div>
                   </div>
                   <button className="detail-btn" onClick={() => {
                     // 상세 페이지 이동 전 현재 상태 sessionStorage에 저장

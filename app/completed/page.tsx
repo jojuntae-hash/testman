@@ -245,7 +245,7 @@ export default function CompletedPage() {
               className={`stats-chip ${selectedDateFilter === null ? 'active' : ''}`}
               onClick={(e) => handleChipClick(e, null)}
             >
-              <span className="stats-date">해당 월 전체</span>
+              <span className="stats-date">월 전체</span>
               <span className="stats-count">
                 {selectedMonth === 'all' 
                   ? completedCustomers.length 
@@ -329,7 +329,7 @@ export default function CompletedPage() {
                       {getElapsedMonthsBadge(customer.계약일자)}
                     </div>
                   </div>
-                  <p className="text-xs text-sub">{customer.전화번호} | {customer.설치주소 || customer.주소}</p>
+                  <p className="text-xs text-sub">{customer.전화번호}</p>
                 </div>
                 <div className="item-actions">
                   <button 
@@ -379,8 +379,8 @@ export default function CompletedPage() {
           cursor: pointer; 
         }
         
-        .stats-chips-container { display: flex; flex-wrap: wrap; gap: 8px; padding-bottom: 4px; user-select: none; }
-        .stats-chip { background: #f8fafc; border: 1px solid #f1f5f9; padding: 6px 12px; border-radius: 10px; display: flex; align-items: center; gap: 6px; flex-shrink: 0; cursor: pointer; transition: all 0.2s; font-family: inherit; user-select: none; -webkit-user-drag: none; }
+        .stats-chips-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding-bottom: 4px; user-select: none; }
+        .stats-chip { background: #f8fafc; border: 1px solid #f1f5f9; padding: 6px 12px; border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; cursor: pointer; transition: all 0.2s; font-family: inherit; user-select: none; -webkit-user-drag: none; width: 100%; box-sizing: border-box; }
         .stats-chip:hover { border-color: #cbd5e1; background: #f1f5f9; }
         .stats-chip.active { background: #10b981; border-color: #10b981; }
         .stats-chip.active .stats-date { color: #fff; }

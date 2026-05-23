@@ -65,6 +65,18 @@ interface DataContextType {
     confirm: (dateTime: string) => Promise<void>
   }
   restoreFromBackup: (backupData: CustomerData[]) => Promise<void>
+  
+  // SMS 기능
+  smsQueue: { id: string; name: string; phone: string }[]
+  setSmsQueue: React.Dispatch<React.SetStateAction<{ id: string; name: string; phone: string }[]>>
+  addToSmsQueue: (name: string, phone: string) => void
+  removeFromSmsQueue: (id: string) => void
+  clearSmsQueue: () => void
+  
+  smsTemplates: { id: string; title: string; content: string }[]
+  addSmsTemplate: (title: string, content: string) => void
+  updateSmsTemplate: (id: string, title: string, content: string) => void
+  deleteSmsTemplate: (id: string) => void
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined)
@@ -78,6 +90,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [isInitialized, setIsInitialized] = useState(false)
   const [folderColors, setFolderColorsState] = useState<Record<string, string>>({})
+
+  // SMS 관련 상태
+  const [smsQueue, setSmsQueue] = useState<{ id: string; name: string; phone: string }[]>([])
+  const [smsTemplates, setSmsTemplates] = useState<{ id: string; title: string; content: string }[]>([])
 
   // 전화번호 보정 로직 (10으로 시작하면 0 추가)
   const fixPhoneNumber = (phone: string) => {
@@ -172,6 +188,45 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         console.error('Failed to parse folder colors', e)
       }
     }
+
+    // Load SMS data
+    const savedSmsQueue = localStorage.getItem('smsQueue')
+    if (savedSmsQueue) {
+      try {
+        setSmsQueue(JSON.parse(savedSmsQueue))
+      } catch (e) {}
+    }
+    const fetchSmsTemplates = async () => {
+      const isSupabaseConfigured = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+      if (isSupabaseConfigured) {
+        try {
+          const { data, error } = await supabase.from('sms_templates').select('*').order('created_at', { ascending: true })
+          if (data && data.length > 0) {
+            setSmsTemplates(data)
+            localStorage.setItem('smsTemplates', JSON.stringify(data))
+          } else {
+            const savedSmsTemplates = localStorage.getItem('smsTemplates')
+            if (savedSmsTemplates) {
+              const parsed = JSON.parse(savedSmsTemplates)
+              setSmsTemplates(parsed)
+              if (parsed.length > 0) {
+                await supabase.from('sms_templates').upsert(parsed)
+              }
+            }
+          }
+        } catch (e) {
+          console.error('Failed to fetch SMS templates:', e)
+        }
+      } else {
+        const savedSmsTemplates = localStorage.getItem('smsTemplates')
+        if (savedSmsTemplates) {
+          try {
+            setSmsTemplates(JSON.parse(savedSmsTemplates))
+          } catch (e) {}
+        }
+      }
+    }
+    fetchSmsTemplates()
 
     refreshData().then(() => {
       setIsInitialized(true)
@@ -456,6 +511,71 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  // SMS 관리 함수
+  const addToSmsQueue = (name: string, phone: string) => {
+    if (!phone) {
+      alert('전화번호가 없습니다.')
+      return
+    }
+    setSmsQueue(prev => {
+      const isExist = prev.find(item => item.phone === phone)
+      if (isExist) return prev // 중복 방지
+      const updated = [...prev, { id: crypto.randomUUID(), name, phone }]
+      localStorage.setItem('smsQueue', JSON.stringify(updated))
+      return updated
+    })
+  }
+
+  const removeFromSmsQueue = (id: string) => {
+    setSmsQueue(prev => {
+      const updated = prev.filter(item => item.id !== id)
+      localStorage.setItem('smsQueue', JSON.stringify(updated))
+      return updated
+    })
+  }
+
+  const clearSmsQueue = () => {
+    setSmsQueue([])
+    localStorage.removeItem('smsQueue')
+  }
+
+  const addSmsTemplate = async (title: string, content: string) => {
+    const newItem = { id: crypto.randomUUID(), title, content }
+    setSmsTemplates(prev => {
+      const updated = [...prev, newItem]
+      localStorage.setItem('smsTemplates', JSON.stringify(updated))
+      return updated
+    })
+    const isSupabaseConfigured = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    if (isSupabaseConfigured) {
+      await supabase.from('sms_templates').insert([newItem])
+    }
+  }
+
+  const updateSmsTemplate = async (id: string, title: string, content: string) => {
+    setSmsTemplates(prev => {
+      const updated = prev.map(t => t.id === id ? { ...t, title, content } : t)
+      localStorage.setItem('smsTemplates', JSON.stringify(updated))
+      return updated
+    })
+    const isSupabaseConfigured = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    if (isSupabaseConfigured) {
+      await supabase.from('sms_templates').update({ title, content }).eq('id', id)
+    }
+  }
+
+  const deleteSmsTemplate = async (id: string) => {
+    setSmsTemplates(prev => {
+      const updated = prev.filter(t => t.id !== id)
+      localStorage.setItem('smsTemplates', JSON.stringify(updated))
+      return updated
+    })
+    const isSupabaseConfigured = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    if (isSupabaseConfigured) {
+      await supabase.from('sms_templates').delete().eq('id', id)
+    }
+  }
+
   // Prevent hydration mismatch by not rendering children until initialized
   if (!isInitialized) return null
 
@@ -489,7 +609,16 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         close: closeReservationModal,
         confirm: confirmReservation
       },
-      restoreFromBackup
+      restoreFromBackup,
+      smsQueue,
+      setSmsQueue,
+      addToSmsQueue,
+      removeFromSmsQueue,
+      clearSmsQueue,
+      smsTemplates,
+      addSmsTemplate,
+      updateSmsTemplate,
+      deleteSmsTemplate
     }}>
       {children}
       <WorkCompletionModal />

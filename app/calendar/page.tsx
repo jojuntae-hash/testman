@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useData, CustomerData } from '@/lib/DataContext'
-import { ChevronLeft, ChevronRight, Calendar, Phone, MapPin, ExternalLink, Save, Clock, Copy, CheckCircle2, MessageCircle } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Calendar, Phone, MapPin, ExternalLink, Save, Clock, Copy, CheckCircle2, MessageCircle, ListPlus } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
 // 예약 정보의 시간 정보를 파싱하는 헬퍼 함수
@@ -45,7 +45,7 @@ const TIME_SLOTS = (() => {
 
 export default function CalendarPage() {
   const router = useRouter()
-  const { customers, setCustomers } = useData()
+  const { customers, setCustomers, addToSmsQueue } = useData()
   const [currentDate, setCurrentDate] = useState<Date>(new Date('2026-05-20')) // 데이터가 있는 2026-05-20 전후를 기본값으로 설정
   
   // 모달 상태
@@ -602,6 +602,16 @@ export default function CalendarPage() {
                         <a href={`sms:${String(selectedCustomer.전화번호).replace(/[^0-9]/g, '')}`} className="action-circle-btn sms">
                           <MessageCircle size={14} />
                         </a>
+                        <button 
+                          onClick={() => {
+                            addToSmsQueue(selectedCustomer.고객명_상호, selectedCustomer.전화번호 || '');
+                            alert('문자 전송 목록에 추가되었습니다.');
+                          }}
+                          className="action-circle-btn queue"
+                          title="단체 문자 목록에 추가"
+                        >
+                          <ListPlus size={14} />
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -1088,9 +1098,9 @@ export default function CalendarPage() {
           line-height: 1.4;
         }
         .action-circle-btn { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; text-decoration: none; transition: all 0.2s; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3); }
-        .action-circle-btn:active { transform: scale(0.9); }
         .action-circle-btn.phone { background: #10b981; }
-        .action-circle-btn.sms { background: #3b82f6; box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3); }
+        .action-circle-btn.sms { background: #3b82f6; }
+        .action-circle-btn.queue { background: #8b5cf6; border: none; }
         .action-circle-btn.map { background: #3b82f6; }
         .action-circle-btn.map {
           background: #eff6ff;

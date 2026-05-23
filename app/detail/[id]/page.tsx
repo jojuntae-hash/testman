@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useData } from '@/lib/DataContext'
-import { Info, FileText, MapPin, MessageSquare, MessageCircle, ChevronLeft, Phone, Save, Calendar, Clock, Copy } from 'lucide-react'
+import { Info, FileText, MapPin, MessageSquare, MessageCircle, ChevronLeft, Phone, Save, Calendar, Clock, Copy, ListPlus } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import VisitLogModal from '@/components/VisitLogModal'
 
@@ -23,7 +23,7 @@ const TIME_SLOTS = (() => {
 
 export default function DetailPage() {
   const { id } = useParams()
-  const { customers, setCustomers, changeCustomerStatus } = useData()
+  const { customers, setCustomers, changeCustomerStatus, addToSmsQueue } = useData()
   const router = useRouter()
   
   const customer = customers.find(c => c.id === id)
@@ -293,6 +293,16 @@ export default function DetailPage() {
               <a href={`sms:${String(customer.전화번호).replace(/[^0-9]/g, '')}`} className="action-circle-btn sms">
                 <MessageCircle size={18} />
               </a>
+              <button 
+                onClick={() => {
+                  addToSmsQueue(customer.고객명_상호, customer.전화번호 || customer.핸드폰번호 || '');
+                  alert('문자 전송 목록에 추가되었습니다.');
+                }}
+                className="action-circle-btn queue"
+                title="단체 문자 목록에 추가"
+              >
+                <ListPlus size={18} />
+              </button>
             </div>
           )}
         </div>
@@ -327,9 +337,9 @@ export default function DetailPage() {
           </div>
           <div className="info-item">
             <label>예약일자</label>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ fontWeight: 700, color: customer.예약일자 ? '#1e293b' : '#94a3b8' }}>
-                {customer.예약일자 || '미지정'}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontWeight: 700, color: customer.예약일자 ? '#1e293b' : '#94a3b8', whiteSpace: 'pre-line', lineHeight: '1.4' }}>
+                {customer.예약일자 ? customer.예약일자.replace(' ', '\n') : '미지정'}
               </span>
               <button 
                 onClick={handleOpenResModal}
@@ -359,9 +369,9 @@ export default function DetailPage() {
           {customer.status === '작업완료' && (
             <div className="info-item" style={{ borderLeft: '3px solid #10b981', paddingLeft: 8 }}>
               <label style={{ color: '#10b981', fontWeight: 700 }}>작업 완료일</label>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ color: customer.작업완료일 ? '#10b981' : '#64748b', fontWeight: 700 }}>
-                  {customer.작업완료일 || '미지정'}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px' }}>
+                <span style={{ color: customer.작업완료일 ? '#10b981' : '#64748b', fontWeight: 700, whiteSpace: 'pre-line', lineHeight: '1.4' }}>
+                  {customer.작업완료일 ? customer.작업완료일.replace(' ', '\n') : '미지정'}
                 </span>
                 <button 
                   onClick={handleOpenCompModal}
@@ -413,32 +423,50 @@ export default function DetailPage() {
           </div>
           <div className="info-item">
             <label>전화번호</label>
-            <div className="value-with-action">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <span>{customer.전화번호}</span>
               {customer.전화번호 && (
-                <div style={{ display: 'flex', gap: '4px' }}>
+                <div style={{ display: 'flex', gap: '6px' }}>
                   <a href={`tel:${String(customer.전화번호).replace(/[^0-9]/g, '')}`} className="mini-call-btn">
                     <Phone size={12} />
                   </a>
                   <a href={`sms:${String(customer.전화번호).replace(/[^0-9]/g, '')}`} className="mini-sms-btn">
                     <MessageCircle size={12} />
                   </a>
+                  <button 
+                    className="mini-sms-btn queue" 
+                    onClick={() => {
+                      addToSmsQueue(customer.고객명_상호, customer.전화번호 || '');
+                      alert('문자 전송 목록에 추가되었습니다.');
+                    }}
+                  >
+                    <ListPlus size={12} />
+                  </button>
                 </div>
               )}
             </div>
           </div>
           <div className="info-item">
             <label>핸드폰번호</label>
-            <div className="value-with-action">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <span>{customer.핸드폰번호}</span>
               {customer.핸드폰번호 && (
-                <div style={{ display: 'flex', gap: '4px' }}>
+                <div style={{ display: 'flex', gap: '6px' }}>
                   <a href={`tel:${String(customer.핸드폰번호).replace(/[^0-9]/g, '')}`} className="mini-call-btn">
                     <Phone size={12} />
                   </a>
                   <a href={`sms:${String(customer.핸드폰번호).replace(/[^0-9]/g, '')}`} className="mini-sms-btn">
                     <MessageCircle size={12} />
                   </a>
+                  <button 
+                    className="mini-sms-btn queue" 
+                    onClick={() => {
+                      addToSmsQueue(customer.고객명_상호, customer.핸드폰번호 || '');
+                      alert('문자 전송 목록에 추가되었습니다.');
+                    }}
+                  >
+                    <ListPlus size={12} />
+                  </button>
                 </div>
               )}
             </div>
@@ -478,16 +506,25 @@ export default function DetailPage() {
           </div>
           <div className="info-item">
             <label>전화번호</label>
-            <div className="value-with-action">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <span>{customer.설치전화번호}</span>
               {customer.설치전화번호 && (
-                <div style={{ display: 'flex', gap: '4px' }}>
+                <div style={{ display: 'flex', gap: '6px' }}>
                   <a href={`tel:${String(customer.설치전화번호).replace(/[^0-9]/g, '')}`} className="mini-call-btn">
                     <Phone size={12} />
                   </a>
                   <a href={`sms:${String(customer.설치전화번호).replace(/[^0-9]/g, '')}`} className="mini-sms-btn">
                     <MessageCircle size={12} />
                   </a>
+                  <button 
+                    className="mini-sms-btn queue" 
+                    onClick={() => {
+                      addToSmsQueue(customer.설치자명 || customer.고객명_상호, customer.설치전화번호 || '');
+                      alert('문자 전송 목록에 추가되었습니다.');
+                    }}
+                  >
+                    <ListPlus size={12} />
+                  </button>
                 </div>
               )}
             </div>
@@ -773,6 +810,7 @@ export default function DetailPage() {
         .action-circle-btn:active { transform: scale(0.9); }
         .action-circle-btn.phone { background: #10b981; }
         .action-circle-btn.sms { background: #3b82f6; }
+        .action-circle-btn.queue { background: #8b5cf6; border: none; cursor: pointer; }
         .memo-textarea { width: 100%; min-height: 80px; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 0.9rem; resize: vertical; outline: none; margin-bottom: 8px; }
         .memo-textarea:focus { border-color: var(--accent-blue); }
         .save-memo-btn { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 8px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; transition: all 0.2s; }
@@ -783,6 +821,7 @@ export default function DetailPage() {
         .mini-call-btn:active { transform: scale(0.9); }
         .mini-sms-btn { width: 28px; height: 28px; background: #eff6ff; color: #3b82f6; border: 1px solid #dbeafe; border-radius: 6px; display: flex; align-items: center; justify-content: center; text-decoration: none; transition: all 0.2s; cursor: pointer; }
         .mini-sms-btn:active { transform: scale(0.9); }
+        .mini-sms-btn.queue { background: #f5f3ff; color: #8b5cf6; border: 1px solid #ede9fe; }
         .mini-map-btn { width: 28px; height: 28px; background: #eff6ff; color: #3b82f6; border: 1px solid #dbeafe; border-radius: 6px; display: flex; align-items: center; justify-content: center; text-decoration: none; transition: all 0.2s; cursor: pointer; }
         .mini-map-btn:active { transform: scale(0.9); }
         

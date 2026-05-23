@@ -5,6 +5,11 @@ import { useData } from '@/lib/DataContext'
 import { useRouter } from 'next/navigation'
 import { Folder, Clock, Calendar, CheckCircle2, ChevronRight, Trash2, FolderPlus, Map, ClipboardList, Search, Phone, Pencil, X, Check } from 'lucide-react'
 
+const formatShortAddress = (addr: string) => {
+  if (!addr) return ''
+  return addr.replace(/^(?:[가-힣]+(?:시|도)\s+)?(?:[가-힣]+(?:구|군|시)\s+)?/, '').trim()
+}
+
 export default function HomePage() {
   const { customers, setCustomers, selectedIds, setSelectedIds, folderColors, renameFolderColor } = useData()
   const router = useRouter()
@@ -389,7 +394,7 @@ export default function HomePage() {
                     {getModelTypeBadge(customer.모델명)}
                     {getElapsedMonthsBadge(customer.계약일자)}
                   </div>
-                  <p className="text-xs text-sub">{customer.전화번호} | {customer.설치주소 || customer.주소}</p>
+                  <p className="text-xs text-sub">{customer.전화번호} | {formatShortAddress(customer.설치주소 || customer.주소 || '')}</p>
                 </div>
                 <div className="item-actions">
                   <button className="go-detail-mini-btn" onClick={(e) => { e.stopPropagation(); router.push(`/detail/${customer.id}`); }}>상세 <ChevronRight size={14} /></button>
