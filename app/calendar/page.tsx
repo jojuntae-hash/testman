@@ -47,7 +47,7 @@ const TIME_SLOTS = (() => {
 export default function CalendarPage() {
   const router = useRouter()
   const { customers, setCustomers, addToSmsQueue } = useData()
-  const [currentDate, setCurrentDate] = useState<Date>(new Date('2026-05-20')) // 데이터가 있는 2026-05-20 전후를 기본값으로 설정
+  const [currentDate, setCurrentDate] = useState<Date>(new Date())
   
   // 모달 상태
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerData | null>(null)

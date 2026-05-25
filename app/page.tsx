@@ -130,9 +130,14 @@ export default function HomePage() {
       list = list.filter(c => 
         (c.고객명_상호 && c.고객명_상호.toLowerCase().includes(lowerTerm)) ||
         (c.전화번호 && c.전화번호.includes(lowerTerm)) ||
+        (c.핸드폰번호 && c.핸드폰번호.includes(lowerTerm)) ||
+        (c.설치전화번호 && c.설치전화번호.includes(lowerTerm)) ||
+        (c.설치핸드폰번호 && c.설치핸드폰번호.includes(lowerTerm)) ||
         (c.설치주소 && c.설치주소.toLowerCase().includes(lowerTerm)) ||
         (c.주소 && c.주소.toLowerCase().includes(lowerTerm)) ||
-        (c.모델명 && c.모델명.toLowerCase().includes(lowerTerm))
+        (c.모델명 && c.모델명.toLowerCase().includes(lowerTerm)) ||
+        (c.설치시특이사항 && c.설치시특이사항.toLowerCase().includes(lowerTerm)) ||
+        (c.현장메모 && c.현장메모.toLowerCase().includes(lowerTerm))
       )
     }
 

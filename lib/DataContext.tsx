@@ -31,6 +31,7 @@ export interface CustomerData {
   설치핸드폰번호: string
   설치주소: string
   설치시특이사항: string
+  현장메모?: string
   lat?: number
   lng?: number
 }
@@ -143,13 +144,29 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
+    // 2.5 Fetch memos if Supabase is configured
+    let memoMap: Record<string, string> = {}
+    if (isSupabaseConfigured) {
+      try {
+        const { data: memosData } = await supabase.from('memos').select('customer_id, content').eq('is_deleted', false)
+        if (memosData) {
+          memosData.forEach(m => {
+            memoMap[m.customer_id] = m.content
+          })
+        }
+      } catch (err) {
+        console.error('Failed to query memos:', err)
+      }
+    }
+
     // 3. 연락처 보정 적용
     const fixed = loadedCustomers.map((c: any) => ({
       ...c,
       전화번호: fixPhoneNumber(c.전화번호),
       핸드폰번호: fixPhoneNumber(c.핸드폰번호),
       설치전화번호: fixPhoneNumber(c.설치전화번호),
-      설치핸드폰번호: fixPhoneNumber(c.설치핸드폰번호)
+      설치핸드폰번호: fixPhoneNumber(c.설치핸드폰번호),
+      현장메모: memoMap[c.id] || c.현장메모 || ''
     }))
 
     setCustomersState(fixed)
