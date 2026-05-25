@@ -150,7 +150,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       try {
         const { data: memosData } = await supabase.from('memos').select('customer_id, content').eq('is_deleted', false)
         if (memosData) {
-          memosData.forEach(m => {
+          memosData.forEach((m: any) => {
             memoMap[m.customer_id] = m.content
           })
         }
