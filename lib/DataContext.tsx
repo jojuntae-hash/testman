@@ -172,10 +172,13 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     setCustomersState(fixed)
     localStorage.setItem('customers', JSON.stringify(fixed))
 
+    // Supabase에 저장할 때는 UI 전용 필드(현장메모 등)를 제외합니다.
+    const sanitizeForDb = (data: any[]) => data.map(({ 현장메모, ...rest }) => rest)
+
     // Supabase가 설정되어 있고 원격 데이터가 비어있었다면 초기 로컬 데이터를 업로드
     if (isSupabaseConfigured && loadedCustomers.length === 0) {
       try {
-        await supabase.from('customers').upsert(fixed)
+        await supabase.from('customers').upsert(sanitizeForDb(fixed))
       } catch (err) {
         console.error('Failed to sync initial data to Supabase:', err)
       }
@@ -313,7 +316,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     if (isSupabaseConfigured) {
       try {
         // 기존 원격 데이터를 upsert를 통해 동기화
-        const { error } = await supabase.from('customers').upsert(fixedData)
+        const sanitizeForDb = (arr: any[]) => arr.map(({ 현장메모, ...rest }) => rest)
+        const { error } = await supabase.from('customers').upsert(sanitizeForDb(fixedData))
         if (error) {
           console.error('Supabase upsert error:', error)
         }
@@ -342,7 +346,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     const isSupabaseConfigured = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
     if (isSupabaseConfigured) {
       try {
-        const { error } = await supabase.from('customers').insert([fixedCustomer])
+        const { 현장메모, ...dbCustomer } = fixedCustomer
+        const { error } = await supabase.from('customers').insert([dbCustomer])
         if (error) {
           console.error('Supabase insert error:', error)
           alert(`서버 저장 실패: ${error.message || JSON.stringify(error)}`)
@@ -389,7 +394,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       try {
         const target = updated.find(c => c.id === id)
         if (target) {
-          await supabase.from('customers').upsert([target])
+          const { 현장메모, ...dbTarget } = target
+          await supabase.from('customers').upsert([dbTarget])
         }
       } catch (err) {
         console.error('Supabase coords sync error:', err)
@@ -494,7 +500,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       try {
         const targets = updated.filter(c => ids.includes(c.id))
         if (targets.length > 0) {
-          const { error } = await supabase.from('customers').upsert(targets)
+          const dbTargets = targets.map(({ 현장메모, ...rest }) => rest)
+          const { error } = await supabase.from('customers').upsert(dbTargets)
           if (error) {
             console.error('Supabase status change sync error:', error)
           }

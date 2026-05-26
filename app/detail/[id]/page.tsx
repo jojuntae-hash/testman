@@ -99,7 +99,8 @@ export default function DetailPage() {
         
         const target = updated.find(c => c.id === customer.id)
         if (target) {
-          await supabase.from('customers').upsert([target])
+          const { 현장메모, ...dbTarget } = target
+          await supabase.from('customers').upsert([dbTarget])
         }
       } catch (err) {
         console.error('Supabase save error:', err)
