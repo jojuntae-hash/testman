@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useData, CustomerData } from '@/lib/DataContext'
-import { ChevronLeft, ChevronRight, X, Phone, MapPin, ExternalLink, FolderPlus, Trash2, Map as MapIcon, LocateFixed } from 'lucide-react'
+import { ChevronLeft, ChevronRight, X, Phone, MapPin, ExternalLink, FolderPlus, Trash2, Map as MapIcon, LocateFixed, Star } from 'lucide-react'
 import { Map, CustomOverlayMap } from 'react-kakao-maps-sdk'
 import Script from 'next/script'
 
@@ -33,6 +33,8 @@ export default function MapPage() {
   const [isFolderModalOpen, setIsFolderModalOpen] = useState(false)
   const [newFolderName, setNewFolderName] = useState('')
   const [newFolderColor, setNewFolderColor] = useState('#3b82f6')
+  const [defaultSource, setDefaultSource] = useState<string>('')
+  const [defaultSourceCoords, setDefaultSourceCoords] = useState<{ lat: number; lng: number } | null>(null)
 
   // 초기 설정 로드 + sessionStorage에서 이전 상태 복원
   useEffect(() => {
@@ -52,6 +54,9 @@ export default function MapPage() {
       // 리스트 패널 확장 상태 복원
       const savedExpanded = sessionStorage.getItem('map_is_expanded')
       if (savedExpanded === 'true') setIsExpanded(true)
+      
+      const savedDefaultSource = localStorage.getItem('default_source') || '인천 미추홀구 주안동 1467'
+      setDefaultSource(savedDefaultSource)
     }
     setStateRestored(true)
   }, [])
@@ -92,6 +97,16 @@ export default function MapPage() {
     if (!stateRestored) return
     if (isMapReady && window.kakao && window.kakao.maps.services) {
       const geocoder = new window.kakao.maps.services.Geocoder()
+      
+      // 기본 출발지 주소 변환
+      if (defaultSource) {
+        geocoder.addressSearch(defaultSource, (result: any, status: any) => {
+          if (status === window.kakao.maps.services.Status.OK) {
+            setDefaultSourceCoords({ lat: parseFloat(result[0].y), lng: parseFloat(result[0].x) })
+          }
+        })
+      }
+
       const newMarkers: any[] = []
       let processedCount = 0
       
@@ -339,6 +354,21 @@ export default function MapPage() {
                   </div>
                 </CustomOverlayMap>
               )}
+              
+              {defaultSourceCoords && (
+                <CustomOverlayMap position={defaultSourceCoords}>
+                  <div className="default-source-marker" title={`기본출발지: ${defaultSource}`}>
+                    <div className="marker-pin-star">
+                      <Star size={16} fill="#fff" color="#fff" />
+                    </div>
+                    {(mapShowNames) && (
+                      <div className="marker-tooltip">
+                        기본출발지
+                      </div>
+                    )}
+                  </div>
+                </CustomOverlayMap>
+              )}
             </Map>
             <button className="current-location-btn" onClick={moveToCurrentLocation} title="현재 위치 보기">
               <LocateFixed size={20} />
@@ -493,6 +523,10 @@ export default function MapPage() {
         .marker-tooltip { position: absolute; top: -35px; background: #333; color: #fff; padding: 4px 10px; border-radius: 8px; font-size: 0.75rem; white-space: nowrap; font-weight: 600; z-index: 10; }
         .group-count { color: #fff; font-size: 0.75rem; font-weight: 800; transform: rotate(45deg); display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; margin-top: -1px; margin-left: -1px; }
         
+        .default-source-marker { display: flex; flex-direction: column; align-items: center; transform: translateY(-50%); position: relative; z-index: 20; }
+        .marker-pin-star { width: 32px; height: 32px; background: #eab308; border: 2px solid #fff; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(234,179,8,0.5); }
+        .marker-pin-star > svg { transform: rotate(45deg); }
+
         .list-area { 
           position: absolute; bottom: 0; left: 0; right: 0; background: #fff; 
           border-radius: 24px 24px 0 0; z-index: 1000; padding: 0 0 20px; 

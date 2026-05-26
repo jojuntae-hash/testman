@@ -253,41 +253,7 @@ export default function SettingsPage() {
           </div>
         </section>
 
-        {/* 경로 및 업무 설정 */}
-        <section className="settings-section">
-          <div className="section-title"><Clock size={18} /> 업무 및 경로 설정</div>
-          <div className="setting-card">
-            <div className="setting-info">
-              <h3>지점당 예상 작업 시간</h3>
-              <p>하나의 지점에서 머무는 평균 시간(분)입니다.</p>
-            </div>
-            <div className="setting-control">
-              <input 
-                type="number" 
-                className="setting-input" 
-                value={taskDuration} 
-                onChange={(e) => setTaskDuration(parseInt(e.target.value))}
-              />
-              <span className="unit">분</span>
-            </div>
-          </div>
-          <div className="setting-card">
-            <div className="setting-info">
-              <h3>점심시간 제외 로직</h3>
-              <p>총 업무 시간이 4시간 이상일 경우 1시간을 추가합니다.</p>
-            </div>
-            <div className="setting-control">
-              <label className="toggle-switch">
-                <input 
-                  type="checkbox" 
-                  checked={excludeLunch} 
-                  onChange={(e) => setExcludeLunch(e.target.checked)}
-                />
-                <span className="slider"></span>
-              </label>
-            </div>
-          </div>
-        </section>
+
 
         {/* 지도 설정 */}
         <section className="settings-section">
