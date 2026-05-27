@@ -486,7 +486,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           ...c,
           status: newStatus,
           작업완료일: newStatus === '작업완료' ? completedDate : undefined,
-          예약일자: newStatus === '예약완료' ? (reservedDate || '') : (newStatus === '작업미완료' || newStatus === '삭제됨' ? '' : c.예약일자)
+          예약일자: reservedDate !== undefined ? reservedDate : (newStatus === '삭제됨' ? '' : c.예약일자)
         }
       }
       return c
