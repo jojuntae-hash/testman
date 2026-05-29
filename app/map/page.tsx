@@ -1,8 +1,8 @@
 'use client'
 
 import React, { useEffect, useState, useMemo } from 'react'
-import { useRouter } from 'next/navigation'
-import { useData, CustomerData } from '@/lib/DataContext'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { useData, CustomerData, LongTermCustomer } from '@/lib/DataContext'
 import { ChevronLeft, ChevronRight, X, Phone, MapPin, ExternalLink, FolderPlus, Trash2, Map as MapIcon, LocateFixed, Star } from 'lucide-react'
 import { Map, CustomOverlayMap } from 'react-kakao-maps-sdk'
 import Script from 'next/script'
@@ -13,12 +13,14 @@ const formatShortAddress = (addr: string) => {
 }
 
 export default function MapPage() {
-  const { customers, setCustomers, selectedIds, updateCustomerCoords, changeCustomerStatus, folderColors, updateFolderColor } = useData()
+  const { customers, longTermCustomers, setCustomers, changeLongTermCustomerStatus, updateLongTermCustomerCoords, deleteLongTermCustomers, selectedIds, updateCustomerCoords, changeCustomerStatus, folderColors, updateFolderColor } = useData()
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const isLongTerm = searchParams?.get('type') === 'longTerm'
   
   // 상태 관리
-  const [selectedCustomersList, setSelectedCustomersList] = useState<CustomerData[]>([])
-  const [markers, setMarkers] = useState<{ key: string; lat: number; lng: number; customers: CustomerData[]; isGroup: boolean }[]>([])
+  const [selectedCustomersList, setSelectedCustomersList] = useState<any[]>([])
+  const [markers, setMarkers] = useState<{ key: string; lat: number; lng: number; customers: any[]; isGroup: boolean }[]>([])
   const [selectedFolder, setSelectedFolder] = useState<string>('선택된 항목')
   const [isMapReady, setIsMapReady] = useState(false)
   const [mapDefaultZoom, setMapDefaultZoom] = useState(4)
@@ -77,20 +79,23 @@ export default function MapPage() {
 
   // 기존 커스텀 폴더 목록
   const uniqueFolders = useMemo(() => {
-    return Array.from(new Set(customers.map(c => c.status)))
-      .filter(s => !['작업미완료', '예약완료', '작업완료', '삭제됨'].includes(s))
-  }, [customers])
+    const dataList = isLongTerm ? longTermCustomers : customers
+    return Array.from(new Set(dataList.map(c => c.status)))
+      .filter((s): s is string => !!s && s !== '미분류' && !['작업미완료', '예약완료', '작업완료', '삭제됨'].includes(s))
+  }, [customers, longTermCustomers, isLongTerm])
 
   const folders = useMemo(() => {
-    const statuses = Array.from(new Set(customers.map(c => c.status))).filter(s => s !== '삭제됨')
+    const dataList = isLongTerm ? longTermCustomers : customers
+    const statuses = Array.from(new Set(dataList.map(c => c.status || '미분류'))).filter(s => s !== '삭제됨')
     return ['선택된 항목', '전체리스트', ...statuses]
-  }, [customers])
+  }, [customers, longTermCustomers, isLongTerm])
 
   const displayCustomers = useMemo(() => {
-    if (selectedFolder === '선택된 항목') return customers.filter(c => selectedIds.includes(c.id))
-    if (selectedFolder === '전체리스트') return customers.filter(c => c.status !== '삭제됨')
-    return customers.filter(c => c.status === selectedFolder)
-  }, [customers, selectedIds, selectedFolder])
+    const dataList = isLongTerm ? longTermCustomers : customers
+    if (selectedFolder === '선택된 항목') return dataList.filter(c => selectedIds.includes(c.id))
+    if (selectedFolder === '전체리스트') return dataList.filter(c => c.status !== '삭제됨')
+    return dataList.filter(c => (c.status || '미분류') === selectedFolder)
+  }, [customers, longTermCustomers, selectedIds, selectedFolder, isLongTerm])
 
   // 주소를 좌표로 변환 (상태 복원 완료 후 실행)
   useEffect(() => {
@@ -148,7 +153,11 @@ export default function MapPage() {
               customer
             })
             // 좌표 캐싱
-            updateCustomerCoords(customer.id, lat, lng)
+            if (isLongTerm) {
+              updateLongTermCustomerCoords(customer.id, lat, lng)
+            } else {
+              updateCustomerCoords(customer.id, lat, lng)
+            }
           }
           processedCount++
           if (processedCount === displayCustomers.length) {
@@ -165,7 +174,7 @@ export default function MapPage() {
     }
   }, [isMapReady, displayCustomers, stateRestored])
 
-  const toggleCustomerSelection = (customer: CustomerData) => {
+  const toggleCustomerSelection = (customer: any) => {
     setSelectedCustomersList(prev => {
       const isExist = prev.find(c => c.id === customer.id)
       return isExist ? prev.filter(c => c.id !== customer.id) : [...prev, customer]
@@ -174,7 +183,8 @@ export default function MapPage() {
 
   const isSelected = (id: string) => selectedCustomersList.some(c => c.id === id)
 
-  const getMarkerColor = (status: string) => {
+  const getMarkerColor = (status: string | undefined) => {
+    if (!status || status === '미분류') return '#94a3b8';
     switch(status) {
       case '작업완료': return '#10b981';
       case '예약완료': return '#3b82f6';
@@ -188,7 +198,15 @@ export default function MapPage() {
     const msg = newStatus === '삭제됨' ? '선택한 고객을 삭제하시겠습니까?' : '상태를 변경하시겠습니까?'
     if (confirm(msg)) {
       const selectedListIds = selectedCustomersList.map(c => c.id)
-      await changeCustomerStatus(selectedListIds, newStatus)
+      if (isLongTerm) {
+        if (newStatus === '삭제됨') {
+          await deleteLongTermCustomers(selectedListIds)
+        } else {
+          await changeLongTermCustomerStatus(selectedListIds, newStatus)
+        }
+      } else {
+        await changeCustomerStatus(selectedListIds, newStatus)
+      }
       setSelectedCustomersList([])
     }
   }
@@ -198,8 +216,12 @@ export default function MapPage() {
     if (!newFolderName || newFolderName.trim() === '') return
     const folderName = newFolderName.trim()
     const selectedListIds = selectedCustomersList.map(c => c.id)
-    const updated = customers.map(c => selectedListIds.includes(c.id) ? { ...c, status: folderName } : c)
-    setCustomers(updated as any)
+    if (isLongTerm) {
+      changeLongTermCustomerStatus(selectedListIds, folderName)
+    } else {
+      const updated = customers.map(c => selectedListIds.includes(c.id) ? { ...c, status: folderName } : c)
+      setCustomers(updated as any)
+    }
     updateFolderColor(folderName, newFolderColor)
     setSelectedCustomersList([])
     setNewFolderName('')
@@ -209,8 +231,12 @@ export default function MapPage() {
   // 기존 폴더로 이동
   const handleMoveToExistingFolder = (folderName: string) => {
     const selectedListIds = selectedCustomersList.map(c => c.id)
-    const updated = customers.map(c => selectedListIds.includes(c.id) ? { ...c, status: folderName } : c)
-    setCustomers(updated as any)
+    if (isLongTerm) {
+      changeLongTermCustomerStatus(selectedListIds, folderName)
+    } else {
+      const updated = customers.map(c => selectedListIds.includes(c.id) ? { ...c, status: folderName } : c)
+      setCustomers(updated as any)
+    }
     setSelectedCustomersList([])
     setIsFolderModalOpen(false)
   }
@@ -388,9 +414,9 @@ export default function MapPage() {
             {selectedCustomersList.length > 0 ? (
               <div className="header-actions">
                 <button className="act-btn-mini folder" onClick={() => setIsFolderModalOpen(true)}>폴더</button>
-                <button className="act-btn-mini" onClick={() => handleBulkStatusChange('작업미완료')}>미완료</button>
-                <button className="act-btn-mini reserved" onClick={() => handleBulkStatusChange('예약완료')}>예약</button>
-                <button className="act-btn-mini complete" onClick={() => handleBulkStatusChange('작업완료')}>완료</button>
+                {!isLongTerm && <button className="act-btn-mini" onClick={() => handleBulkStatusChange('작업미완료')}>미완료</button>}
+                {!isLongTerm && <button className="act-btn-mini reserved" onClick={() => handleBulkStatusChange('예약완료')}>예약</button>}
+                {!isLongTerm && <button className="act-btn-mini complete" onClick={() => handleBulkStatusChange('작업완료')}>완료</button>}
                 <button className="act-btn-mini danger" onClick={() => handleBulkStatusChange('삭제됨')}>삭제</button>
               </div>
             ) : (
@@ -423,7 +449,7 @@ export default function MapPage() {
               {selectedCustomersList.map((customer) => (
                 <div key={customer.id} className="customer-row">
                   <div className="row-info">
-                    <div className="row-badge" style={{ background: getMarkerColor(customer.status) }}>{customer.status}</div>
+                    <div className="row-badge" style={{ background: getMarkerColor(customer.status) }}>{customer.status || '미분류'}</div>
                     <div className="row-name">{customer.고객명_상호}</div>
                     <div className="row-addr">{formatShortAddress(customer.설치주소 || customer.주소 || '')}</div>
                   </div>
@@ -432,7 +458,11 @@ export default function MapPage() {
                     sessionStorage.setItem('map_selected_folder', selectedFolder)
                     sessionStorage.setItem('map_selected_ids', JSON.stringify(selectedCustomersList.map(c => c.id)))
                     sessionStorage.setItem('map_is_expanded', String(isExpanded))
-                    router.push(`/detail/${customer.id}`)
+                    if (isLongTerm) {
+                      router.push(`/customers/${customer.id}`)
+                    } else {
+                      router.push(`/detail/${customer.id}`)
+                    }
                   }}>상세</button>
                 </div>
               ))}

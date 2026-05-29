@@ -16,13 +16,15 @@ import {
   Calendar,
   CheckCircle2,
   MoreHorizontal,
-  MessageSquare
+  MessageSquare,
+  Users,
+  Copy
 } from 'lucide-react'
 
 export default function BottomNav() {
   const pathname = usePathname()
   const router = useRouter()
-  const { customers, setCustomers, selectedIds, setSelectedIds, changeCustomerStatus } = useData()
+  const { customers, setCustomers, selectedIds, setSelectedIds, changeCustomerStatus, copyToLongTerm } = useData()
   const [isMoreOpen, setIsMoreOpen] = React.useState(false)
 
   // 모달 관련 상태
@@ -81,6 +83,10 @@ export default function BottomNav() {
           <button className="action-btn folder-btn" onClick={() => setIsFolderModalOpen(true)}>
             <FolderPlus size={18} />
             <span>폴더</span>
+          </button>
+          <button className="action-btn" onClick={() => { copyToLongTerm(selectedIds); setSelectedIds([]) }}>
+            <Copy size={18} />
+            <span>고객관리</span>
           </button>
           <button className="action-btn" onClick={() => handleBulkStatusChange('작업미완료')}>
             <Clock size={18} />
@@ -150,6 +156,9 @@ export default function BottomNav() {
 
         <style jsx>{`
           .bottom-nav.selection-mode {
+            position: absolute;
+            bottom: 0;
+            left: 0;
             background: #0f172a;
             color: #fff;
             padding: 0 15px;
@@ -370,7 +379,7 @@ export default function BottomNav() {
     )
   }
 
-  const isMoreActive = ['/sms', '/memos', '/settings'].includes(pathname)
+  const isMoreActive = ['/sms', '/memos', '/settings', '/customers'].includes(pathname)
 
   // 일반 내비게이션 바
   return (
@@ -378,6 +387,10 @@ export default function BottomNav() {
       {isMoreOpen && (
         <div className="more-menu-overlay" onClick={() => setIsMoreOpen(false)}>
           <div className="more-menu-container animated-slide-up" onClick={(e) => e.stopPropagation()}>
+            <Link href="/customers" className={`more-menu-item ${pathname === '/customers' ? 'active' : ''}`} onClick={() => setIsMoreOpen(false)}>
+              <Users size={18} />
+              <span>고객관리</span>
+            </Link>
             <Link href="/sms" className={`more-menu-item ${pathname === '/sms' ? 'active' : ''}`} onClick={() => setIsMoreOpen(false)}>
               <MessageSquare size={18} />
               <span>문자</span>

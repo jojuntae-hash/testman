@@ -36,6 +36,29 @@ export interface CustomerData {
   lng?: number
 }
 
+export interface LongTermCustomer {
+  id: string
+  이름: string
+  고객번호: string
+  모델명: string
+  계약일자: string
+  작업완료일: string
+  계약자구분: string
+  고객명_상호: string
+  전화번호: string
+  핸드폰번호: string
+  주소: string
+  설치자명: string
+  설치전화번호?: string
+  설치주소: string
+  기록: string
+  status?: string // 폴더 관리용 상태 ('미분류' 등)
+  lat?: number
+  lng?: number
+  created_at?: string
+  updated_at?: string
+}
+
 interface DataContextType {
   customers: CustomerData[]
   setCustomers: (data: CustomerData[]) => Promise<void>
@@ -78,6 +101,17 @@ interface DataContextType {
   addSmsTemplate: (title: string, content: string) => void
   updateSmsTemplate: (id: string, title: string, content: string) => void
   deleteSmsTemplate: (id: string) => void
+
+  // 장기 고객 관리
+  longTermCustomers: LongTermCustomer[]
+  setLongTermCustomers: (data: LongTermCustomer[]) => Promise<void>
+  copyToLongTerm: (customerIds: string[]) => Promise<void>
+  updateLongTermCustomer: (id: string, updates: Partial<LongTermCustomer>) => Promise<void>
+  changeLongTermCustomerStatus: (ids: string[], newStatus: string) => Promise<void>
+  updateLongTermCustomerCoords: (id: string, lat: number, lng: number) => Promise<void>
+  deleteLongTermCustomers: (ids: string[]) => Promise<void>
+  restoreLongTermFromBackup: (backupData: LongTermCustomer[]) => Promise<void>
+  clearAllLongTermCustomers: () => Promise<void>
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined)
@@ -95,6 +129,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   // SMS 관련 상태
   const [smsQueue, setSmsQueue] = useState<{ id: string; name: string; phone: string }[]>([])
   const [smsTemplates, setSmsTemplates] = useState<{ id: string; title: string; content: string }[]>([])
+
+  // 장기 고객 관리 상태
+  const [longTermCustomers, setLongTermCustomersState] = useState<LongTermCustomer[]>([])
 
   // 전화번호 보정 로직 (10으로 시작하면 0 추가)
   const fixPhoneNumber = (phone: string) => {
@@ -143,6 +180,27 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         loadedCustomers = initialCustomers
       }
     }
+
+    // 장기 고객 관리 데이터 로드
+    let loadedLongTerm: LongTermCustomer[] = []
+    if (isSupabaseConfigured) {
+      try {
+        const { data, error } = await supabase.from('long_term_customers').select('*')
+        if (!error && data) {
+          loadedLongTerm = data as LongTermCustomer[]
+        }
+      } catch (err) {
+        console.error('Failed to query long_term_customers:', err)
+      }
+    }
+    if (loadedLongTerm.length === 0) {
+      const savedLongTerm = localStorage.getItem('longTermCustomers')
+      if (savedLongTerm) {
+        try { loadedLongTerm = JSON.parse(savedLongTerm) } catch (e) {}
+      }
+    }
+    setLongTermCustomersState(loadedLongTerm)
+    localStorage.setItem('longTermCustomers', JSON.stringify(loadedLongTerm))
 
     // 2.5 Fetch memos if Supabase is configured
     let memoMap: Record<string, string> = {}
@@ -641,6 +699,181 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  // 장기 고객관리 로직
+  const setLongTermCustomers = async (data: LongTermCustomer[]) => {
+    setLongTermCustomersState(data)
+    localStorage.setItem('longTermCustomers', JSON.stringify(data))
+  }
+
+  const copyToLongTerm = async (customerIds: string[]) => {
+    const isSupabaseConfigured = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    
+    const targets = customers.filter(c => customerIds.includes(c.id))
+    if (targets.length === 0) return
+
+    const newLongTerms: LongTermCustomer[] = []
+
+    for (const c of targets) {
+      // 기존에 복사된 항목이 있다면 제외하거나 업데이트할 수 있지만, 요구사항에서는 일단 복사. 
+      // 중복 방지를 위해 기존 ID 확인
+      const existing = longTermCustomers.find(lt => lt.id === c.id)
+      if (existing) continue
+
+      // 기록 병합 (현장메모 + 방문기록)
+      let combinedRecord = ''
+      if (c.현장메모) {
+        combinedRecord += `[현장메모]\n${c.현장메모}\n\n`
+      }
+
+      if (isSupabaseConfigured) {
+        try {
+          const { data: logsData } = await supabase
+            .from('visit_logs')
+            .select('visit_date, content')
+            .eq('customer_id', c.id)
+            .eq('is_deleted', false)
+            .order('visit_date', { ascending: false })
+          
+          if (logsData && logsData.length > 0) {
+            combinedRecord += `[이전 방문 기록]\n`
+            logsData.forEach((log: any) => {
+              combinedRecord += `- ${log.visit_date}: ${log.content}\n`
+            })
+          }
+        } catch (e) {
+          console.error('Failed to fetch visit logs for long term copy', e)
+        }
+      }
+
+      const newLT: LongTermCustomer = {
+        id: c.id,
+        이름: c.고객명_상호 || '',
+        고객번호: c.고객번호 || '',
+        모델명: c.모델명 || '',
+        계약일자: c.계약일자 || '',
+        작업완료일: c.작업완료일 || '',
+        계약자구분: c.계약자구분 || '',
+        고객명_상호: c.고객명_상호 || '',
+        전화번호: c.전화번호 || '',
+        핸드폰번호: c.핸드폰번호 || '',
+        주소: c.주소 || '',
+        설치자명: c.설치자명 || '',
+        설치전화번호: c.설치전화번호 || '',
+        설치주소: c.설치주소 || '',
+        기록: combinedRecord.trim(),
+        created_at: new Date().toISOString()
+      }
+      newLongTerms.push(newLT)
+    }
+
+    if (newLongTerms.length === 0) {
+      alert('이미 고객관리에 존재하는 고객이거나 선택된 고객이 없습니다.')
+      return
+    }
+
+    const updated = [...longTermCustomers, ...newLongTerms]
+    setLongTermCustomersState(updated)
+    localStorage.setItem('longTermCustomers', JSON.stringify(updated))
+
+    if (isSupabaseConfigured) {
+      try {
+        await supabase.from('long_term_customers').upsert(newLongTerms)
+      } catch (e) {
+        console.error('Supabase long term upsert error:', e)
+      }
+    }
+    
+    alert(`${newLongTerms.length}명의 고객이 고객관리로 복사되었습니다.`)
+  }
+
+  const updateLongTermCustomer = async (id: string, updates: Partial<LongTermCustomer>) => {
+    let targetDb: Partial<LongTermCustomer> | null = null
+    const updated = longTermCustomers.map(c => {
+      if (c.id === id) {
+        targetDb = { ...c, ...updates, updated_at: new Date().toISOString() }
+        return targetDb as LongTermCustomer
+      }
+      return c
+    })
+    
+    setLongTermCustomersState(updated)
+    localStorage.setItem('longTermCustomers', JSON.stringify(updated))
+
+    const isSupabaseConfigured = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    if (isSupabaseConfigured && targetDb) {
+      await supabase.from('long_term_customers').update(targetDb).eq('id', id)
+    }
+  }
+
+  const changeLongTermCustomerStatus = async (ids: string[], newStatus: string) => {
+    const updated = longTermCustomers.map(c => ids.includes(c.id) ? { ...c, status: newStatus } : c)
+    setLongTermCustomersState(updated)
+    localStorage.setItem('longTermCustomers', JSON.stringify(updated))
+
+    const isSupabaseConfigured = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    if (isSupabaseConfigured) {
+      try {
+        const updatePromises = ids.map(id => supabase.from('long_term_customers').update({ status: newStatus }).eq('id', id))
+        await Promise.all(updatePromises)
+      } catch (err) {
+        console.error('Supabase long term status update error:', err)
+      }
+    }
+  }
+
+  const updateLongTermCustomerCoords = async (id: string, lat: number, lng: number) => {
+    let targetDb: Partial<LongTermCustomer> | null = null
+    const updated = longTermCustomers.map(c => {
+      if (c.id === id) {
+        targetDb = { ...c, lat, lng }
+        const { 현장메모, ...dbObj } = targetDb as any
+        targetDb = dbObj
+        return { ...c, lat, lng }
+      }
+      return c
+    })
+    setLongTermCustomersState(updated)
+    localStorage.setItem('longTermCustomers', JSON.stringify(updated))
+    const isSupabaseConfigured = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    if (isSupabaseConfigured && targetDb) {
+      await supabase.from('long_term_customers').update({ lat, lng }).eq('id', id)
+    }
+  }
+
+  const deleteLongTermCustomers = async (ids: string[]) => {
+    const updated = longTermCustomers.filter(c => !ids.includes(c.id))
+    setLongTermCustomersState(updated)
+    localStorage.setItem('longTermCustomers', JSON.stringify(updated))
+
+    const isSupabaseConfigured = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    if (isSupabaseConfigured) {
+      await supabase.from('long_term_customers').delete().in('id', ids)
+    }
+  }
+
+  const clearAllLongTermCustomers = async () => {
+    setLongTermCustomersState([])
+    localStorage.removeItem('longTermCustomers')
+    const isSupabaseConfigured = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    if (isSupabaseConfigured) {
+      await supabase.from('long_term_customers').delete().neq('id', '')
+    }
+  }
+
+  const restoreLongTermFromBackup = async (backupData: LongTermCustomer[]) => {
+    const isSupabaseConfigured = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    if (isSupabaseConfigured) {
+      try {
+        await supabase.from('long_term_customers').delete().neq('id', '')
+        await supabase.from('long_term_customers').upsert(backupData)
+      } catch (err) {
+        console.error('Supabase long term clear before restore error:', err)
+      }
+    }
+    setLongTermCustomersState(backupData)
+    localStorage.setItem('longTermCustomers', JSON.stringify(backupData))
+  }
+
   // Prevent hydration mismatch by not rendering children until initialized
   if (!isInitialized) return null
 
@@ -683,7 +916,16 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       smsTemplates,
       addSmsTemplate,
       updateSmsTemplate,
-      deleteSmsTemplate
+      deleteSmsTemplate,
+      longTermCustomers,
+      setLongTermCustomers,
+      copyToLongTerm,
+      updateLongTermCustomer,
+      changeLongTermCustomerStatus,
+      updateLongTermCustomerCoords,
+      deleteLongTermCustomers,
+      clearAllLongTermCustomers,
+      restoreLongTermFromBackup
     }}>
       {children}
       <WorkCompletionModal />

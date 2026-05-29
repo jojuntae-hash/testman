@@ -2,10 +2,10 @@
 
 import React, { useState, useEffect } from 'react'
 import { useData } from '@/lib/DataContext'
-import { Calendar, CheckCircle2, X } from 'lucide-react'
+import { Calendar, CheckCircle2, X, Users } from 'lucide-react'
 
 export default function ReservationModal() {
-  const { reservationModal } = useData()
+  const { reservationModal, copyToLongTerm } = useData()
   const [date, setDate] = useState('')
   const [hour, setHour] = useState(9)
   const [minute, setMinute] = useState(0)
@@ -95,6 +95,13 @@ export default function ReservationModal() {
           </div>
           <div className="btn-group">
             <button className="cancel-btn" onClick={reservationModal.close}>취소</button>
+            <button className="confirm-btn lt-btn" onClick={() => {
+              if (!date.trim()) { alert('올바른 예약 날짜를 선택해주세요.'); return; }
+              const pad = (n: number) => n.toString().padStart(2, '0')
+              const formatted = `${date} ${pad(hour)}:${pad(minute)}`
+              copyToLongTerm(reservationModal.targetIds)
+              reservationModal.confirm(formatted)
+            }}>예약+복사</button>
             <button className="confirm-btn" onClick={handleConfirm}>예약 처리</button>
           </div>
         </div>
@@ -224,6 +231,12 @@ export default function ReservationModal() {
           background: #4f46e5;
           color: #fff;
           border: none;
+        }
+        .confirm-btn.lt-btn {
+          background: #0f172a;
+        }
+        .confirm-btn.lt-btn:hover {
+          background: #1e293b;
         }
         .confirm-btn:hover {
           background: #4338ca;

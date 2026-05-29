@@ -12,7 +12,7 @@ import BackupManagerModal from '@/components/BackupManagerModal'
 
 export default function SettingsPage() {
   const router = useRouter()
-  const { customers, setCustomers, addCustomer, resetToDefault, clearAllCustomers } = useData()
+  const { customers, setCustomers, addCustomer, resetToDefault, clearAllCustomers, longTermCustomers, restoreLongTermFromBackup, clearAllLongTermCustomers } = useData()
   
   // 기본 설정 상태
   const [defaultSource, setDefaultSource] = useState('')
@@ -115,6 +115,50 @@ export default function SettingsPage() {
       }
     }
     reader.readAsText(file)
+  }
+
+  // 장기 고객 데이터 백업 (JSON)
+  const handleBackupLongTermJSON = () => {
+    const data = {
+      longTermCustomers,
+      backupDate: new Date().toISOString()
+    }
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `long_term_customers_backup_${new Date().toISOString().split('T')[0]}.json`
+    a.click()
+  }
+
+  // 장기 고객 데이터 복원
+  const handleRestoreLongTerm = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      try {
+        const json = JSON.parse(event.target?.result as string)
+        if (json.longTermCustomers) {
+          restoreLongTermFromBackup(json.longTermCustomers)
+          alert('장기 고객 데이터가 성공적으로 복원되었습니다.')
+        } else {
+          alert('장기 고객관리 백업 파일이 아닙니다.')
+        }
+      } catch (err) {
+        alert('올바른 백업 파일이 아닙니다.')
+      }
+    }
+    reader.readAsText(file)
+  }
+
+  // 장기 고객 전체 삭제
+  const handleClearAllLongTerm = () => {
+    if (confirm('정말로 모든 "고객관리" 장기 데이터를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) {
+      clearAllLongTermCustomers()
+      alert('모든 장기 고객 데이터가 삭제되었습니다.')
+    }
   }
 
   // Excel/CSV 날짜 변환 헬퍼
@@ -363,6 +407,22 @@ export default function SettingsPage() {
               </button>
               <button className="settings-list-item" onClick={handleBackupExcel}>
                 <div className="item-left"><Download size={16} color="#10b981" /> <span>고객 리스트 내보내기 (Excel)</span></div>
+              </button>
+            </div>
+          </div>
+
+          <div className="settings-list-group">
+            <div className="settings-list-header">장기 고객관리 데이터</div>
+            <div className="settings-list-items">
+              <label className="settings-list-item">
+                <div className="item-left"><Upload size={16} color="#f59e0b" /> <span>장기 고객 복원 (JSON)</span></div>
+                <input type="file" accept=".json" onChange={handleRestoreLongTerm} hidden />
+              </label>
+              <button className="settings-list-item" onClick={handleBackupLongTermJSON}>
+                <div className="item-left"><Download size={16} color="#8b5cf6" /> <span>장기 고객 백업 (JSON)</span></div>
+              </button>
+              <button className="settings-list-item" onClick={handleClearAllLongTerm}>
+                <div className="item-left"><Trash2 size={16} color="#ef4444" /> <span>장기 고객 모두 삭제</span></div>
               </button>
             </div>
           </div>

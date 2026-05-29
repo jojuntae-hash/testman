@@ -172,141 +172,188 @@ export default function CalendarPage() {
   const [draggingId, setDraggingId] = useState<string | null>(null)
   const [isLongPressed, setIsLongPressed] = useState(false)
   const [activeDropCell, setActiveDropCell] = useState<{ date: string; hour: number } | null>(null)
+  const [dragTouch, setDragTouch] = useState<{x: number, y: number} | null>(null)
   const longPressTimer = React.useRef<any>(null)
   const touchStartPos = React.useRef({ x: 0, y: 0 })
+  const dragStartCellInfo = React.useRef<{
+    dateIndex: number;
+    hour: number;
+    colWidth: number;
+    cellHeight: number;
+  } | null>(null)
 
-  // 캘린더 스와이프 제스처 관련
+  // 드래그 중 네이티브 스크롤 방지 (패시브 이벤트 우회)
+  useEffect(() => {
+    const preventScroll = (e: TouchEvent) => {
+      if (isLongPressed) {
+        e.preventDefault()
+      }
+    }
+    document.addEventListener('touchmove', preventScroll, { passive: false })
+    return () => document.removeEventListener('touchmove', preventScroll)
+  }, [isLongPressed])
+
+  // 캘린더 스와이프 제스처 관련 (클릭 간섭 문제로 기능 비활성화)
   const swipeStartPos = React.useRef({ x: 0, y: 0 })
   const [isSwiping, setIsSwiping] = useState(false)
   const [slideAnim, setSlideAnim] = useState('')
 
   const handleCalendarTouchStart = (e: React.TouchEvent) => {
-    swipeStartPos.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }
-    setIsSwiping(true)
+    // 비활성화
   }
 
   const handleCalendarTouchEnd = (e: React.TouchEvent) => {
-    if (!isSwiping) return
-    const endX = e.changedTouches[0].clientX
-    const endY = e.changedTouches[0].clientY
-    const diffX = endX - swipeStartPos.current.x
-    const diffY = endY - swipeStartPos.current.y
-    
-    // 수평 이동 거리가 50px 이상이고 수직 이동 거리보다 큰 경우 스와이프 처리
-    if (Math.abs(diffX) > 50 && Math.abs(diffX) > Math.abs(diffY)) {
-      if (diffX > 0) {
-        // 오른쪽으로 스와이프 -> 이전 날짜
-        setSlideAnim('slide-out-right')
-        setTimeout(() => {
-          handlePrevWeek()
-          setSlideAnim('slide-in-left')
-          setTimeout(() => setSlideAnim(''), 300)
-        }, 200)
-      } else {
-        // 왼쪽으로 스와이프 -> 다음 날짜
-        setSlideAnim('slide-out-left')
-        setTimeout(() => {
-          handleNextWeek()
-          setSlideAnim('slide-in-right')
-          setTimeout(() => setSlideAnim(''), 300)
-        }, 200)
-      }
-    }
-    setIsSwiping(false)
+    // 비활성화
   }
 
-  const handlePointerDown = (e: React.PointerEvent, customerId: string) => {
-    // 마우스의 경우 오직 좌클릭만 반응
-    if (e.pointerType === 'mouse' && e.button !== 0) return
+  const handleDropToCell = (customerId: string, targetDateStr: string, targetHour: number) => {
+    const targetCustomer = customers.find(c => c.id === customerId)
+    let targetMinute = 0
+    if (targetCustomer) {
+      const timeInfo = parseReservationTime(targetCustomer)
+      if (timeInfo) targetMinute = timeInfo.minute
+    }
+    const pad = (n: number) => n.toString().padStart(2, '0')
+    const newDateTimeStr = `${targetDateStr} ${pad(targetHour)}:${pad(targetMinute)}`
 
-    touchStartPos.current = { x: e.clientX, y: e.clientY }
-    setIsLongPressed(false)
+    const updated = customers.map(c => {
+      if (c.id === customerId) {
+        return {
+          ...c,
+          예약일자: newDateTimeStr,
+          status: c.status === '작업미완료' ? '예약완료' : c.status
+        }
+      }
+      return c
+    })
+    setCustomers(updated as any)
+  }
 
-    // 마우스는 지연 없이 드래그 시작, 터치는 1초(1000ms) 롱프레스 조건
-    const delay = e.pointerType === 'touch' ? 1000 : 0
+  // 좌표를 기반으로 드롭될 칸(Cell)을 수학적으로 계산 (DOM 오버레이/트랜지션 무시)
+  const findDropCellFromTouch = (clientX: number, clientY: number) => {
+    const container = document.querySelector('.weeks-scroll')
+    if (!container) return null
 
+    const columns = Array.from(container.querySelectorAll('.day-column'))
+    const targetCol = columns.find(col => {
+      const rect = col.getBoundingClientRect()
+      return clientX >= rect.left && clientX <= rect.right
+    })
+
+    if (!targetCol) return null
+
+    const cells = Array.from(targetCol.querySelectorAll('.grid-cell'))
+    const targetCell = cells.find(cell => {
+      const rect = cell.getBoundingClientRect()
+      return clientY >= rect.top && clientY <= rect.bottom
+    })
+
+    if (!targetCell) return null
+
+    const date = targetCell.getAttribute('data-date')
+    const hour = targetCell.getAttribute('data-hour')
+    
+    if (date && hour) {
+      return { date, hour: parseInt(hour, 10) }
+    }
+    return null
+  }
+
+  const handleTouchStart = (e: React.TouchEvent, customerId: string, originalDateStr: string, originalHour: number) => {
+    const touch = e.touches[0]
+    touchStartPos.current = { x: touch.clientX, y: touch.clientY }
+    
     if (longPressTimer.current) clearTimeout(longPressTimer.current)
-
     longPressTimer.current = setTimeout(() => {
       setDraggingId(customerId)
       setIsLongPressed(true)
-      if (navigator.vibrate) {
-        navigator.vibrate(50) // 햅틱 진동 알림
+      setDragTouch({ x: touch.clientX, y: touch.clientY })
+      
+      const container = document.querySelector('.weeks-scroll')
+      let colWidth = 80
+      let cellHeight = 80
+      if (container) {
+        const firstCol = container.querySelector('.day-column')
+        if (firstCol) {
+          const rect = firstCol.getBoundingClientRect()
+          colWidth = rect.width
+        }
+        const firstCell = container.querySelector('.grid-cell')
+        if (firstCell) {
+          const rect = firstCell.getBoundingClientRect()
+          cellHeight = rect.height
+        }
       }
-    }, delay)
 
-    // 타겟 엘리먼트에 포인터 캡처 지정 (화면 밖으로 포인터가 나가도 추적)
-    e.currentTarget.setPointerCapture(e.pointerId)
+      const dateIndex = weekDays.findIndex(d => d.toISOString().split('T')[0] === originalDateStr)
+      dragStartCellInfo.current = {
+        dateIndex: dateIndex !== -1 ? dateIndex : 0,
+        hour: originalHour,
+        colWidth: colWidth > 0 ? colWidth : 80,
+        cellHeight: cellHeight > 0 ? cellHeight : 80
+      }
+
+      if (navigator.vibrate) navigator.vibrate(50)
+    }, 400) // 0.4초로 좀 더 빠르게 반응하도록 수정
   }
 
-  const handlePointerMove = (e: React.PointerEvent) => {
-    if (!longPressTimer.current) return
-
-    // 롱프레스 전에 포인터가 10px 이상 과도하게 움직이면 스크롤로 인지하여 타이머 파기
-    const dist = Math.hypot(e.clientX - touchStartPos.current.x, e.clientY - touchStartPos.current.y)
-    if (!isLongPressed && dist > 10) {
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!longPressTimer.current && !isLongPressed) return
+    const touch = e.touches[0]
+    const dist = Math.hypot(touch.clientX - touchStartPos.current.x, touch.clientY - touchStartPos.current.y)
+    
+    if (!isLongPressed && dist > 15) {
       clearTimeout(longPressTimer.current)
       longPressTimer.current = null
       return
     }
 
-    // 롱프레스가 활성화되었을 때 드롭 대상 그리드 셀을 계산하여 하이라이트
-    if (isLongPressed && draggingId) {
-      const targetElement = document.elementFromPoint(e.clientX, e.clientY)
-      const gridCell = targetElement?.closest('.grid-cell') as HTMLElement
-      if (gridCell) {
-        const date = gridCell.getAttribute('data-date')
-        const hour = gridCell.getAttribute('data-hour')
-        if (date && hour) {
-          setActiveDropCell({ date, hour: parseInt(hour, 10) })
-        } else {
-          setActiveDropCell(null)
-        }
-      } else {
-        setActiveDropCell(null)
+    if (isLongPressed && draggingId && dragStartCellInfo.current) {
+      setDragTouch({ x: touch.clientX, y: touch.clientY })
+      
+      const { dateIndex, hour, colWidth, cellHeight } = dragStartCellInfo.current
+      const deltaX = touch.clientX - touchStartPos.current.x
+      const deltaY = touch.clientY - touchStartPos.current.y
+
+      const colDelta = Math.round(deltaX / colWidth)
+      const rowDelta = Math.round(deltaY / cellHeight)
+
+      const newColIndex = Math.min(3, Math.max(0, dateIndex + colDelta))
+      const newHour = Math.min(20, Math.max(8, hour + rowDelta))
+
+      const targetDate = weekDays[newColIndex]
+      if (targetDate) {
+        const targetDateStr = targetDate.toISOString().split('T')[0]
+        setActiveDropCell({ date: targetDateStr, hour: newHour })
       }
     }
   }
 
-  const handlePointerUp = (e: React.PointerEvent) => {
+  const handleTouchEnd = (e: React.TouchEvent) => {
     if (longPressTimer.current) {
       clearTimeout(longPressTimer.current)
       longPressTimer.current = null
     }
 
-    e.currentTarget.releasePointerCapture(e.pointerId)
-
     if (isLongPressed && draggingId) {
-      const targetElement = document.elementFromPoint(e.clientX, e.clientY)
-      const gridCell = targetElement?.closest('.grid-cell') as HTMLElement
-      if (gridCell) {
-        const targetDateStr = gridCell.getAttribute('data-date')
-        const targetHourStr = gridCell.getAttribute('data-hour')
+      if (activeDropCell) {
+        handleDropToCell(draggingId, activeDropCell.date, activeDropCell.hour)
+      } else if (dragStartCellInfo.current) {
+        const touch = e.changedTouches[0]
+        const { dateIndex, hour, colWidth, cellHeight } = dragStartCellInfo.current
+        const deltaX = touch.clientX - touchStartPos.current.x
+        const deltaY = touch.clientY - touchStartPos.current.y
         
-        if (targetDateStr && targetHourStr) {
-          const targetHour = parseInt(targetHourStr, 10)
-          const targetCustomer = customers.find(c => c.id === draggingId)
-          let targetMinute = 0
-          if (targetCustomer) {
-            const timeInfo = parseReservationTime(targetCustomer)
-            if (timeInfo) targetMinute = timeInfo.minute
-          }
-
-          const pad = (n: number) => n.toString().padStart(2, '0')
-          const newDateTimeStr = `${targetDateStr} ${pad(targetHour)}:${pad(targetMinute)}`
-
-          const updated = customers.map(c => {
-            if (c.id === draggingId) {
-              return {
-                ...c,
-                예약일자: newDateTimeStr,
-                status: c.status === '작업미완료' ? '예약완료' : c.status
-              }
-            }
-            return c
-          })
-
-          setCustomers(updated as any)
+        const colDelta = Math.round(deltaX / colWidth)
+        const rowDelta = Math.round(deltaY / cellHeight)
+        
+        const newColIndex = Math.min(3, Math.max(0, dateIndex + colDelta))
+        const newHour = Math.min(20, Math.max(8, hour + rowDelta))
+        
+        const targetDate = weekDays[newColIndex]
+        if (targetDate) {
+          const targetDateStr = targetDate.toISOString().split('T')[0]
+          handleDropToCell(draggingId, targetDateStr, newHour)
         }
       }
     }
@@ -314,16 +361,8 @@ export default function CalendarPage() {
     setDraggingId(null)
     setIsLongPressed(false)
     setActiveDropCell(null)
-  }
-
-  const handlePointerCancel = (e: React.PointerEvent) => {
-    if (longPressTimer.current) {
-      clearTimeout(longPressTimer.current)
-      longPressTimer.current = null
-    }
-    setDraggingId(null)
-    setIsLongPressed(false)
-    setActiveDropCell(null)
+    setDragTouch(null)
+    dragStartCellInfo.current = null
   }
 
   // 모달 열기
@@ -478,12 +517,8 @@ export default function CalendarPage() {
         </button>
       </div>
 
-      {/* 캘린더 영역 (터치 스와이프 이벤트 추가) */}
-      <div 
-        className={`calendar-container ${slideAnim}`}
-        onTouchStart={handleCalendarTouchStart}
-        onTouchEnd={handleCalendarTouchEnd}
-      >
+      {/* 캘린더 영역 */}
+      <div className={`calendar-container ${slideAnim}`}>
         {/* 시간 축 */}
         <div className="time-axis">
           <div className="axis-header">시간</div>
@@ -521,19 +556,58 @@ export default function CalendarPage() {
                       className={`grid-cell ${isOver ? 'drag-over' : ''}`}
                       data-date={date.toISOString().split('T')[0]}
                       data-hour={hour}
+                      onDragOver={(e) => {
+                        e.preventDefault()
+                        setActiveDropCell({ date: date.toISOString().split('T')[0], hour })
+                      }}
+                      onDragLeave={() => setActiveDropCell(null)}
+                      onDrop={(e) => {
+                        e.preventDefault()
+                        const droppedId = e.dataTransfer.getData('text/plain')
+                        if (droppedId) {
+                          handleDropToCell(droppedId, date.toISOString().split('T')[0], hour)
+                        }
+                        setActiveDropCell(null)
+                        setDraggingId(null)
+                      }}
                     >
                       {dayReservations.map(({ customer, timeInfo }) => {
                         const isDraggingThis = draggingId === customer.id
                         return (
                           <div 
+                            id={`card-${customer.id}`}
                             key={customer.id} 
                             className={`reservation-card ${isDraggingThis ? 'dragging' : ''}`}
-                            onClick={() => handleOpenDetail(customer, timeInfo)}
-                            onPointerDown={e => handlePointerDown(e, customer.id)}
-                            onPointerMove={handlePointerMove}
-                            onPointerUp={handlePointerUp}
-                            onPointerCancel={handlePointerCancel}
-                            style={{ touchAction: 'none' }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenDetail(customer, timeInfo);
+                            }}
+                            onTouchStart={(e) => {
+                              e.stopPropagation();
+                              handleTouchStart(e, customer.id, timeInfo.date, timeInfo.hour);
+                            }}
+                            onTouchMove={(e) => {
+                              e.stopPropagation();
+                              handleTouchMove(e);
+                            }}
+                            onTouchEnd={(e) => {
+                              e.stopPropagation();
+                              handleTouchEnd(e);
+                            }}
+                            onTouchCancel={(e) => {
+                              e.stopPropagation();
+                              handleTouchEnd(e);
+                            }}
+                            draggable={true}
+                            onDragStart={(e) => {
+                              e.stopPropagation();
+                              setDraggingId(customer.id);
+                              e.dataTransfer.setData('text/plain', customer.id);
+                            }}
+                            onDragEnd={() => {
+                              setDraggingId(null);
+                              setActiveDropCell(null);
+                            }}
                           >
                             <div className="res-inline-info">
                               <span className="res-name">{customer.고객명_상호}</span>
@@ -758,6 +832,36 @@ export default function CalendarPage() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* 모바일 드래그 고스트 (시각적 피드백) */}
+      {isLongPressed && draggingId && dragTouch && (
+        <div 
+          style={{
+            position: 'fixed',
+            left: dragTouch.x,
+            top: dragTouch.y,
+            pointerEvents: 'none',
+            zIndex: 99999,
+            background: '#ffffff',
+            border: '2px solid #3b82f6',
+            padding: '8px 12px',
+            borderRadius: '8px',
+            boxShadow: '0 10px 25px rgba(59, 130, 246, 0.5)',
+            fontSize: '0.8rem',
+            fontWeight: 'bold',
+            color: '#1e293b',
+            opacity: 0.95,
+            transform: 'translate(-50%, -50%) scale(1.05)',
+            whiteSpace: 'nowrap',
+            maxWidth: '120px',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            textAlign: 'center'
+          }}
+        >
+          {customers.find(c => c.id === draggingId)?.고객명_상호}
         </div>
       )}
 

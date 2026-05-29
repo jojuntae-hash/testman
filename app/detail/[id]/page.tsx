@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useData } from '@/lib/DataContext'
-import { Info, FileText, MapPin, MessageSquare, MessageCircle, ChevronLeft, Phone, Save, Calendar, Clock, Copy, ListPlus } from 'lucide-react'
+import { Info, FileText, MapPin, MessageSquare, MessageCircle, ChevronLeft, Phone, Save, Calendar, Clock, Copy, ListPlus, Users } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import VisitLogModal from '@/components/VisitLogModal'
 
@@ -23,7 +23,7 @@ const TIME_SLOTS = (() => {
 
 export default function DetailPage() {
   const { id } = useParams()
-  const { customers, setCustomers, changeCustomerStatus, addToSmsQueue } = useData()
+  const { customers, setCustomers, changeCustomerStatus, addToSmsQueue, copyToLongTerm } = useData()
   const router = useRouter()
   
   const customer = customers.find(c => c.id === id)
@@ -246,6 +246,12 @@ export default function DetailPage() {
     }
   }
 
+  const openNaverMap = (address: string) => {
+    if (!address) return
+    const encoded = encodeURIComponent(address)
+    window.open(`https://map.naver.com/v5/search/${encoded}`, '_blank')
+  }
+
   if (!customer) {
     return (
       <div style={{ padding: '40px', textAlign: 'center' }}>
@@ -286,11 +292,19 @@ export default function DetailPage() {
         </div>
         <div className="title-row">
           <h2 className="customer-name">{customer.고객명_상호}</h2>
-          {customer.전화번호 && (
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <a href={`tel:${String(customer.전화번호).replace(/[^0-9]/g, '')}`} className="action-circle-btn phone">
-                <Phone size={18} />
-              </a>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button 
+              onClick={() => { copyToLongTerm([customer.id]) }} 
+              className="action-circle-btn copy-to-lt"
+              title="고객관리로 복사"
+            >
+              <Users size={18} />
+            </button>
+            {customer.전화번호 && (
+              <>
+                <a href={`tel:${String(customer.전화번호).replace(/[^0-9]/g, '')}`} className="action-circle-btn phone">
+                  <Phone size={18} />
+                </a>
               <a href={`sms:${String(customer.전화번호).replace(/[^0-9]/g, '')}`} className="action-circle-btn sms">
                 <MessageCircle size={18} />
               </a>
@@ -304,8 +318,9 @@ export default function DetailPage() {
               >
                 <ListPlus size={18} />
               </button>
-            </div>
-          )}
+              </>
+            )}
+          </div>
         </div>
       </div>
 
@@ -477,9 +492,17 @@ export default function DetailPage() {
             <div className="value-with-action">
               <span>{customer.주소}</span>
               {customer.주소 && (
-                <button className="mini-map-btn" onClick={() => openMap(customer.주소)}>
-                  <MapPin size={12} />
-                </button>
+                <div style={{ display: 'flex', gap: '4px' }}>
+                  <button className="mini-map-btn" onClick={() => openMap(customer.주소)} title="기본 지도 열기">
+                    <MapPin size={12} />
+                  </button>
+                  <button className="mini-map-btn" onClick={() => openNaverMap(customer.주소)} title="네이버 지도 열기">
+                    <span style={{ fontSize: '10px', fontWeight: 'bold' }}>N</span>
+                  </button>
+                  <button className="mini-map-btn" onClick={() => handleCopyAddress(customer.주소)} title="주소 복사">
+                    <Copy size={12} />
+                  </button>
+                </div>
               )}
             </div>
           </div>
@@ -536,10 +559,13 @@ export default function DetailPage() {
               <div className="value-with-action">
                 <span>{customer.설치주소 || customer.주소}</span>
                 <div style={{ display: 'flex', gap: '4px' }}>
-                  <button className="mini-map-btn" onClick={() => openMap(customer.설치주소 || customer.주소)}>
+                  <button className="mini-map-btn" onClick={() => openMap(customer.설치주소 || customer.주소)} title="기본 지도 열기">
                     <MapPin size={12} />
                   </button>
-                  <button className="mini-map-btn" onClick={() => handleCopyAddress(customer.설치주소 || customer.주소)}>
+                  <button className="mini-map-btn" onClick={() => openNaverMap(customer.설치주소 || customer.주소)} title="네이버 지도 열기">
+                    <span style={{ fontSize: '10px', fontWeight: 'bold' }}>N</span>
+                  </button>
+                  <button className="mini-map-btn" onClick={() => handleCopyAddress(customer.설치주소 || customer.주소)} title="주소 복사">
                     <Copy size={12} />
                   </button>
                 </div>
@@ -812,6 +838,7 @@ export default function DetailPage() {
         .action-circle-btn.phone { background: #10b981; }
         .action-circle-btn.sms { background: #3b82f6; }
         .action-circle-btn.queue { background: #8b5cf6; border: none; cursor: pointer; }
+        .action-circle-btn.copy-to-lt { background: #0f172a; border: none; cursor: pointer; }
         .memo-textarea { width: 100%; min-height: 80px; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 0.9rem; resize: vertical; outline: none; margin-bottom: 8px; }
         .memo-textarea:focus { border-color: var(--accent-blue); }
         .save-memo-btn { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 8px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; transition: all 0.2s; }
