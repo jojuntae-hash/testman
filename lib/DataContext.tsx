@@ -261,6 +261,17 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         }).catch(err => console.error('Auto backup failed', err))
       })
     }
+
+    // 장기 고객은 2주(14일 = 1,209,600,000ms) 경과 시 자동 백업
+    const lastLongTermBackupTime = parseInt(localStorage.getItem('lastLongTermBackupTime') || '0', 10)
+    if (now - lastLongTermBackupTime >= 1209600000 && loadedLongTerm.length > 0) {
+      import('./backupUtils').then(({ saveLongTermBackup }) => {
+        saveLongTermBackup(loadedLongTerm).then(() => {
+          localStorage.setItem('lastLongTermBackupTime', now.toString())
+          console.log('Long term auto backup created successfully.')
+        }).catch(err => console.error('Long term auto backup failed', err))
+      })
+    }
   }
 
   // Load data on mount

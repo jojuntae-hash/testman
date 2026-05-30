@@ -9,6 +9,7 @@ import Script from 'next/script'
 import ManualAddModal from '@/components/ManualAddModal'
 import CustomerDeleteModal from '@/components/CustomerDeleteModal'
 import BackupManagerModal from '@/components/BackupManagerModal'
+import LongTermBackupManagerModal from '@/components/LongTermBackupManagerModal'
 
 export default function SettingsPage() {
   const router = useRouter()
@@ -26,6 +27,7 @@ export default function SettingsPage() {
   const [isManualAddOpen, setIsManualAddOpen] = useState(false)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [isBackupManagerOpen, setIsBackupManagerOpen] = useState(false)
+  const [isLongTermBackupManagerOpen, setIsLongTermBackupManagerOpen] = useState(false)
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -414,6 +416,9 @@ export default function SettingsPage() {
           <div className="settings-list-group">
             <div className="settings-list-header">장기 고객관리 데이터</div>
             <div className="settings-list-items">
+              <button className="settings-list-item" onClick={() => setIsLongTermBackupManagerOpen(true)}>
+                <div className="item-left"><Database size={16} color="#0ea5e9" /> <span>장기 고객 자동 백업 관리</span></div>
+              </button>
               <label className="settings-list-item">
                 <div className="item-left"><Upload size={16} color="#f59e0b" /> <span>장기 고객 복원 (JSON)</span></div>
                 <input type="file" accept=".json" onChange={handleRestoreLongTerm} hidden />
@@ -469,6 +474,12 @@ export default function SettingsPage() {
       {isBackupManagerOpen && (
         <BackupManagerModal 
           onClose={() => setIsBackupManagerOpen(false)}
+        />
+      )}
+
+      {isLongTermBackupManagerOpen && (
+        <LongTermBackupManagerModal 
+          onClose={() => setIsLongTermBackupManagerOpen(false)}
         />
       )}
 

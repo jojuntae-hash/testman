@@ -1,4 +1,4 @@
-import { CustomerData } from './DataContext'
+import { CustomerData, LongTermCustomer } from './DataContext'
 import { supabase } from './supabase'
 
 const MAX_BACKUPS = 50
@@ -91,6 +91,89 @@ export async function deleteBackups(ids: string[]): Promise<void> {
   const { error } = await supabase.from('backups').delete().in('id', ids)
   if (error) {
     console.error('Backup delete error:', error)
+    throw error
+  }
+}
+
+export interface LongTermBackupItem {
+  id: string
+  name: string
+  timestamp: number
+  data: LongTermCustomer[]
+}
+
+// 50개 초과 시 오래된 장기 고객 백업 삭제 로직
+async function enforceMaxLongTermBackups(): Promise<void> {
+  const { data, error } = await supabase
+    .from('long_term_backups')
+    .select('id, timestamp')
+    .order('timestamp', { ascending: true })
+  
+  if (error || !data) return
+
+  if (data.length > MAX_BACKUPS) {
+    const toDelete = data.slice(0, data.length - MAX_BACKUPS)
+    const idsToDelete = toDelete.map((d: any) => d.id)
+    await supabase.from('long_term_backups').delete().in('id', idsToDelete)
+  }
+}
+
+// 장기 고객 데이터 백업 생성
+export async function saveLongTermBackup(data: LongTermCustomer[]): Promise<void> {
+  const now = new Date()
+  const id = Date.now().toString()
+  const name = `J_LT_${formatDate(now)}`
+
+  const backupItem: LongTermBackupItem = {
+    id,
+    name,
+    timestamp: now.getTime(),
+    data: JSON.parse(JSON.stringify(data)), // 깊은 복사
+  }
+
+  const { error } = await supabase.from('long_term_backups').insert(backupItem)
+  if (error) {
+    console.error('Long term backup save error:', error)
+    throw error
+  }
+
+  await enforceMaxLongTermBackups()
+}
+
+// 장기 고객 데이터 백업 리스트 조회 (데이터 제외)
+export async function getLongTermBackupList(): Promise<Omit<LongTermBackupItem, 'data'>[]> {
+  const { data, error } = await supabase
+    .from('long_term_backups')
+    .select('id, name, timestamp')
+    .order('timestamp', { ascending: false })
+    
+  if (error) {
+    console.error('Long term backup list fetch error:', error)
+    return []
+  }
+  return data as Omit<LongTermBackupItem, 'data'>[]
+}
+
+// 특정 장기 고객 데이터 백업 상세 가져오기
+export async function getLongTermBackupData(id: string): Promise<LongTermBackupItem | undefined> {
+  const { data, error } = await supabase
+    .from('long_term_backups')
+    .select('*')
+    .eq('id', id)
+    .single()
+    
+  if (error) {
+    console.error('Long term backup data fetch error:', error)
+    return undefined
+  }
+  return data as LongTermBackupItem
+}
+
+// 여러 장기 고객 데이터 백업 삭제
+export async function deleteLongTermBackups(ids: string[]): Promise<void> {
+  const { error } = await supabase.from('long_term_backups').delete().in('id', ids)
+  if (error) {
+    console.error('Long term backup delete error:', error)
     throw error
   }
 }
