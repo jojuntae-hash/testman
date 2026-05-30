@@ -198,6 +198,14 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       if (savedLongTerm) {
         try { loadedLongTerm = JSON.parse(savedLongTerm) } catch (e) {}
       }
+      
+      if (isSupabaseConfigured && loadedLongTerm.length > 0) {
+        try {
+          await supabase.from('long_term_customers').upsert(loadedLongTerm)
+        } catch (err) {
+          console.error('Failed to sync initial long term data to Supabase:', err)
+        }
+      }
     }
     setLongTermCustomersState(loadedLongTerm)
     localStorage.setItem('longTermCustomers', JSON.stringify(loadedLongTerm))
@@ -703,6 +711,18 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const setLongTermCustomers = async (data: LongTermCustomer[]) => {
     setLongTermCustomersState(data)
     localStorage.setItem('longTermCustomers', JSON.stringify(data))
+
+    const isSupabaseConfigured = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    if (isSupabaseConfigured) {
+      try {
+        const { error } = await supabase.from('long_term_customers').upsert(data)
+        if (error) {
+          console.error('Supabase long term upsert error:', error)
+        }
+      } catch (err) {
+        console.error('Supabase long term sync error:', err)
+      }
+    }
   }
 
   const copyToLongTerm = async (customerIds: string[]) => {

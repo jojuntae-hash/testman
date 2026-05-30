@@ -38,6 +38,16 @@ export default function MapPage() {
   const [defaultSource, setDefaultSource] = useState<string>('')
   const [defaultSourceCoords, setDefaultSourceCoords] = useState<{ lat: number; lng: number } | null>(null)
 
+  const [sessionSelectedIds] = useState<string[]>(() => {
+    if (typeof window !== 'undefined') {
+      const savedIds = sessionStorage.getItem('map_selected_ids')
+      if (savedIds) {
+        try { return JSON.parse(savedIds) } catch (e) {}
+      }
+    }
+    return []
+  })
+
   // 초기 설정 로드 + sessionStorage에서 이전 상태 복원
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -92,10 +102,13 @@ export default function MapPage() {
 
   const displayCustomers = useMemo(() => {
     const dataList = isLongTerm ? longTermCustomers : customers
-    if (selectedFolder === '선택된 항목') return dataList.filter(c => selectedIds.includes(c.id))
+    if (selectedFolder === '선택된 항목') {
+      const idsToUse = sessionSelectedIds.length > 0 ? sessionSelectedIds : selectedIds
+      return dataList.filter(c => idsToUse.includes(c.id))
+    }
     if (selectedFolder === '전체리스트') return dataList.filter(c => c.status !== '삭제됨')
     return dataList.filter(c => (c.status || '미분류') === selectedFolder)
-  }, [customers, longTermCustomers, selectedIds, selectedFolder, isLongTerm])
+  }, [customers, longTermCustomers, selectedIds, sessionSelectedIds, selectedFolder, isLongTerm])
 
   // 주소를 좌표로 변환 (상태 복원 완료 후 실행)
   useEffect(() => {
