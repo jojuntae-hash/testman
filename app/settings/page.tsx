@@ -131,8 +131,16 @@ export default function SettingsPage() {
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `long_term_customers_backup_${new Date().toISOString().split('T')[0]}.json`
+    a.download = `long_term_customer_backup_${new Date().toISOString().split('T')[0]}.json`
     a.click()
+  }
+
+  // 장기 고객 데이터 백업 (Excel)
+  const handleBackupLongTermExcel = () => {
+    const ws = XLSX.utils.json_to_sheet(longTermCustomers)
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, "LongTermCustomers")
+    XLSX.writeFile(wb, `long_term_customer_list_${new Date().toISOString().split('T')[0]}.xlsx`)
   }
 
   // 장기 고객 데이터 복원
@@ -430,6 +438,9 @@ export default function SettingsPage() {
               </label>
               <button className="settings-list-item" onClick={handleBackupLongTermJSON}>
                 <div className="item-left"><Download size={16} color="#8b5cf6" /> <span>장기 고객 백업 (JSON)</span></div>
+              </button>
+              <button className="settings-list-item" onClick={handleBackupLongTermExcel}>
+                <div className="item-left"><Download size={16} color="#10b981" /> <span>장기 고객 리스트 내보내기 (Excel)</span></div>
               </button>
               <button className="settings-list-item" onClick={handleClearAllLongTerm}>
                 <div className="item-left"><Trash2 size={16} color="#ef4444" /> <span>장기 고객 모두 삭제</span></div>

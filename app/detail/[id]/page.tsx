@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useData } from '@/lib/DataContext'
-import { Info, FileText, MapPin, MessageSquare, MessageCircle, ChevronLeft, Phone, Save, Calendar, Clock, Copy, ListPlus, Users } from 'lucide-react'
+import { Info, FileText, MapPin, MessageSquare, MessageCircle, ChevronLeft, Phone, Save, Calendar, Clock, Copy, ListPlus, Users, Edit3, X } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import VisitLogModal from '@/components/VisitLogModal'
 
@@ -23,7 +23,7 @@ const TIME_SLOTS = (() => {
 
 export default function DetailPage() {
   const { id } = useParams()
-  const { customers, setCustomers, changeCustomerStatus, addToSmsQueue, copyToLongTerm } = useData()
+  const { customers, setCustomers, changeCustomerStatus, addToSmsQueue, copyToLongTerm, updateCustomer } = useData()
   const router = useRouter()
   
   const customer = customers.find(c => c.id === id)
@@ -37,6 +37,53 @@ export default function DetailPage() {
   
   const [isCompModalOpen, setIsCompModalOpen] = useState(false)
   const [editCompDate, setEditCompDate] = useState('')
+
+  // 편집 모드 상태
+  const [isEditingInfo, setIsEditingInfo] = useState(false)
+  const [editForm, setEditForm] = useState<any>({})
+
+  const handleEditInfoStart = () => {
+    if (!customer) return
+    setEditForm({
+      고객번호: customer.고객번호 || '',
+      모델명: customer.모델명 || '',
+      계약일자: customer.계약일자 || '',
+      계약만료일자: customer.계약만료일자 || '',
+      최종점검일: customer.최종점검일 || '',
+      당월작업: customer.당월작업 || '',
+      최종작업내용: customer.최종작업내용 || '',
+      계약자구분: customer.계약자구분 || '',
+      고객명_상호: customer.고객명_상호 || '',
+      사업자번호: customer.사업자번호 || '',
+      전화번호: customer.전화번호 || '',
+      핸드폰번호: customer.핸드폰번호 || '',
+      주소: customer.주소 || '',
+      설치처구분: customer.설치처구분 || '',
+      설치자명: customer.설치자명 || '',
+      설치구분: customer.설치구분 || '',
+      설치전화번호: customer.설치전화번호 || '',
+      설치주소: customer.설치주소 || '',
+      설치시특이사항: customer.설치시특이사항 || ''
+    })
+    setIsEditingInfo(true)
+  }
+
+  const handleEditInfoSave = async () => {
+    if (!customer) return
+    await updateCustomer(customer.id, editForm)
+    setIsEditingInfo(false)
+    alert('고객 정보가 수정되었습니다.')
+  }
+
+  const handleEditInfoCancel = () => {
+    setIsEditingInfo(false)
+  }
+
+  const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target
+    setEditForm((prev: any) => ({ ...prev, [name]: value }))
+  }
+
 
   const handleOpenResModal = () => {
     if (!customer) return
@@ -291,8 +338,48 @@ export default function DetailPage() {
           </div>
         </div>
         <div className="title-row">
-          <h2 className="customer-name">{customer.고객명_상호}</h2>
+          {isEditingInfo ? (
+            <input 
+              className="edit-input name-input"
+              name="고객명_상호"
+              value={editForm.고객명_상호}
+              onChange={handleFormChange}
+              placeholder="고객명/상호"
+              style={{ fontSize: '1.4rem', fontWeight: 800, padding: '4px 8px', width: '200px' }}
+            />
+          ) : (
+            <h2 className="customer-name">{customer.고객명_상호}</h2>
+          )}
           <div style={{ display: 'flex', gap: '8px' }}>
+            {!isEditingInfo ? (
+              <button 
+                onClick={handleEditInfoStart}
+                className="action-circle-btn"
+                style={{ background: '#f8fafc', color: '#3b82f6', border: '1px solid #e2e8f0' }}
+                title="정보 수정"
+              >
+                <Edit3 size={18} />
+              </button>
+            ) : (
+              <div style={{ display: 'flex', gap: '6px' }}>
+                <button 
+                  onClick={handleEditInfoCancel}
+                  className="action-circle-btn"
+                  style={{ background: '#f1f5f9', color: '#64748b' }}
+                  title="취소"
+                >
+                  <X size={18} />
+                </button>
+                <button 
+                  onClick={handleEditInfoSave}
+                  className="action-circle-btn"
+                  style={{ background: '#0f172a', color: '#fff' }}
+                  title="저장"
+                >
+                  <Save size={16} />
+                </button>
+              </div>
+            )}
             <button 
               onClick={() => { copyToLongTerm([customer.id]) }} 
               className="action-circle-btn copy-to-lt"
@@ -333,23 +420,23 @@ export default function DetailPage() {
         <div className="info-grid">
           <div className="info-item">
             <label>고객번호</label>
-            <span>{customer.고객번호}</span>
+            {isEditingInfo ? <input className="edit-input" name="고객번호" value={editForm.고객번호} onChange={handleFormChange} /> : <span>{customer.고객번호}</span>}
           </div>
           <div className="info-item">
             <label>모델명</label>
-            <span>{customer.모델명}</span>
+            {isEditingInfo ? <input className="edit-input" name="모델명" value={editForm.모델명} onChange={handleFormChange} /> : <span>{customer.모델명}</span>}
           </div>
           <div className="info-item">
             <label>계약일자</label>
-            <span>{customer.계약일자}</span>
+            {isEditingInfo ? <input type="date" className="edit-input" name="계약일자" value={editForm.계약일자} onChange={handleFormChange} /> : <span>{customer.계약일자}</span>}
           </div>
           <div className="info-item">
             <label>계약만료예정일</label>
-            <span>{customer.계약만료일자}</span>
+            {isEditingInfo ? <input type="date" className="edit-input" name="계약만료일자" value={editForm.계약만료일자} onChange={handleFormChange} /> : <span>{customer.계약만료일자}</span>}
           </div>
           <div className="info-item">
             <label>최종점검일</label>
-            <span>{customer.최종점검일}</span>
+            {isEditingInfo ? <input type="date" className="edit-input" name="최종점검일" value={editForm.최종점검일} onChange={handleFormChange} /> : <span>{customer.최종점검일}</span>}
           </div>
           <div className="info-item">
             <label>예약일자</label>
@@ -380,7 +467,7 @@ export default function DetailPage() {
           </div>
           <div className="info-item">
             <label>당월작업</label>
-            <span>{customer.당월작업}</span>
+            {isEditingInfo ? <input className="edit-input" name="당월작업" value={editForm.당월작업} onChange={handleFormChange} /> : <span>{customer.당월작업}</span>}
           </div>
           {customer.status === '작업완료' && (
             <div className="info-item" style={{ borderLeft: '3px solid #10b981', paddingLeft: 8 }}>
@@ -413,7 +500,7 @@ export default function DetailPage() {
           )}
           <div className="info-item full">
             <label>최종작업내용</label>
-            <span>{customer.최종작업내용}</span>
+            {isEditingInfo ? <input className="edit-input" name="최종작업내용" value={editForm.최종작업내용} onChange={handleFormChange} /> : <span>{customer.최종작업내용}</span>}
           </div>
         </div>
       </div>
@@ -427,20 +514,20 @@ export default function DetailPage() {
         <div className="info-grid">
           <div className="info-item">
             <label>계약자 구분</label>
-            <span>{customer.계약자구분}</span>
+            {isEditingInfo ? <input className="edit-input" name="계약자구분" value={editForm.계약자구분} onChange={handleFormChange} /> : <span>{customer.계약자구분}</span>}
           </div>
           <div className="info-item">
             <label>고객명/상호</label>
-            <span>{customer.고객명_상호}</span>
+            {isEditingInfo ? <input className="edit-input" name="고객명_상호" value={editForm.고객명_상호} onChange={handleFormChange} /> : <span>{customer.고객명_상호}</span>}
           </div>
           <div className="info-item">
             <label>사업자번호</label>
-            <span>{customer.사업자번호}</span>
+            {isEditingInfo ? <input className="edit-input" name="사업자번호" value={editForm.사업자번호} onChange={handleFormChange} /> : <span>{customer.사업자번호}</span>}
           </div>
           <div className="info-item">
             <label>전화번호</label>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <span>{customer.전화번호}</span>
+              {isEditingInfo ? <input className="edit-input" name="전화번호" value={editForm.전화번호} onChange={handleFormChange} /> : <span>{customer.전화번호}</span>}
               {customer.전화번호 && (
                 <div style={{ display: 'flex', gap: '6px' }}>
                   <a href={`tel:${String(customer.전화번호).replace(/[^0-9]/g, '')}`} className="mini-call-btn">
@@ -465,7 +552,7 @@ export default function DetailPage() {
           <div className="info-item">
             <label>핸드폰번호</label>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <span>{customer.핸드폰번호}</span>
+              {isEditingInfo ? <input className="edit-input" name="핸드폰번호" value={editForm.핸드폰번호} onChange={handleFormChange} /> : <span>{customer.핸드폰번호}</span>}
               {customer.핸드폰번호 && (
                 <div style={{ display: 'flex', gap: '6px' }}>
                   <a href={`tel:${String(customer.핸드폰번호).replace(/[^0-9]/g, '')}`} className="mini-call-btn">
@@ -490,7 +577,7 @@ export default function DetailPage() {
           <div className="info-item full">
             <label>주소</label>
             <div className="value-with-action">
-              <span>{customer.주소}</span>
+              {isEditingInfo ? <input className="edit-input" name="주소" value={editForm.주소} onChange={handleFormChange} style={{ flex: 1 }} /> : <span>{customer.주소}</span>}
               {customer.주소 && (
                 <div style={{ display: 'flex', gap: '4px' }}>
                   <button className="mini-map-btn" onClick={() => openMap(customer.주소)} title="기본 지도 열기">
@@ -518,20 +605,20 @@ export default function DetailPage() {
         <div className="info-grid">
           <div className="info-item">
             <label>설치처구분</label>
-            <span>{customer.설치처구분}</span>
+            {isEditingInfo ? <input className="edit-input" name="설치처구분" value={editForm.설치처구분} onChange={handleFormChange} /> : <span>{customer.설치처구분}</span>}
           </div>
           <div className="info-item">
             <label>설치자명</label>
-            <span>{customer.설치자명}</span>
+            {isEditingInfo ? <input className="edit-input" name="설치자명" value={editForm.설치자명} onChange={handleFormChange} /> : <span>{customer.설치자명}</span>}
           </div>
           <div className="info-item">
             <label>설치구분</label>
-            <span>{customer.설치구분}</span>
+            {isEditingInfo ? <input className="edit-input" name="설치구분" value={editForm.설치구분} onChange={handleFormChange} /> : <span>{customer.설치구분}</span>}
           </div>
           <div className="info-item">
             <label>전화번호</label>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <span>{customer.설치전화번호}</span>
+              {isEditingInfo ? <input className="edit-input" name="설치전화번호" value={editForm.설치전화번호} onChange={handleFormChange} /> : <span>{customer.설치전화번호}</span>}
               {customer.설치전화번호 && (
                 <div style={{ display: 'flex', gap: '6px' }}>
                   <a href={`tel:${String(customer.설치전화번호).replace(/[^0-9]/g, '')}`} className="mini-call-btn">
@@ -557,7 +644,7 @@ export default function DetailPage() {
             <div className="info-item full">
               <label>주소</label>
               <div className="value-with-action">
-                <span>{customer.설치주소 || customer.주소}</span>
+                {isEditingInfo ? <input className="edit-input" name="설치주소" value={editForm.설치주소} onChange={handleFormChange} style={{ flex: 1 }} /> : <span>{customer.설치주소 || customer.주소}</span>}
                 <div style={{ display: 'flex', gap: '4px' }}>
                   <button className="mini-map-btn" onClick={() => openMap(customer.설치주소 || customer.주소)} title="기본 지도 열기">
                     <MapPin size={12} />
@@ -575,7 +662,7 @@ export default function DetailPage() {
           <div className="info-item full memo">
             <label>설치시 특이사항</label>
             <div className="memo-box">
-              {customer.설치시특이사항}
+              {isEditingInfo ? <textarea className="edit-input" name="설치시특이사항" value={editForm.설치시특이사항} onChange={handleFormChange} rows={4} style={{ width: '100%', resize: 'vertical' }} /> : customer.설치시특이사항}
             </div>
           </div>
         </div>

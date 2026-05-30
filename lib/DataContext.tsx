@@ -66,6 +66,7 @@ interface DataContextType {
   deleteCustomers: (ids: string[]) => Promise<void>
   selectedIds: string[]
   setSelectedIds: (ids: string[]) => void
+  updateCustomer: (id: string, updates: Partial<CustomerData>) => Promise<void>
   updateCustomerCoords: (id: string, lat: number, lng: number) => Promise<void>
   resetToDefault: () => void
   clearAllCustomers: () => void
@@ -496,6 +497,29 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  // 고객 정보 업데이트 함수
+  const updateCustomer = async (id: string, updates: Partial<CustomerData>) => {
+    let updated: CustomerData[] = []
+    setCustomersState(prev => {
+      updated = prev.map(c => c.id === id ? { ...c, ...updates } : c)
+      localStorage.setItem('customers', JSON.stringify(updated))
+      return updated
+    })
+
+    const isSupabaseConfigured = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    if (isSupabaseConfigured) {
+      try {
+        const target = updated.find(c => c.id === id)
+        if (target) {
+          const { 현장메모, ...dbTarget } = target
+          await supabase.from('customers').upsert([dbTarget])
+        }
+      } catch (err) {
+        console.error('Supabase customer update error:', err)
+      }
+    }
+  }
+
   // 좌표 업데이트 함수 및 동기화
   const updateCustomerCoords = async (id: string, lat: number, lng: number) => {
     let updated: CustomerData[] = []
@@ -782,13 +806,17 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     if (targets.length === 0) return
 
     const newLongTerms: LongTermCustomer[] = []
+    const updatedLongTerms: LongTermCustomer[] = []
+    const currentList = [...longTermCustomers]
 
     for (const c of targets) {
       const ltId = toUUID(c.id)
-      // 기존에 복사된 항목이 있다면 제외하거나 업데이트할 수 있지만, 요구사항에서는 일단 복사. 
-      // 중복 방지를 위해 기존 ID 확인
-      const existing = longTermCustomers.find(lt => lt.id === ltId)
-      if (existing) continue
+      
+      // 중복 방지 및 업데이트 로직: ID가 같거나, 이름과 고객번호가 모두 같은 경우 중복으로 처리
+      const existingIndex = currentList.findIndex(lt => 
+        lt.id === ltId || 
+        (lt.이름 === (c.고객명_상호 || '') && lt.고객번호 === (c.고객번호 || ''))
+      )
 
       // 기록 병합 (현장메모 + 방문기록)
       let combinedRecord = ''
@@ -816,39 +844,68 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
-      const newLT: LongTermCustomer = {
-        id: ltId,
-        이름: c.고객명_상호 || '',
-        고객번호: c.고객번호 || '',
-        모델명: c.모델명 || '',
-        계약일자: c.계약일자 || '',
-        작업완료일: c.작업완료일 || '',
-        계약자구분: c.계약자구분 || '',
-        고객명_상호: c.고객명_상호 || '',
-        전화번호: c.전화번호 || '',
-        핸드폰번호: c.핸드폰번호 || '',
-        주소: c.주소 || '',
-        설치자명: c.설치자명 || '',
-        설치전화번호: c.설치전화번호 || '',
-        설치주소: c.설치주소 || '',
-        기록: combinedRecord.trim(),
-        created_at: new Date().toISOString()
+      combinedRecord = combinedRecord.trim()
+
+      if (existingIndex >= 0) {
+        const existing = currentList[existingIndex]
+        const updatedLT = { ...existing }
+        let hasChanges = false
+
+        if (c.작업완료일 && updatedLT.작업완료일 !== c.작업완료일) { updatedLT.작업완료일 = c.작업완료일; hasChanges = true }
+        if (c.전화번호 && updatedLT.전화번호 !== c.전화번호) { updatedLT.전화번호 = c.전화번호; hasChanges = true }
+        if (c.핸드폰번호 && updatedLT.핸드폰번호 !== c.핸드폰번호) { updatedLT.핸드폰번호 = c.핸드폰번호; hasChanges = true }
+        if (c.주소 && updatedLT.주소 !== c.주소) { updatedLT.주소 = c.주소; hasChanges = true }
+        if (c.설치전화번호 && updatedLT.설치전화번호 !== c.설치전화번호) { updatedLT.설치전화번호 = c.설치전화번호; hasChanges = true }
+        if (c.설치주소 && updatedLT.설치주소 !== c.설치주소) { updatedLT.설치주소 = c.설치주소; hasChanges = true }
+        
+        if (combinedRecord) {
+          const oldRecord = updatedLT.기록 || ''
+          if (!oldRecord.includes(combinedRecord)) {
+            updatedLT.기록 = oldRecord ? `${oldRecord}\n\n[${new Date().toISOString().split('T')[0]} 업데이트]\n${combinedRecord}` : combinedRecord
+            hasChanges = true
+          }
+        }
+
+        if (hasChanges) {
+          currentList[existingIndex] = updatedLT
+          updatedLongTerms.push(updatedLT)
+        }
+      } else {
+        const newLT: LongTermCustomer = {
+          id: ltId,
+          이름: c.고객명_상호 || '',
+          고객번호: c.고객번호 || '',
+          모델명: c.모델명 || '',
+          계약일자: c.계약일자 || '',
+          작업완료일: c.작업완료일 || '',
+          계약자구분: c.계약자구분 || '',
+          고객명_상호: c.고객명_상호 || '',
+          전화번호: c.전화번호 || '',
+          핸드폰번호: c.핸드폰번호 || '',
+          주소: c.주소 || '',
+          설치자명: c.설치자명 || '',
+          설치전화번호: c.설치전화번호 || '',
+          설치주소: c.설치주소 || '',
+          기록: combinedRecord,
+          created_at: new Date().toISOString()
+        }
+        newLongTerms.push(newLT)
+        currentList.push(newLT)
       }
-      newLongTerms.push(newLT)
     }
 
-    if (newLongTerms.length === 0) {
-      alert('이미 고객관리에 존재하는 고객이거나 선택된 고객이 없습니다.')
+    if (newLongTerms.length === 0 && updatedLongTerms.length === 0) {
+      alert('업데이트되거나 새로 장기고객으로 복사될 데이터가 없습니다.')
       return
     }
 
-    const updated = [...longTermCustomers, ...newLongTerms]
-    setLongTermCustomersState(updated)
-    localStorage.setItem('longTermCustomers', JSON.stringify(updated))
+    setLongTermCustomersState(currentList)
+    localStorage.setItem('longTermCustomers', JSON.stringify(currentList))
 
     if (isSupabaseConfigured) {
       try {
-        const { error } = await supabase.from('long_term_customers').upsert(newLongTerms)
+        const upsertData = [...newLongTerms, ...updatedLongTerms]
+        const { error } = await supabase.from('long_term_customers').upsert(upsertData)
         if (error) {
           console.error('Supabase long term upsert error:', error)
           alert(`서버 저장 실패: ${error.message || JSON.stringify(error)}`)
@@ -858,7 +915,11 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       }
     }
     
-    alert(`${newLongTerms.length}명의 고객이 고객관리로 복사되었습니다.`)
+    let msg = ''
+    if (newLongTerms.length > 0) msg += `${newLongTerms.length}명의 고객이 장기 고객 리스트로 복사되었습니다.\n`
+    if (updatedLongTerms.length > 0) msg += `${updatedLongTerms.length}명의 고객 정보가 장기 고객 리스트에 업데이트되었습니다.`
+    
+    alert(msg.trim())
   }
 
   const addLongTermCustomer = async (newCustomer: LongTermCustomer) => {
@@ -990,6 +1051,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       deleteCustomers,
       selectedIds, 
       setSelectedIds, 
+      updateCustomer,
       updateCustomerCoords, 
       resetToDefault, 
       clearAllCustomers,
