@@ -147,6 +147,20 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     return s
   }
 
+  // UUID 변환 함수 (Supabase UUID 타입 호환을 위함)
+  const toUUID = (id: string): string => {
+    if (!id) return '00000000-0000-0000-0000-000000000000';
+    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+      return id.toLowerCase();
+    }
+    let hex = '';
+    for(let i = 0; i < id.length; i++) {
+      hex += id.charCodeAt(i).toString(16).padStart(2, '0');
+    }
+    hex = hex.padEnd(32, '0').slice(0, 32);
+    return `${hex.slice(0,8)}-${hex.slice(8,12)}-${hex.slice(12,16)}-${hex.slice(16,20)}-${hex.slice(20,32)}`;
+  }
+
   // Supabase 및 로컬 스토리지로부터 데이터를 가져오는 동기화 로직
   const refreshData = async () => {
     let loadedCustomers: CustomerData[] = []
@@ -197,7 +211,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     if (loadedLongTerm.length === 0) {
       const savedLongTerm = localStorage.getItem('longTermCustomers')
       if (savedLongTerm) {
-        try { loadedLongTerm = JSON.parse(savedLongTerm) } catch (e) {}
+        try { 
+          const parsed = JSON.parse(savedLongTerm)
+          loadedLongTerm = parsed.map((c: any) => ({ ...c, id: toUUID(c.id) }))
+        } catch (e) {}
       }
       
       if (isSupabaseConfigured && loadedLongTerm.length > 0) {
@@ -767,9 +784,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     const newLongTerms: LongTermCustomer[] = []
 
     for (const c of targets) {
+      const ltId = toUUID(c.id)
       // 기존에 복사된 항목이 있다면 제외하거나 업데이트할 수 있지만, 요구사항에서는 일단 복사. 
       // 중복 방지를 위해 기존 ID 확인
-      const existing = longTermCustomers.find(lt => lt.id === c.id)
+      const existing = longTermCustomers.find(lt => lt.id === ltId)
       if (existing) continue
 
       // 기록 병합 (현장메모 + 방문기록)
@@ -799,7 +817,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       }
 
       const newLT: LongTermCustomer = {
-        id: c.id,
+        id: ltId,
         이름: c.고객명_상호 || '',
         고객번호: c.고객번호 || '',
         모델명: c.모델명 || '',
@@ -830,7 +848,11 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
     if (isSupabaseConfigured) {
       try {
-        await supabase.from('long_term_customers').upsert(newLongTerms)
+        const { error } = await supabase.from('long_term_customers').upsert(newLongTerms)
+        if (error) {
+          console.error('Supabase long term upsert error:', error)
+          alert(`서버 저장 실패: ${error.message || JSON.stringify(error)}`)
+        }
       } catch (e) {
         console.error('Supabase long term upsert error:', e)
       }
@@ -842,6 +864,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const addLongTermCustomer = async (newCustomer: LongTermCustomer) => {
     const fixedCustomer = {
       ...newCustomer,
+      id: toUUID(newCustomer.id),
       전화번호: fixPhoneNumber(newCustomer.전화번호 || ''),
       핸드폰번호: fixPhoneNumber(newCustomer.핸드폰번호 || ''),
       설치전화번호: fixPhoneNumber(newCustomer.설치전화번호 || '')
@@ -943,16 +966,17 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
   const restoreLongTermFromBackup = async (backupData: LongTermCustomer[]) => {
     const isSupabaseConfigured = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    const fixedData = backupData.map(c => ({ ...c, id: toUUID(c.id) }))
     if (isSupabaseConfigured) {
       try {
         await supabase.from('long_term_customers').delete().neq('id', '')
-        await supabase.from('long_term_customers').upsert(backupData)
+        await supabase.from('long_term_customers').upsert(fixedData)
       } catch (err) {
         console.error('Supabase long term clear before restore error:', err)
       }
     }
-    setLongTermCustomersState(backupData)
-    localStorage.setItem('longTermCustomers', JSON.stringify(backupData))
+    setLongTermCustomersState(fixedData)
+    localStorage.setItem('longTermCustomers', JSON.stringify(fixedData))
   }
 
   // Prevent hydration mismatch by not rendering children until initialized
