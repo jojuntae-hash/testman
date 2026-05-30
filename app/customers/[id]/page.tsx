@@ -86,7 +86,7 @@ export default function LongTermCustomerDetailPage() {
 
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
-    setEditForm(prev => ({ ...prev, [name]: value }))
+    setEditForm((prev: any) => ({ ...prev, [name]: value }))
   }
 
   const handleMapClick = (address: string) => {

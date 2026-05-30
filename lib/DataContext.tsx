@@ -350,9 +350,30 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     }
     fetchSmsTemplates()
 
-    refreshData().then(() => {
-      setIsInitialized(true)
-    })
+    refreshData()
+    setIsInitialized(true)
+
+    const isSupabaseConfigured = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    if (isSupabaseConfigured && supabase.channel) {
+      const channel = supabase.channel('realtime_sync')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'customers' }, () => {
+          refreshData()
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'long_term_customers' }, () => {
+          refreshData()
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'memos' }, () => {
+          refreshData()
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'visit_logs' }, () => {
+          refreshData()
+        })
+        .subscribe()
+
+      return () => {
+        supabase.removeChannel(channel)
+      }
+    }
   }, [])
 
   const updateFolderColor = (folderName: string, color: string) => {

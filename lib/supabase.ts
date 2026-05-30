@@ -43,5 +43,10 @@ const createMockBuilder = () => {
 }
 
 export const supabase = supabaseClient || {
-  from: () => createMockBuilder()
+  from: () => createMockBuilder(),
+  channel: () => ({
+    on: function() { return this },
+    subscribe: function() { return this }
+  }),
+  removeChannel: () => {}
 }
