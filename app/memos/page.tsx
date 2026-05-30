@@ -22,9 +22,10 @@ type GroupedCustomer = {
 }
 
 export default function MemosPage() {
-  const { customers } = useData()
+  const { customers, longTermCustomers, updateLongTermCustomer } = useData()
   const router = useRouter()
   
+  const [activeTab, setActiveTab] = useState<'regular' | 'longTerm'>('regular')
   const [loading, setLoading] = useState(true)
   const [groupedData, setGroupedData] = useState<GroupedCustomer[]>([])
   const [searchTerm, setSearchTerm] = useState('')
@@ -42,6 +43,17 @@ export default function MemosPage() {
     if (!editingRecord) return
     if (!editContent.trim()) {
       alert('내용을 입력해주세요.')
+      return
+    }
+
+    if (activeTab === 'longTerm') {
+      try {
+        await updateLongTermCustomer(editingRecord.id, { 기록: editContent.trim() })
+        alert('장기 고객 기록이 수정되었습니다.')
+        setEditingRecord(null)
+      } catch (err: any) {
+        alert(`수정 중 오류가 발생했습니다: ${err.message || err}`)
+      }
       return
     }
     
@@ -72,6 +84,17 @@ export default function MemosPage() {
   }
 
   const handleDeleteRecord = async (recordId: string, type: 'memo' | 'visit_log') => {
+    if (activeTab === 'longTerm') {
+      if (!confirm('장기 고객 기록을 삭제하시겠습니까?')) return
+      try {
+        await updateLongTermCustomer(recordId, { 기록: '' })
+        alert('기록이 삭제되었습니다.')
+      } catch (err: any) {
+        alert(`삭제 중 오류가 발생했습니다: ${err.message || err}`)
+      }
+      return
+    }
+
     const typeKor = type === 'memo' ? '메모' : '방문기록'
     if (!confirm(`${typeKor}를 삭제하시겠습니까?\n(삭제된 기록은 휴지통으로 이동합니다)`)) return
 
@@ -105,7 +128,10 @@ export default function MemosPage() {
   }, [customers])
 
   const fetchData = async () => {
-    if (!customers || customers.length === 0) return
+    if (!customers || customers.length === 0) {
+      setLoading(false)
+      return
+    }
     setLoading(true)
 
     try {
@@ -214,19 +240,69 @@ export default function MemosPage() {
     })
   }, [groupedData, searchTerm, sortOrder])
 
+  const longTermData = useMemo(() => {
+    const valid = longTermCustomers.filter(c => c.기록 && c.기록.trim() !== '')
+    const groups: GroupedCustomer[] = valid.map(c => ({
+      customerId: c.id,
+      customerName: c.고객명_상호 || '-',
+      customerNumber: c.고객번호 || '-',
+      latestDate: c.updated_at || c.created_at || new Date().toISOString(),
+      records: [{
+        id: c.id,
+        type: 'memo',
+        content: c.기록,
+        date: c.updated_at || c.created_at || new Date().toISOString()
+      }]
+    }))
+    
+    let result = groups
+    if (searchTerm) {
+      const lower = searchTerm.toLowerCase()
+      result = result.filter(g => 
+        g.customerName.toLowerCase().includes(lower) || 
+        g.records.some(r => r.content.toLowerCase().includes(lower))
+      )
+    }
+
+    result.sort((a, b) => {
+      const timeA = new Date(a.latestDate).getTime()
+      const timeB = new Date(b.latestDate).getTime()
+      return sortOrder === 'desc' ? timeB - timeA : timeA - timeB
+    })
+
+    return result
+  }, [longTermCustomers, searchTerm, sortOrder])
+
+  const displayData = activeTab === 'regular' ? filteredData : longTermData
+
   return (
     <div className="memos-page">
       <header className="header">
         <div>
           <h1>통합 메모 내역</h1>
           <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: 2 }}>
-            총 {filteredData.length}명의 고객
+            총 {displayData.length}명의 고객
           </div>
         </div>
         <button className="trash-nav-btn" onClick={() => router.push('/trash')}>
           <Trash2 size={16} /> 휴지통
         </button>
       </header>
+
+      <div className="tabs-container">
+        <button 
+          className={`tab-btn ${activeTab === 'regular' ? 'active' : ''}`}
+          onClick={() => setActiveTab('regular')}
+        >
+          일반 고객 메모
+        </button>
+        <button 
+          className={`tab-btn ${activeTab === 'longTerm' ? 'active' : ''}`}
+          onClick={() => setActiveTab('longTerm')}
+        >
+          장기 고객 관리기록
+        </button>
+      </div>
 
       <div className="controls-bar">
         <div className="search-input-wrapper">
@@ -250,18 +326,18 @@ export default function MemosPage() {
       </div>
 
       <div className="list-container">
-        {loading ? (
+        {loading && activeTab === 'regular' ? (
           <div className="empty-state">데이터를 불러오는 중입니다...</div>
-        ) : filteredData.length === 0 ? (
+        ) : displayData.length === 0 ? (
           <div className="empty-state">
             {searchTerm ? '검색 결과가 없습니다.' : '등록된 메모나 방문 기록이 없습니다.'}
           </div>
         ) : (
-          filteredData.map(group => (
+          displayData.map(group => (
             <div key={group.customerId} className="customer-card">
               <div 
                 className="card-header"
-                onClick={() => router.push(`/detail/${group.customerId}`)}
+                onClick={() => router.push(activeTab === 'regular' ? `/detail/${group.customerId}` : `/customers/${group.customerId}`)}
               >
                 <div className="customer-info-row">
                   <h2 className="customer-name">{group.customerName}</h2>
@@ -271,7 +347,7 @@ export default function MemosPage() {
                   className="detail-btn"
                   onClick={(e) => {
                     e.stopPropagation()
-                    router.push(`/detail/${group.customerId}`)
+                    router.push(activeTab === 'regular' ? `/detail/${group.customerId}` : `/customers/${group.customerId}`)
                   }}
                 >
                   상세보기 <ChevronRight size={14} />
@@ -292,7 +368,7 @@ export default function MemosPage() {
                     <div className="record-content-box">
                       <div className="record-meta">
                         <span className={`badge ${record.type}`}>
-                          {record.type === 'memo' ? '메모' : '방문기록'}
+                          {activeTab === 'longTerm' ? '기록' : (record.type === 'memo' ? '메모' : '방문기록')}
                         </span>
                         <div className="meta-right">
                           <span className="date-text">
@@ -330,7 +406,7 @@ export default function MemosPage() {
         <div className="edit-modal-overlay" onClick={() => setEditingRecord(null)}>
           <div className="edit-modal-card" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>{editingRecord.type === 'memo' ? '메모 수정' : '방문기록 수정'}</h3>
+              <h3>{activeTab === 'longTerm' ? '기록 수정' : (editingRecord.type === 'memo' ? '메모 수정' : '방문기록 수정')}</h3>
               <button className="modal-close-btn" onClick={() => setEditingRecord(null)}>
                 <X size={18} />
               </button>
@@ -368,7 +444,7 @@ export default function MemosPage() {
           display: flex;
           align-items: flex-end;
           justify-content: space-between;
-          margin-bottom: 15px;
+          margin-bottom: 10px;
           padding: 5px 0;
         }
         .header h1 {
@@ -394,6 +470,41 @@ export default function MemosPage() {
         .trash-nav-btn:hover {
           background: #e2e8f0;
         }
+
+        .tabs-container {
+          display: flex;
+          gap: 8px;
+          margin-bottom: 15px;
+          border-bottom: 2px solid #e2e8f0;
+        }
+        .tab-btn {
+          padding: 10px 16px;
+          background: none;
+          border: none;
+          font-size: 0.95rem;
+          font-weight: 700;
+          color: #64748b;
+          cursor: pointer;
+          position: relative;
+          transition: all 0.2s;
+        }
+        .tab-btn.active {
+          color: #3b82f6;
+        }
+        .tab-btn.active::after {
+          content: '';
+          position: absolute;
+          bottom: -2px;
+          left: 0;
+          right: 0;
+          height: 2px;
+          background: #3b82f6;
+          border-radius: 2px 2px 0 0;
+        }
+        .tab-btn:hover:not(.active) {
+          color: #334155;
+        }
+
         .controls-bar { 
           margin-bottom: 20px; 
           display: flex;

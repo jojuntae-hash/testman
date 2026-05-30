@@ -107,6 +107,7 @@ interface DataContextType {
   setLongTermCustomers: (data: LongTermCustomer[]) => Promise<void>
   copyToLongTerm: (customerIds: string[]) => Promise<void>
   updateLongTermCustomer: (id: string, updates: Partial<LongTermCustomer>) => Promise<void>
+  addLongTermCustomer: (customer: LongTermCustomer) => Promise<void>
   changeLongTermCustomerStatus: (ids: string[], newStatus: string) => Promise<void>
   updateLongTermCustomerCoords: (id: string, lat: number, lng: number) => Promise<void>
   deleteLongTermCustomers: (ids: string[]) => Promise<void>
@@ -817,6 +818,34 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     alert(`${newLongTerms.length}명의 고객이 고객관리로 복사되었습니다.`)
   }
 
+  const addLongTermCustomer = async (newCustomer: LongTermCustomer) => {
+    const fixedCustomer = {
+      ...newCustomer,
+      전화번호: fixPhoneNumber(newCustomer.전화번호 || ''),
+      핸드폰번호: fixPhoneNumber(newCustomer.핸드폰번호 || ''),
+      설치전화번호: fixPhoneNumber(newCustomer.설치전화번호 || '')
+    }
+
+    setLongTermCustomersState(prev => {
+      const updated = [...prev, fixedCustomer]
+      localStorage.setItem('longTermCustomers', JSON.stringify(updated))
+      return updated
+    })
+
+    const isSupabaseConfigured = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    if (isSupabaseConfigured) {
+      try {
+        const { error } = await supabase.from('long_term_customers').insert([fixedCustomer])
+        if (error) {
+          console.error('Supabase long term insert error:', error)
+          alert(`서버 저장 실패: ${error.message || JSON.stringify(error)}`)
+        }
+      } catch (err) {
+        console.error('Supabase long term sync error:', err)
+      }
+    }
+  }
+
   const updateLongTermCustomer = async (id: string, updates: Partial<LongTermCustomer>) => {
     let targetDb: Partial<LongTermCustomer> | null = null
     const updated = longTermCustomers.map(c => {
@@ -950,6 +979,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       deleteSmsTemplate,
       longTermCustomers,
       setLongTermCustomers,
+      addLongTermCustomer,
       copyToLongTerm,
       updateLongTermCustomer,
       changeLongTermCustomerStatus,

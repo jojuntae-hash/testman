@@ -10,10 +10,11 @@ import ManualAddModal from '@/components/ManualAddModal'
 import CustomerDeleteModal from '@/components/CustomerDeleteModal'
 import BackupManagerModal from '@/components/BackupManagerModal'
 import LongTermBackupManagerModal from '@/components/LongTermBackupManagerModal'
+import LongTermManualAddModal from '@/components/LongTermManualAddModal'
 
 export default function SettingsPage() {
   const router = useRouter()
-  const { customers, setCustomers, addCustomer, resetToDefault, clearAllCustomers, longTermCustomers, restoreLongTermFromBackup, clearAllLongTermCustomers } = useData()
+  const { customers, setCustomers, addCustomer, resetToDefault, clearAllCustomers, longTermCustomers, restoreLongTermFromBackup, clearAllLongTermCustomers, addLongTermCustomer } = useData()
   
   // 기본 설정 상태
   const [defaultSource, setDefaultSource] = useState('')
@@ -28,6 +29,7 @@ export default function SettingsPage() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [isBackupManagerOpen, setIsBackupManagerOpen] = useState(false)
   const [isLongTermBackupManagerOpen, setIsLongTermBackupManagerOpen] = useState(false)
+  const [isLongTermManualAddOpen, setIsLongTermManualAddOpen] = useState(false)
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -416,6 +418,9 @@ export default function SettingsPage() {
           <div className="settings-list-group">
             <div className="settings-list-header">장기 고객관리 데이터</div>
             <div className="settings-list-items">
+              <button className="settings-list-item" onClick={() => setIsLongTermManualAddOpen(true)}>
+                <div className="item-left"><Save size={16} color="#3b82f6" /> <span>장기 고객 수동 추가 (1건)</span></div>
+              </button>
               <button className="settings-list-item" onClick={() => setIsLongTermBackupManagerOpen(true)}>
                 <div className="item-left"><Database size={16} color="#0ea5e9" /> <span>장기 고객 자동 백업 관리</span></div>
               </button>
@@ -480,6 +485,21 @@ export default function SettingsPage() {
       {isLongTermBackupManagerOpen && (
         <LongTermBackupManagerModal 
           onClose={() => setIsLongTermBackupManagerOpen(false)}
+        />
+      )}
+
+      {isLongTermManualAddOpen && (
+        <LongTermManualAddModal 
+          onClose={() => setIsLongTermManualAddOpen(false)}
+          onAdd={async (data) => {
+            try {
+              await addLongTermCustomer(data)
+              alert('장기 고객이 성공적으로 추가되었습니다.')
+              setIsLongTermManualAddOpen(false)
+            } catch(e) {
+              alert('장기 고객 추가에 실패했습니다.')
+            }
+          }}
         />
       )}
 

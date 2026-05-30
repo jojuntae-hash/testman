@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useData } from '@/lib/DataContext'
-import { ChevronLeft, Phone, MessageCircle, MapPin, Copy, ListPlus, Edit3, Save } from 'lucide-react'
+import { ChevronLeft, Phone, MessageCircle, MapPin, Copy, ListPlus, Edit3, Save, X } from 'lucide-react'
 
 export default function LongTermCustomerDetailPage() {
   const { id } = useParams()
@@ -14,6 +14,9 @@ export default function LongTermCustomerDetailPage() {
   
   const [recordText, setRecordText] = useState('')
   const [isEditingRecord, setIsEditingRecord] = useState(false)
+  
+  const [isEditingInfo, setIsEditingInfo] = useState(false)
+  const [editForm, setEditForm] = useState<any>({})
 
   useEffect(() => {
     if (customer) {
@@ -53,6 +56,39 @@ export default function LongTermCustomerDetailPage() {
     alert('기록이 저장되었습니다.')
   }
 
+  const handleEditInfoStart = () => {
+    setEditForm({
+      고객명_상호: customer.고객명_상호 || '',
+      이름: customer.이름 || '',
+      고객번호: customer.고객번호 || '',
+      모델명: customer.모델명 || '',
+      계약자구분: customer.계약자구분 || '',
+      전화번호: customer.전화번호 || '',
+      핸드폰번호: customer.핸드폰번호 || '',
+      작업완료일: customer.작업완료일 || '',
+      주소: customer.주소 || '',
+      설치자명: customer.설치자명 || '',
+      설치전화번호: customer.설치전화번호 || '',
+      설치주소: customer.설치주소 || ''
+    })
+    setIsEditingInfo(true)
+  }
+
+  const handleEditInfoSave = async () => {
+    await updateLongTermCustomer(customer.id, editForm)
+    setIsEditingInfo(false)
+    alert('고객 정보가 수정되었습니다.')
+  }
+
+  const handleEditInfoCancel = () => {
+    setIsEditingInfo(false)
+  }
+
+  const handleFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target
+    setEditForm(prev => ({ ...prev, [name]: value }))
+  }
+
   const handleMapClick = (address: string) => {
     if (!address) return;
     const navApp = localStorage.getItem('navigation_app') || 'tmap';
@@ -87,7 +123,30 @@ export default function LongTermCustomerDetailPage() {
       <div className="detail-content">
         {/* 상단 액션 카드 */}
         <div className="action-card">
-          <h2 className="customer-name">{customer.고객명_상호}</h2>
+          <div className="title-row">
+            {isEditingInfo ? (
+              <input 
+                className="edit-input name-input"
+                name="고객명_상호"
+                value={editForm.고객명_상호}
+                onChange={handleFormChange}
+                placeholder="고객명/상호"
+              />
+            ) : (
+              <h2 className="customer-name">{customer.고객명_상호}</h2>
+            )}
+            
+            {!isEditingInfo ? (
+              <button className="edit-btn" onClick={handleEditInfoStart}>
+                <Edit3 size={14} /> 정보 수정
+              </button>
+            ) : (
+              <div className="edit-actions">
+                <button className="cancel-btn mini" onClick={handleEditInfoCancel}><X size={14}/> 취소</button>
+                <button className="save-btn mini" onClick={handleEditInfoSave}><Save size={14}/> 저장</button>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* 고객 정보 카드 */}
@@ -97,93 +156,125 @@ export default function LongTermCustomerDetailPage() {
           <div className="info-grid">
             <div className="info-item">
               <span className="info-label">이름</span>
-              <span className="info-value">{customer.이름 || '-'}</span>
+              {isEditingInfo ? (
+                <input className="edit-input" name="이름" value={editForm.이름} onChange={handleFormChange} />
+              ) : (
+                <span className="info-value">{customer.이름 || '-'}</span>
+              )}
             </div>
             <div className="info-item">
               <span className="info-label">고객번호</span>
-              <span className="info-value">{customer.고객번호 || '-'}</span>
+              {isEditingInfo ? (
+                <input className="edit-input" name="고객번호" value={editForm.고객번호} onChange={handleFormChange} />
+              ) : (
+                <span className="info-value">{customer.고객번호 || '-'}</span>
+              )}
             </div>
             <div className="info-item">
               <span className="info-label">모델명</span>
-              <span className="info-value">{customer.모델명 || '-'}</span>
+              {isEditingInfo ? (
+                <input className="edit-input" name="모델명" value={editForm.모델명} onChange={handleFormChange} />
+              ) : (
+                <span className="info-value">{customer.모델명 || '-'}</span>
+              )}
             </div>
             <div className="info-item">
               <span className="info-label">계약자구분</span>
-              <span className="info-value">{customer.계약자구분 || '-'}</span>
+              {isEditingInfo ? (
+                <input className="edit-input" name="계약자구분" value={editForm.계약자구분} onChange={handleFormChange} />
+              ) : (
+                <span className="info-value">{customer.계약자구분 || '-'}</span>
+              )}
             </div>
             <div className="info-item">
               <span className="info-label">전화번호</span>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <span className="info-value">{customer.전화번호 || '-'}</span>
-                {customer.전화번호 && (
-                  <div style={{ display: 'flex', gap: '6px' }}>
-                    <a href={`tel:${String(customer.전화번호).replace(/[^0-9]/g, '')}`} className="mini-call-btn">
-                      <Phone size={12} />
-                    </a>
-                    <a href={`sms:${String(customer.전화번호).replace(/[^0-9]/g, '')}`} className="mini-sms-btn">
-                      <MessageCircle size={12} />
-                    </a>
-                    <button 
-                      className="mini-sms-btn queue" 
-                      onClick={() => {
-                        addToSmsQueue(customer.고객명_상호 || '이름없음', customer.전화번호 || '')
-                        alert('문자 전송 목록에 추가되었습니다.')
-                      }}
-                    >
-                      <ListPlus size={12} />
-                    </button>
-                  </div>
-                )}
-              </div>
+              {isEditingInfo ? (
+                <input className="edit-input" name="전화번호" value={editForm.전화번호} onChange={handleFormChange} />
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <span className="info-value">{customer.전화번호 || '-'}</span>
+                  {customer.전화번호 && (
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                      <a href={`tel:${String(customer.전화번호).replace(/[^0-9]/g, '')}`} className="mini-call-btn">
+                        <Phone size={12} />
+                      </a>
+                      <a href={`sms:${String(customer.전화번호).replace(/[^0-9]/g, '')}`} className="mini-sms-btn">
+                        <MessageCircle size={12} />
+                      </a>
+                      <button 
+                        className="mini-sms-btn queue" 
+                        onClick={() => {
+                          addToSmsQueue(customer.고객명_상호 || '이름없음', customer.전화번호 || '')
+                          alert('문자 전송 목록에 추가되었습니다.')
+                        }}
+                      >
+                        <ListPlus size={12} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
             <div className="info-item">
               <span className="info-label">핸드폰번호</span>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <span className="info-value">{customer.핸드폰번호 || '-'}</span>
-                {customer.핸드폰번호 && (
-                  <div style={{ display: 'flex', gap: '6px' }}>
-                    <a href={`tel:${String(customer.핸드폰번호).replace(/[^0-9]/g, '')}`} className="mini-call-btn">
-                      <Phone size={12} />
-                    </a>
-                    <a href={`sms:${String(customer.핸드폰번호).replace(/[^0-9]/g, '')}`} className="mini-sms-btn">
-                      <MessageCircle size={12} />
-                    </a>
-                    <button 
-                      className="mini-sms-btn queue" 
-                      onClick={() => {
-                        addToSmsQueue(customer.고객명_상호 || '이름없음', customer.핸드폰번호 || '')
-                        alert('문자 전송 목록에 추가되었습니다.')
-                      }}
-                    >
-                      <ListPlus size={12} />
-                    </button>
-                  </div>
-                )}
-              </div>
+              {isEditingInfo ? (
+                <input className="edit-input" name="핸드폰번호" value={editForm.핸드폰번호} onChange={handleFormChange} />
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <span className="info-value">{customer.핸드폰번호 || '-'}</span>
+                  {customer.핸드폰번호 && (
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                      <a href={`tel:${String(customer.핸드폰번호).replace(/[^0-9]/g, '')}`} className="mini-call-btn">
+                        <Phone size={12} />
+                      </a>
+                      <a href={`sms:${String(customer.핸드폰번호).replace(/[^0-9]/g, '')}`} className="mini-sms-btn">
+                        <MessageCircle size={12} />
+                      </a>
+                      <button 
+                        className="mini-sms-btn queue" 
+                        onClick={() => {
+                          addToSmsQueue(customer.고객명_상호 || '이름없음', customer.핸드폰번호 || '')
+                          alert('문자 전송 목록에 추가되었습니다.')
+                        }}
+                      >
+                        <ListPlus size={12} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
             <div className="info-item full-width">
               <span className="info-label">작업완료일</span>
-              <span className="info-value">{customer.작업완료일 || '-'}</span>
+              {isEditingInfo ? (
+                <input type="date" className="edit-input" name="작업완료일" value={editForm.작업완료일} onChange={handleFormChange} />
+              ) : (
+                <span className="info-value">{customer.작업완료일 || '-'}</span>
+              )}
             </div>
             
             <div className="info-item full-width">
               <span className="info-label">고객 주소</span>
-              <div className="value-with-action">
-                <span className="info-value">{customer.주소 || '-'}</span>
-                {customer.주소 && (
-                  <div style={{ display: 'flex', gap: '6px' }}>
-                    <button className="mini-map-btn" onClick={() => handleMapClick(customer.주소)} title="기본 지도 열기">
-                      <MapPin size={12} />
-                    </button>
-                    <button className="mini-map-btn" onClick={() => openNaverMap(customer.주소)} title="네이버 지도 열기">
-                      <span style={{ fontSize: '10px', fontWeight: 'bold' }}>N</span>
-                    </button>
-                    <button className="mini-map-btn" onClick={() => handleCopyAddress(customer.주소)} title="주소 복사">
-                      <Copy size={12} />
-                    </button>
-                  </div>
-                )}
-              </div>
+              {isEditingInfo ? (
+                <input className="edit-input" name="주소" value={editForm.주소} onChange={handleFormChange} />
+              ) : (
+                <div className="value-with-action">
+                  <span className="info-value">{customer.주소 || '-'}</span>
+                  {customer.주소 && (
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                      <button className="mini-map-btn" onClick={() => handleMapClick(customer.주소)} title="기본 지도 열기">
+                        <MapPin size={12} />
+                      </button>
+                      <button className="mini-map-btn" onClick={() => openNaverMap(customer.주소)} title="네이버 지도 열기">
+                        <span style={{ fontSize: '10px', fontWeight: 'bold' }}>N</span>
+                      </button>
+                      <button className="mini-map-btn" onClick={() => handleCopyAddress(customer.주소)} title="주소 복사">
+                        <Copy size={12} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -194,51 +285,63 @@ export default function LongTermCustomerDetailPage() {
           <div className="info-grid">
             <div className="info-item">
               <span className="info-label">설치자명</span>
-              <span className="info-value">{customer.설치자명 || '-'}</span>
+              {isEditingInfo ? (
+                <input className="edit-input" name="설치자명" value={editForm.설치자명} onChange={handleFormChange} />
+              ) : (
+                <span className="info-value">{customer.설치자명 || '-'}</span>
+              )}
             </div>
             <div className="info-item">
               <span className="info-label">설치 전화번호</span>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <span className="info-value">{customer.설치전화번호 || '-'}</span>
-                {customer.설치전화번호 && (
-                  <div style={{ display: 'flex', gap: '6px' }}>
-                    <a href={`tel:${String(customer.설치전화번호).replace(/[^0-9]/g, '')}`} className="mini-call-btn">
-                      <Phone size={12} />
-                    </a>
-                    <a href={`sms:${String(customer.설치전화번호).replace(/[^0-9]/g, '')}`} className="mini-sms-btn">
-                      <MessageCircle size={12} />
-                    </a>
-                    <button 
-                      className="mini-sms-btn queue" 
-                      onClick={() => {
-                        addToSmsQueue(customer.고객명_상호 || '이름없음', customer.설치전화번호 || '')
-                        alert('문자 전송 목록에 추가되었습니다.')
-                      }}
-                    >
-                      <ListPlus size={12} />
-                    </button>
-                  </div>
-                )}
-              </div>
+              {isEditingInfo ? (
+                <input className="edit-input" name="설치전화번호" value={editForm.설치전화번호} onChange={handleFormChange} />
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <span className="info-value">{customer.설치전화번호 || '-'}</span>
+                  {customer.설치전화번호 && (
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                      <a href={`tel:${String(customer.설치전화번호).replace(/[^0-9]/g, '')}`} className="mini-call-btn">
+                        <Phone size={12} />
+                      </a>
+                      <a href={`sms:${String(customer.설치전화번호).replace(/[^0-9]/g, '')}`} className="mini-sms-btn">
+                        <MessageCircle size={12} />
+                      </a>
+                      <button 
+                        className="mini-sms-btn queue" 
+                        onClick={() => {
+                          addToSmsQueue(customer.고객명_상호 || '이름없음', customer.설치전화번호 || '')
+                          alert('문자 전송 목록에 추가되었습니다.')
+                        }}
+                      >
+                        <ListPlus size={12} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
             <div className="info-item full-width">
               <span className="info-label">설치 주소</span>
-              <div className="value-with-action">
-                <span className="info-value">{customer.설치주소 || '-'}</span>
-                {customer.설치주소 && (
-                  <div style={{ display: 'flex', gap: '6px' }}>
-                    <button className="mini-map-btn" onClick={() => handleMapClick(customer.설치주소)} title="기본 지도 열기">
-                      <MapPin size={12} />
-                    </button>
-                    <button className="mini-map-btn" onClick={() => openNaverMap(customer.설치주소)} title="네이버 지도 열기">
-                      <span style={{ fontSize: '10px', fontWeight: 'bold' }}>N</span>
-                    </button>
-                    <button className="mini-map-btn" onClick={() => handleCopyAddress(customer.설치주소)} title="주소 복사">
-                      <Copy size={12} />
-                    </button>
-                  </div>
-                )}
-              </div>
+              {isEditingInfo ? (
+                <input className="edit-input" name="설치주소" value={editForm.설치주소} onChange={handleFormChange} />
+              ) : (
+                <div className="value-with-action">
+                  <span className="info-value">{customer.설치주소 || '-'}</span>
+                  {customer.설치주소 && (
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                      <button className="mini-map-btn" onClick={() => handleMapClick(customer.설치주소)} title="기본 지도 열기">
+                        <MapPin size={12} />
+                      </button>
+                      <button className="mini-map-btn" onClick={() => openNaverMap(customer.설치주소)} title="네이버 지도 열기">
+                        <span style={{ fontSize: '10px', fontWeight: 'bold' }}>N</span>
+                      </button>
+                      <button className="mini-map-btn" onClick={() => handleCopyAddress(customer.설치주소)} title="주소 복사">
+                        <Copy size={12} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -291,8 +394,9 @@ export default function LongTermCustomerDetailPage() {
         .detail-content { padding: 0 20px; display: flex; flex-direction: column; gap: 15px; }
         
         .action-card { background: #fff; padding: 20px; border-radius: 16px; border: 1px solid #e2e8f0; }
-        .title-row { display: flex; justify-content: space-between; align-items: center; }
+        .title-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
         .customer-name { font-size: 1.2rem; font-weight: 800; color: #1e293b; margin: 0; }
+        .name-input { font-size: 1.2rem; font-weight: 800; }
         
         .action-circle-btn { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; text-decoration: none; border: none; cursor: pointer; transition: transform 0.2s; }
         .action-circle-btn:active { transform: scale(0.95); }
@@ -313,6 +417,11 @@ export default function LongTermCustomerDetailPage() {
         
         .value-with-action { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
         
+        .edit-input { width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.95rem; outline: none; }
+        .edit-input:focus { border-color: #3b82f6; }
+
+        .edit-actions { display: flex; gap: 6px; }
+
         .mini-call-btn { width: 28px; height: 28px; background: #ecfdf5; color: #10b981; border: 1px solid #d1fae5; border-radius: 6px; display: flex; align-items: center; justify-content: center; text-decoration: none; transition: all 0.2s; cursor: pointer; }
         .mini-call-btn:active { transform: scale(0.9); }
         .mini-sms-btn { width: 28px; height: 28px; background: #eff6ff; color: #3b82f6; border: 1px solid #dbeafe; border-radius: 6px; display: flex; align-items: center; justify-content: center; text-decoration: none; transition: all 0.2s; cursor: pointer; }
@@ -321,7 +430,7 @@ export default function LongTermCustomerDetailPage() {
         .mini-map-btn { width: 28px; height: 28px; background: #eff6ff; color: #3b82f6; border: 1px solid #dbeafe; border-radius: 6px; display: flex; align-items: center; justify-content: center; text-decoration: none; transition: all 0.2s; cursor: pointer; }
         .mini-map-btn:active { transform: scale(0.9); }
         
-        .edit-btn { display: flex; align-items: center; gap: 4px; background: #eff6ff; color: #3b82f6; border: 1px solid #dbeafe; padding: 6px 12px; border-radius: 8px; font-size: 0.8rem; font-weight: 700; cursor: pointer; }
+        .edit-btn { display: flex; align-items: center; gap: 4px; background: #eff6ff; color: #3b82f6; border: 1px solid #dbeafe; padding: 6px 12px; border-radius: 8px; font-size: 0.8rem; font-weight: 700; cursor: pointer; white-space: nowrap; }
         
         .record-container { margin-top: 10px; }
         .record-view-mode { background: #f8fafc; padding: 15px; border-radius: 12px; border-left: 3px solid #0f172a; }
@@ -334,6 +443,9 @@ export default function LongTermCustomerDetailPage() {
         .record-actions { display: flex; justify-content: flex-end; gap: 8px; }
         .cancel-btn { padding: 8px 16px; background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.85rem; font-weight: 700; cursor: pointer; }
         .save-btn { padding: 8px 16px; background: #0f172a; color: #fff; border: none; border-radius: 8px; font-size: 0.85rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+        
+        .cancel-btn.mini { padding: 6px 10px; font-size: 0.75rem; border-radius: 6px; display: flex; align-items: center; gap: 4px; }
+        .save-btn.mini { padding: 6px 10px; font-size: 0.75rem; border-radius: 6px; display: flex; align-items: center; gap: 4px; }
       `}</style>
     </div>
   )
