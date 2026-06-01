@@ -65,6 +65,11 @@ export default function BottomNav() {
     setIsFolderModalOpen(false)
   }
 
+  // 제품 상세 페이지에서는 하단 네비게이션을 아예 숨김
+  if (pathname.startsWith('/products/') && pathname !== '/products/') {
+    return null
+  }
+
   // 선택된 항목이 있을 때 렌더링할 선택 모드 액션 바
   if (pathname === '/' && selectedIds.length > 0) {
     return (
@@ -402,6 +407,10 @@ export default function BottomNav() {
             <Link href="/settings" className={`more-menu-item ${pathname === '/settings' ? 'active' : ''}`} onClick={() => setIsMoreOpen(false)}>
               <Settings size={18} />
               <span>설정</span>
+            </Link>
+            <Link href="/products" className={`more-menu-item ${pathname === '/products' ? 'active' : ''}`} onClick={() => setIsMoreOpen(false)}>
+              <LayoutGrid size={18} />
+              <span>제품목록</span>
             </Link>
           </div>
         </div>

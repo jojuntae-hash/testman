@@ -1,10 +1,12 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
+import { usePathname } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { User, Lock, Eye, EyeOff, ShieldCheck, Grid, CheckCircle2, Circle } from 'lucide-react'
 
 export default function AuthWrapper({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname()
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
 
@@ -19,6 +21,13 @@ export default function AuthWrapper({ children }: { children: React.ReactNode })
   const [errorMsg, setErrorMsg] = useState('')
 
   useEffect(() => {
+    // 1. 특정 경로는 로그인 검사 무시 (공개 접근 허용)
+    if (pathname && pathname.startsWith('/products')) {
+      setIsAuthenticated(true)
+      setIsLoading(false)
+      return
+    }
+
     const checkAuth = async () => {
       const isAuto = localStorage.getItem('auto_login') === 'true'
       const sessionAuth = sessionStorage.getItem('is_authenticated') === 'true'
