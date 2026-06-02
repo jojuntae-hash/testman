@@ -139,11 +139,12 @@ export default function PDFBulkUploadModal({ onClose, onAddBulk }: PDFBulkUpload
         const rightItems: any[] = []
         
         for (const item of content.items) {
-          if (!item.transform) continue
-          const x = item.transform[4] // X coordinate
-          const y = item.transform[5] // Y coordinate
+          const textItem = item as any
+          if (!textItem.transform) continue
+          const x = textItem.transform[4] // X coordinate
+          const y = textItem.transform[5] // Y coordinate
           
-          const itemData = { str: item.str, x, y }
+          const itemData = { str: textItem.str, x, y }
           if (x < midX) {
             leftItems.push(itemData)
           } else {
