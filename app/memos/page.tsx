@@ -33,6 +33,7 @@ export default function MemosPage() {
 
   const [editingRecord, setEditingRecord] = useState<AggregatedRecord | null>(null)
   const [editContent, setEditContent] = useState('')
+  const [selectedRecords, setSelectedRecords] = useState<{id: string, type: 'memo' | 'visit_log'}[]>([])
 
   const handleOpenEdit = (record: AggregatedRecord) => {
     setEditingRecord(record)
@@ -123,9 +124,53 @@ export default function MemosPage() {
     }
   }
 
+  const toggleSelectRecord = (id: string, type: 'memo' | 'visit_log') => {
+    setSelectedRecords(prev => {
+      const exists = prev.find(item => item.id === id)
+      if (exists) return prev.filter(item => item.id !== id)
+      return [...prev, { id, type }]
+    })
+  }
+
+  const handleBulkDelete = async () => {
+    if (selectedRecords.length === 0) return
+    if (!confirm(`선택한 ${selectedRecords.length}개의 기록을 삭제하시겠습니까?`)) return
+
+    try {
+      if (activeTab === 'longTerm') {
+        // 장기고객의 메모 일괄 비우기
+        const updatePromises = selectedRecords.map(record => updateLongTermCustomer(record.id, { 기록: '' }))
+        await Promise.all(updatePromises)
+        alert('선택한 기록들이 삭제되었습니다.')
+      } else {
+        const memoIds = selectedRecords.filter(r => r.type === 'memo').map(r => r.id)
+        const visitIds = selectedRecords.filter(r => r.type === 'visit_log').map(r => r.id)
+
+        if (memoIds.length > 0) {
+          const { error } = await supabase.from('memos').update({ is_deleted: true }).in('id', memoIds)
+          if (error) throw error
+        }
+        if (visitIds.length > 0) {
+          const { error } = await supabase.from('visit_logs').update({ is_deleted: true }).in('id', visitIds)
+          if (error) throw error
+        }
+        alert('선택한 기록들이 휴지통으로 이동되었습니다.')
+        fetchData()
+      }
+      setSelectedRecords([])
+    } catch (err: any) {
+      console.error(err)
+      alert(`삭제 중 오류가 발생했습니다: ${err.message || err}`)
+    }
+  }
+
   useEffect(() => {
     fetchData()
   }, [customers])
+
+  useEffect(() => {
+    setSelectedRecords([])
+  }, [activeTab, searchTerm])
 
   const fetchData = async () => {
     if (!customers || customers.length === 0) {
@@ -355,7 +400,9 @@ export default function MemosPage() {
               </div>
               
               <div className="records-timeline">
-                {group.records.map((record, index) => (
+                {group.records.map((record, index) => {
+                  const isSelected = selectedRecords.some(r => r.id === record.id)
+                  return (
                   <div key={record.id} className="record-item">
                     <div className="record-icon-wrapper">
                       {record.type === 'memo' ? (
@@ -365,26 +412,34 @@ export default function MemosPage() {
                       )}
                       {index !== group.records.length - 1 && <div className="timeline-line"></div>}
                     </div>
-                    <div className="record-content-box">
+                    <div className={`record-content-box ${isSelected ? 'selected' : ''}`} onClick={() => toggleSelectRecord(record.id, record.type)} style={{ cursor: 'pointer' }}>
                       <div className="record-meta">
-                        <span className={`badge ${record.type}`}>
-                          {activeTab === 'longTerm' ? '기록' : (record.type === 'memo' ? '메모' : '방문기록')}
-                        </span>
-                        <div className="meta-right">
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <input 
+                            type="checkbox" 
+                            checked={isSelected}
+                            onChange={() => {}} // handled by onClick on wrapper
+                            style={{ cursor: 'pointer' }}
+                          />
+                          <span className={`badge ${record.type}`}>
+                            {activeTab === 'longTerm' ? '기록' : (record.type === 'memo' ? '메모' : '방문기록')}
+                          </span>
+                        </div>
+                        <div className="meta-right" onClick={(e) => e.stopPropagation()}>
                           <span className="date-text">
                             <Clock size={10} style={{ display: 'inline', marginRight: 2 }} />
                             {new Date(record.date).toLocaleDateString()} {new Date(record.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                           </span>
                           <button 
                             className="edit-record-btn" 
-                            onClick={() => handleOpenEdit(record)}
+                            onClick={(e) => { e.stopPropagation(); handleOpenEdit(record); }}
                             title="수정"
                           >
                             <Edit2 size={12} />
                           </button>
                           <button 
                             className="delete-record-btn" 
-                            onClick={() => handleDeleteRecord(record.id, record.type)}
+                            onClick={(e) => { e.stopPropagation(); handleDeleteRecord(record.id, record.type); }}
                             title="삭제"
                           >
                             <Trash2 size={12} />
@@ -394,12 +449,30 @@ export default function MemosPage() {
                       <div className="record-text">{record.content}</div>
                     </div>
                   </div>
-                ))}
+                )})}
               </div>
             </div>
           ))
         )}
       </div>
+
+      {/* 다중 선택 액션 바 */}
+      {selectedRecords.length > 0 && (
+        <nav className="bottom-nav selection-mode">
+          <div className="selection-info-container">
+            <div className="selection-info">
+              <span className="count">{selectedRecords.length}</span>개 선택됨
+            </div>
+            <button className="clear-selection-btn" onClick={() => setSelectedRecords([])}>전체해제</button>
+          </div>
+          <div className="action-buttons">
+            <button className="action-btn delete-btn" onClick={handleBulkDelete}>
+              <Trash2 size={18} />
+              <span>일괄 삭제</span>
+            </button>
+          </div>
+        </nav>
+      )}
 
       {/* 메모 수정 모달 */}
       {editingRecord && (
@@ -636,6 +709,11 @@ export default function MemosPage() {
           border-radius: 12px;
           border: 1px solid #f1f5f9;
           margin-bottom: 4px;
+          transition: all 0.2s;
+        }
+        .record-content-box.selected {
+          background: #f0fdf4;
+          border-color: #86efac;
         }
         .record-meta {
           display: flex;
@@ -815,6 +893,85 @@ export default function MemosPage() {
           background: #fff;
           border-radius: 16px;
         }
+
+        /* 다중 선택 액션 바 */
+        .bottom-nav.selection-mode {
+          position: fixed;
+          bottom: 0;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 100%;
+          max-width: 600px;
+          background: #0f172a;
+          color: #fff;
+          padding: 0 15px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          border-top: none;
+          height: 70px;
+          z-index: 1001;
+          box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
+        }
+        .selection-info-container {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        }
+        .clear-selection-btn {
+          background: rgba(255, 255, 255, 0.1);
+          color: #cbd5e1;
+          border: 1px solid rgba(255, 255, 255, 0.15);
+          padding: 4px 8px;
+          border-radius: 6px;
+          font-size: 0.7rem;
+          font-weight: 700;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+        .clear-selection-btn:hover {
+          background: rgba(255, 255, 255, 0.2);
+          color: #fff;
+        }
+        .clear-selection-btn:active {
+          transform: scale(0.95);
+        }
+        .selection-info {
+          font-size: 0.8rem;
+          font-weight: 800;
+          white-space: nowrap;
+          color: #94a3b8;
+        }
+        .selection-info .count {
+          color: #3b82f6;
+          font-size: 1rem;
+          margin-right: 2px;
+        }
+        .action-buttons {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        }
+        .action-btn {
+          background: transparent;
+          color: #cbd5e1;
+          border: none;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 4px;
+          cursor: pointer;
+          font-size: 0.6rem;
+          font-weight: 700;
+          padding: 4px 6px;
+          border-radius: 8px;
+          transition: all 0.2s;
+        }
+        .action-btn:active {
+          background: #1e293b;
+          color: #fff;
+        }
+        .action-btn.delete-btn { color: #f87171; }
       `}</style>
     </div>
   )
