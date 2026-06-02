@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useData } from '@/lib/DataContext'
-import { ChevronLeft, Save, Trash2, Download, Upload, Map as MapIcon, Clock, Key, Home, Settings as SettingsIcon, Search, Lock, Unlock, RotateCcw, Database, LogOut } from 'lucide-react'
+import { ChevronLeft, Save, Trash2, Download, Upload, FileUp, Map as MapIcon, Clock, Key, Home, Settings as SettingsIcon, Search, Lock, Unlock, RotateCcw, Database, LogOut } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import Script from 'next/script'
 import ManualAddModal from '@/components/ManualAddModal'
@@ -11,6 +11,7 @@ import CustomerDeleteModal from '@/components/CustomerDeleteModal'
 import BackupManagerModal from '@/components/BackupManagerModal'
 import LongTermBackupManagerModal from '@/components/LongTermBackupManagerModal'
 import LongTermManualAddModal from '@/components/LongTermManualAddModal'
+import PDFBulkUploadModal from '@/components/PDFBulkUploadModal'
 
 export default function SettingsPage() {
   const router = useRouter()
@@ -30,6 +31,7 @@ export default function SettingsPage() {
   const [isBackupManagerOpen, setIsBackupManagerOpen] = useState(false)
   const [isLongTermBackupManagerOpen, setIsLongTermBackupManagerOpen] = useState(false)
   const [isLongTermManualAddOpen, setIsLongTermManualAddOpen] = useState(false)
+  const [isPdfBulkModalOpen, setIsPdfBulkModalOpen] = useState(false)
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -402,6 +404,9 @@ export default function SettingsPage() {
                 <div className="item-left"><Upload size={16} color="#10b981" /> <span>엑셀/CSV 데이터 추가</span></div>
                 <input type="file" accept=".xlsx, .xls, .csv" onChange={handleExcelImport} hidden />
               </label>
+              <button className="settings-list-item" onClick={() => setIsPdfBulkModalOpen(true)}>
+                <div className="item-left"><FileUp size={16} color="#8b5cf6" /> <span>PDF 파일로 여러 고객 일괄 추가</span></div>
+              </button>
               <button className="settings-list-item" onClick={() => setIsManualAddOpen(true)}>
                 <div className="item-left"><Upload size={16} color="#3b82f6" /> <span>수동으로 1건 추가</span></div>
               </button>
@@ -510,6 +515,17 @@ export default function SettingsPage() {
             } catch(e) {
               alert('장기 고객 추가에 실패했습니다.')
             }
+          }}
+        />
+      )}
+
+      {isPdfBulkModalOpen && (
+        <PDFBulkUploadModal 
+          onClose={() => setIsPdfBulkModalOpen(false)}
+          onAddBulk={async (parsedCustomers) => {
+            setCustomers([...customers, ...parsedCustomers])
+            alert(`${parsedCustomers.length}명의 고객이 성공적으로 일괄 추가되었습니다.`)
+            setIsPdfBulkModalOpen(false)
           }}
         />
       )}

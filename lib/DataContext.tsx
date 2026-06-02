@@ -34,6 +34,7 @@ export interface CustomerData {
   현장메모?: string
   lat?: number
   lng?: number
+  created_at?: string
 }
 
 export interface LongTermCustomer {
@@ -423,7 +424,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       전화번호: fixPhoneNumber(c.전화번호),
       핸드폰번호: fixPhoneNumber(c.핸드폰번호),
       설치전화번호: fixPhoneNumber(c.설치전화번호),
-      설치핸드폰번호: fixPhoneNumber(c.설치핸드폰번호)
+      설치핸드폰번호: fixPhoneNumber(c.설치핸드폰번호),
+      created_at: c.created_at || new Date().toISOString()
     }))
     
     setCustomersState(fixedData)
@@ -437,6 +439,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         const { error } = await supabase.from('customers').upsert(sanitizeForDb(fixedData))
         if (error) {
           console.error('Supabase upsert error:', error)
+          alert('저장 실패: ' + (error.message || JSON.stringify(error)))
         }
       } catch (err) {
         console.error('Supabase sync error:', err)
@@ -444,14 +447,14 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  // 단일 고객 추가 및 동기화
   const addCustomer = async (newCustomer: CustomerData) => {
     const fixedCustomer = {
       ...newCustomer,
       전화번호: fixPhoneNumber(newCustomer.전화번호),
       핸드폰번호: fixPhoneNumber(newCustomer.핸드폰번호),
       설치전화번호: fixPhoneNumber(newCustomer.설치전화번호),
-      설치핸드폰번호: fixPhoneNumber(newCustomer.설치핸드폰번호)
+      설치핸드폰번호: fixPhoneNumber(newCustomer.설치핸드폰번호),
+      created_at: newCustomer.created_at || new Date().toISOString()
     }
 
     setCustomersState(prev => {
