@@ -6,6 +6,8 @@ export interface Product {
   model_name: string
   image_url: string
   description?: string
+  category?: string
+  order_index?: number
   created_at?: string
 }
 
@@ -15,6 +17,7 @@ export async function getProducts(): Promise<Product[]> {
     const { data, error } = await supabase
       .from('products')
       .select('*')
+      .order('order_index', { ascending: true })
       .order('created_at', { ascending: false })
 
     if (error) {
@@ -132,4 +135,25 @@ function getFallbackProducts(): Product[] {
       description: '더 작아지고 더 완벽해진 아이콘'
     }
   ]
+}
+
+// 제품 순서 일괄 변경
+export async function updateProductOrders(updates: { id: string, category?: string, order_index: number }[]): Promise<boolean> {
+  try {
+    // Supabase에서 여러 행을 각기 다른 값으로 한 번에 업데이트하려면 개별 update를 병렬로 실행하는 것이 가장 안전합니다.
+    await Promise.all(
+      updates.map(async (u) => {
+        const { error } = await supabase
+          .from('products')
+          .update({ order_index: u.order_index, category: u.category })
+          .eq('id', u.id)
+        
+        if (error) throw error
+      })
+    )
+    return true
+  } catch (error) {
+    console.error('Update order error:', error)
+    return false
+  }
 }

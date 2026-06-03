@@ -33,6 +33,14 @@ export default function CustomersPage() {
     setCurrentPage(1)
   }, [searchTerm, selectedFolder, itemsPerPage, sortOption])
 
+  // 마운트 시 이전에 선택했던 정렬 기준 복구
+  React.useEffect(() => {
+    const savedSort = localStorage.getItem('lastSortOption_long')
+    if (savedSort) {
+      setSortOption(savedSort)
+    }
+  }, [])
+
   const folders = useMemo(() => {
     const unique = Array.from(new Set(longTermCustomers.map(c => c.status || '미분류')))
     return ['전체', ...unique]
@@ -245,7 +253,10 @@ export default function CustomersPage() {
             <select 
               className="items-per-page-select sort-select"
               value={sortOption}
-              onChange={(e) => setSortOption(e.target.value)}
+              onChange={(e) => {
+                setSortOption(e.target.value)
+                localStorage.setItem('lastSortOption_long', e.target.value)
+              }}
             >
               <option value="name">이름순</option>
               <option value="model">장비순</option>
@@ -448,10 +459,12 @@ export default function CustomersPage() {
 
         /* 다중 선택 액션 바 (메인화면 스타일 일치) */
         .bottom-nav.selection-mode {
-          position: absolute;
+          position: fixed;
           bottom: 0;
-          left: 0;
+          left: 50%;
+          transform: translateX(-50%);
           width: 100%;
+          max-width: 600px;
           background: #0f172a;
           color: #fff;
           padding: 0 15px;
@@ -460,7 +473,7 @@ export default function CustomersPage() {
           justify-content: space-between;
           border-top: none;
           height: 70px;
-          z-index: 999;
+          z-index: 9999;
           box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
         }
         .selection-info-container {

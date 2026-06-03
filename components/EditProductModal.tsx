@@ -14,6 +14,7 @@ interface EditProductModalProps {
 export default function EditProductModal({ isOpen, onClose, onSuccess, initialData }: EditProductModalProps) {
   const [name, setName] = useState('')
   const [modelName, setModelName] = useState('')
+  const [category, setCategory] = useState('')
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -24,6 +25,7 @@ export default function EditProductModal({ isOpen, onClose, onSuccess, initialDa
     if (initialData && isOpen) {
       setName(initialData.name)
       setModelName(initialData.model_name)
+      setCategory(initialData.category || '')
       setPreviewUrl(initialData.image_url)
       setImageFile(null)
       setError('')
@@ -67,6 +69,7 @@ export default function EditProductModal({ isOpen, onClose, onSuccess, initialDa
       const updated = await updateProduct(initialData.id, {
         name,
         model_name: modelName,
+        category: category.trim() || '미분류',
         image_url: imageUrl,
       })
 
@@ -109,6 +112,17 @@ export default function EditProductModal({ isOpen, onClose, onSuccess, initialDa
               placeholder="예: CHPI-7400N" 
               value={modelName}
               onChange={(e) => setModelName(e.target.value)}
+              disabled={loading}
+            />
+          </div>
+
+          <div className="form-group">
+            <label>폴더(카테고리)</label>
+            <input 
+              type="text" 
+              placeholder="예: 정수기, 공기청정기 (비워두면 '미분류')" 
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
               disabled={loading}
             />
           </div>

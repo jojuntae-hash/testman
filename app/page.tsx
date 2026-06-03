@@ -15,19 +15,23 @@ export default function HomePage() {
   const router = useRouter()
   const [selectedFolder, setSelectedFolder] = useState<string | null>('전체리스트')
   const [searchTerm, setSearchTerm] = useState('')
-  const [completedSortOrder, setCompletedSortOrder] = useState<string>('desc')
-  const [reservedSortOrder, setReservedSortOrder] = useState<string>('res-asc')
+  const [sortOption, setSortOption] = useState<string>('name')
   const [renamingFolder, setRenamingFolder] = useState<string | null>(null)
   const [renameValue, setRenameValue] = useState('')
   const [renameColor, setRenameColor] = useState('#34495e')
 
-  // 마운트 시 이전에 선택했던 폴더 복구
+  // 마운트 시 이전에 선택했던 폴더와 정렬 기준 복구
   useEffect(() => {
     const savedFolder = localStorage.getItem('lastSelectedFolder')
     if (savedFolder) {
       setSelectedFolder(savedFolder)
     } else {
       setSelectedFolder('전체리스트')
+    }
+
+    const savedSort = localStorage.getItem('lastSortOption_main')
+    if (savedSort) {
+      setSortOption(savedSort)
     }
   }, [])
 
@@ -62,17 +66,19 @@ export default function HomePage() {
     )
   }
 
-  const getElapsedMonthsBadge = (contractDate?: string) => {
-    if (!contractDate) return null
+  const getElapsedMonths = (contractDate?: string) => {
+    if (!contractDate) return -1
     const start = new Date(contractDate)
     const end = new Date()
-    if (isNaN(start.getTime())) return null
-
+    if (isNaN(start.getTime())) return -1
     let diff = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth())
-    if (end.getDate() < start.getDate()) {
-      diff--
-    }
-    const months = Math.max(0, diff)
+    if (end.getDate() < start.getDate()) diff--
+    return Math.max(0, diff)
+  }
+
+  const getElapsedMonthsBadge = (contractDate?: string) => {
+    const months = getElapsedMonths(contractDate)
+    if (months === -1) return null
 
     return (
       <span className="model-badge elapsed-months">
@@ -141,52 +147,28 @@ export default function HomePage() {
       )
     }
 
-    if (selectedFolder === '작업완료') {
-      list.sort((a, b) => {
-        if (completedSortOrder === 'res-asc' || completedSortOrder === 'res-desc') {
-          const timeA = a.예약일자 || (completedSortOrder === 'res-asc' ? '9999-99-99' : '0000-00-00')
-          const timeB = b.예약일자 || (completedSortOrder === 'res-asc' ? '9999-99-99' : '0000-00-00')
-          if (timeA === timeB) {
-            return (a.고객명_상호 || '').localeCompare(b.고객명_상호 || '')
-          }
-          return completedSortOrder === 'res-asc' ? timeA.localeCompare(timeB) : timeB.localeCompare(timeA)
-        }
-
-        const dateA = a.작업완료일 || ''
-        const dateB = b.작업완료일 || ''
-        
-        if (dateA === dateB) {
+    return list.sort((a, b) => {
+      switch (sortOption) {
+        case 'model':
+          return (a.모델명 || '').localeCompare(b.모델명 || '')
+        case 'comp-desc':
+          return (b.작업완료일 || '').localeCompare(a.작업완료일 || '')
+        case 'comp-asc':
+          return (a.작업완료일 || '').localeCompare(b.작업완료일 || '')
+        case 'res-desc':
+          return (b.예약일자 || '').localeCompare(a.예약일자 || '')
+        case 'res-asc':
+          return (a.예약일자 || '').localeCompare(b.예약일자 || '')
+        case 'months-asc':
+          return getElapsedMonths(a.계약일자) - getElapsedMonths(b.계약일자)
+        case 'months-desc':
+          return getElapsedMonths(b.계약일자) - getElapsedMonths(a.계약일자)
+        case 'name':
+        default:
           return (a.고객명_상호 || '').localeCompare(b.고객명_상호 || '')
-        }
-        
-        if (completedSortOrder === 'desc') {
-          return dateB.localeCompare(dateA)
-        } else {
-          return dateA.localeCompare(dateB)
-        }
-      })
-    } else if (selectedFolder === '예약완료') {
-      list.sort((a, b) => {
-        const dateA = a.예약일자 || ''
-        const dateB = b.예약일자 || ''
-        
-        if (!dateA && !dateB) return (a.고객명_상호 || '').localeCompare(b.고객명_상호 || '')
-        if (!dateA) return 1
-        if (!dateB) return -1
-        
-        if (dateA === dateB) {
-          return (a.고객명_상호 || '').localeCompare(b.고객명_상호 || '')
-        }
-        return reservedSortOrder === 'res-asc' ? dateA.localeCompare(dateB) : dateB.localeCompare(dateA)
-      })
-    } else {
-      list.sort((a, b) => {
-        return (a.고객명_상호 || '').localeCompare(b.고객명_상호 || '')
-      })
-    }
-
-    return list
-  }, [customers, selectedFolder, searchTerm, completedSortOrder, reservedSortOrder])
+      }
+    })
+  }, [customers, selectedFolder, searchTerm, sortOption])
 
   const toggleSelect = (id: string, e: React.MouseEvent) => {
     e.stopPropagation()
@@ -349,32 +331,25 @@ export default function HomePage() {
             </button>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            {selectedFolder === '작업완료' && (
-              <div className="sort-box">
-                <select 
-                  value={completedSortOrder} 
-                  onChange={(e) => setCompletedSortOrder(e.target.value)}
-                  className="sort-select"
-                >
-                  <option value="desc">완료일 최신순</option>
-                  <option value="asc">완료일 오래된순</option>
-                  <option value="res-asc">예약시간 빠른순</option>
-                  <option value="res-desc">예약시간 오래된순</option>
-                </select>
-              </div>
-            )}
-            {selectedFolder === '예약완료' && (
-              <div className="sort-box">
-                <select 
-                  value={reservedSortOrder} 
-                  onChange={(e) => setReservedSortOrder(e.target.value)}
-                  className="sort-select"
-                >
-                  <option value="res-asc">예약시간 빠른순</option>
-                  <option value="res-desc">예약시간 오래된순</option>
-                </select>
-              </div>
-            )}
+            <div className="sort-box">
+              <select 
+                value={sortOption} 
+                onChange={(e) => {
+                  setSortOption(e.target.value)
+                  localStorage.setItem('lastSortOption_main', e.target.value)
+                }}
+                className="sort-select"
+              >
+                <option value="name">이름순</option>
+                <option value="model">장비순</option>
+                <option value="comp-desc">완료일 최신순</option>
+                <option value="comp-asc">완료일 오래된순</option>
+                <option value="res-desc">예약일 최신순</option>
+                <option value="res-asc">예약일 오래된순</option>
+                <option value="months-asc">개월수 오름차순</option>
+                <option value="months-desc">개월수 내림차순</option>
+              </select>
+            </div>
           </div>
         </div>
 
