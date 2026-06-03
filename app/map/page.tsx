@@ -363,11 +363,9 @@ export default function MapPage() {
                               })
                               return newArr
                             })
-                            setIsExpanded(true)
                           }
                         } else {
                           toggleCustomerSelection(marker.customers[0])
-                          setIsExpanded(true)
                         }
                       }} 
                       style={{ '--m-color': getMarkerColor(marker.customers[0].status) } as any}

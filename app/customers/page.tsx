@@ -122,6 +122,10 @@ export default function CustomersPage() {
           return (b.작업완료일 || '').localeCompare(a.작업완료일 || '')
         case 'comp-asc':
           return (a.작업완료일 || '').localeCompare(b.작업완료일 || '')
+        case 'res-desc':
+          return (b.예약일자 || '').localeCompare(a.예약일자 || '')
+        case 'res-asc':
+          return (a.예약일자 || '').localeCompare(b.예약일자 || '')
         case 'months-asc':
           return getElapsedMonths(a.계약일자) - getElapsedMonths(b.계약일자)
         case 'months-desc':
@@ -247,6 +251,8 @@ export default function CustomersPage() {
               <option value="model">장비순</option>
               <option value="comp-desc">완료일 최신순</option>
               <option value="comp-asc">완료일 오래된순</option>
+              <option value="res-desc">예약일 최신순</option>
+              <option value="res-asc">예약일 오래된순</option>
               <option value="months-asc">개월수 오름차순</option>
               <option value="months-desc">개월수 내림차순</option>
             </select>
