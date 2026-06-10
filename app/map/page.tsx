@@ -286,6 +286,52 @@ export default function MapPage() {
     }
   }, [markers])
 
+  const getElapsedMonths = (contractDate?: string) => {
+    if (!contractDate) return -1
+    const start = new Date(contractDate)
+    const end = new Date()
+    if (isNaN(start.getTime())) return -1
+    let diff = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth())
+    if (end.getDate() < start.getDate()) diff--
+    return Math.max(0, diff)
+  }
+
+  const getModelTypeBadge = (modelName?: string) => {
+    if (!modelName) return null
+    const lower = modelName.toLowerCase()
+    let text = ''
+    let typeClass = ''
+    if (lower.startsWith('cp')) {
+      text = '정수기'
+      typeClass = 'purifier'
+    } else if (lower.startsWith('ac')) {
+      text = '공기청정기'
+      typeClass = 'air-cleaner'
+    } else if (lower.startsWith('cbt')) {
+      text = '비데'
+      typeClass = 'bidet'
+    } else {
+      return null
+    }
+
+    return (
+      <span className={`model-badge ${typeClass}`}>
+        {text}
+      </span>
+    )
+  }
+
+  const getElapsedMonthsBadge = (contractDate?: string) => {
+    const months = getElapsedMonths(contractDate)
+    if (months === -1) return null
+
+    return (
+      <span className="model-badge elapsed-months">
+        {months}개월
+      </span>
+    )
+  }
+
   const moveToCurrentLocation = () => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -460,9 +506,13 @@ export default function MapPage() {
               {selectedCustomersList.map((customer) => (
                 <div key={customer.id} className="customer-row">
                   <div className="row-info">
-                    <div className="row-badge" style={{ background: getMarkerColor(customer.status) }}>{customer.status || '미분류'}</div>
-                    <div className="row-name">{customer.고객명_상호}</div>
-                    <div className="row-addr">{formatShortAddress(customer.설치주소 || customer.주소 || '')}</div>
+                    <div className="row-name-container">
+                      <div className="row-name">{customer.고객명_상호}</div>
+                      <div className="row-badge" style={{ background: getMarkerColor(customer.status) }}>{customer.status || '미분류'}</div>
+                      {getModelTypeBadge(customer.모델명)}
+                      {getElapsedMonthsBadge(customer.계약일자)}
+                    </div>
+                    <div className="row-addr">{(customer.전화번호 || customer.핸드폰번호 || customer.설치전화번호 || '').replace(/-/g, '') + ' | ' + formatShortAddress(customer.설치주소 || customer.주소 || '')}</div>
                   </div>
                   <button className="detail-btn" onClick={() => {
                     // 상세 페이지 이동 전 현재 상태 sessionStorage에 저장
@@ -591,8 +641,14 @@ export default function MapPage() {
         .empty-guide { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #ccc; font-size: 0.8rem; gap: 8px; }
         .customer-row { display: flex; align-items: center; justify-content: space-between; padding: 12px; background: #f8fafc; border-radius: 12px; margin-bottom: 8px; border: 1px solid #f1f5f9; }
         .row-info { flex: 1; min-width: 0; }
-        .row-badge { display: inline-block; font-size: 0.6rem; color: #fff; padding: 1px 6px; border-radius: 4px; font-weight: 700; margin-bottom: 4px; }
-        .row-name { font-size: 0.95rem; font-weight: 700; color: #1a1a1a; }
+        .row-badge { display: inline-block; font-size: 0.65rem; color: #fff; padding: 2px 6px; border-radius: 4px; font-weight: 700; }
+        .row-name-container { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 2px; }
+        .row-name { font-size: 0.95rem; font-weight: 800; color: #1a1a1a; }
+        :global(.model-badge) { font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; font-weight: 700; white-space: nowrap; display: inline-flex; align-items: center; }
+        :global(.model-badge.purifier) { background: #eff6ff; color: #3b82f6; }
+        :global(.model-badge.air-cleaner) { background: #ecfdf5; color: #10b981; }
+        :global(.model-badge.bidet) { background: #fff7ed; color: #ea580c; }
+        :global(.model-badge.elapsed-months) { background: #f1f5f9; color: #475569; }
         .row-addr { font-size: 0.75rem; color: #94a3b8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
         .detail-btn { font-size: 0.75rem; padding: 6px 12px; border: 1px solid #e2e8f0; border-radius: 8px; background: #fff; color: #666; font-weight: 600; }
         
