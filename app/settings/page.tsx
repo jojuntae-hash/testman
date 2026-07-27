@@ -400,10 +400,24 @@ export default function SettingsPage() {
                 <div className="item-left"><Upload size={16} color="#f59e0b" /> <span>데이터 복원 (JSON 파일)</span></div>
                 <input type="file" accept=".json" onChange={handleRestore} hidden />
               </label>
-              <label className="settings-list-item">
-                <div className="item-left"><Upload size={16} color="#10b981" /> <span>엑셀/CSV 데이터 추가</span></div>
-                <input type="file" accept=".xlsx, .xls, .csv" onChange={handleExcelImport} hidden />
-              </label>
+              <div className="settings-list-item" style={{ padding: '0', display: 'flex' }}>
+                <label style={{ display: 'flex', alignItems: 'center', flex: 1, cursor: 'pointer', padding: '12px' }}>
+                  <div className="item-left"><Upload size={16} color="#10b981" /> <span>엑셀/CSV 데이터 추가</span></div>
+                  <input type="file" accept=".xlsx, .xls, .csv" onChange={handleExcelImport} hidden />
+                </label>
+                <a 
+                  href="/template.csv" 
+                  download 
+                  style={{ 
+                    display: 'flex', alignItems: 'center', gap: '4px', 
+                    padding: '0 12px', background: '#f8fafc', borderLeft: '1px solid #e2e8f0', 
+                    color: '#64748b', fontSize: '0.8rem', textDecoration: 'none', fontWeight: 500
+                  }}
+                  title="데이터 입력용 양식 다운로드"
+                >
+                  <Download size={14} /> 양식 받기
+                </a>
+              </div>
               <button className="settings-list-item" onClick={() => setIsPdfBulkModalOpen(true)}>
                 <div className="item-left"><FileUp size={16} color="#8b5cf6" /> <span>PDF 파일로 여러 고객 일괄 추가</span></div>
               </button>
