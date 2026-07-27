@@ -39,6 +39,10 @@ export default function CustomersPage() {
     if (savedSort) {
       setSortOption(savedSort)
     }
+    const savedFolder = localStorage.getItem('lastFolder_long')
+    if (savedFolder) {
+      setSelectedFolder(savedFolder)
+    }
   }, [])
 
   const folders = useMemo(() => {
@@ -228,7 +232,10 @@ export default function CustomersPage() {
             <button 
               key={folder}
               className={`cat-btn ${selectedFolder === folder ? 'active' : ''}`}
-              onClick={() => setSelectedFolder(folder)}
+              onClick={() => {
+                setSelectedFolder(folder)
+                localStorage.setItem('lastFolder_long', folder)
+              }}
             >
               {folder}
             </button>
