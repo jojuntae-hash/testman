@@ -43,7 +43,9 @@ export interface LongTermCustomer {
   고객번호: string
   모델명: string
   계약일자: string
+  계약만료일?: string
   작업완료일: string
+  최종작업내용?: string
   계약자구분: string
   고객명_상호: string
   전화번호: string
@@ -855,6 +857,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         let hasChanges = false
 
         if (c.작업완료일 && updatedLT.작업완료일 !== c.작업완료일) { updatedLT.작업완료일 = c.작업완료일; hasChanges = true }
+        if (c.계약만료일자 && updatedLT.계약만료일 !== c.계약만료일자) { updatedLT.계약만료일 = c.계약만료일자; hasChanges = true }
+        if (c.당월작업 && updatedLT.최종작업내용 !== c.당월작업) { updatedLT.최종작업내용 = c.당월작업; hasChanges = true }
         if (c.전화번호 && updatedLT.전화번호 !== c.전화번호) { updatedLT.전화번호 = c.전화번호; hasChanges = true }
         if (c.핸드폰번호 && updatedLT.핸드폰번호 !== c.핸드폰번호) { updatedLT.핸드폰번호 = c.핸드폰번호; hasChanges = true }
         if (c.주소 && updatedLT.주소 !== c.주소) { updatedLT.주소 = c.주소; hasChanges = true }
@@ -880,7 +884,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           고객번호: c.고객번호 || '',
           모델명: c.모델명 || '',
           계약일자: c.계약일자 || '',
+          계약만료일: c.계약만료일자 || '',
           작업완료일: c.작업완료일 || '',
+          최종작업내용: c.당월작업 || '',
           계약자구분: c.계약자구분 || '',
           고객명_상호: c.고객명_상호 || '',
           전화번호: c.전화번호 || '',

@@ -65,7 +65,10 @@ export default function LongTermCustomerDetailPage() {
       계약자구분: customer.계약자구분 || '',
       전화번호: customer.전화번호 || '',
       핸드폰번호: customer.핸드폰번호 || '',
+      계약일자: customer.계약일자 || '',
+      계약만료일: customer.계약만료일 || '',
       작업완료일: customer.작업완료일 || '',
+      최종작업내용: customer.최종작업내용 || '',
       주소: customer.주소 || '',
       설치자명: customer.설치자명 || '',
       설치전화번호: customer.설치전화번호 || '',
@@ -242,6 +245,30 @@ export default function LongTermCustomerDetailPage() {
                     </div>
                   )}
                 </div>
+              )}
+            </div>
+            <div className="info-item full-width">
+              <span className="info-label">계약일</span>
+              {isEditingInfo ? (
+                <input type="date" className="edit-input" name="계약일자" value={editForm.계약일자} onChange={handleFormChange} />
+              ) : (
+                <span className="info-value">{customer.계약일자 || '-'}</span>
+              )}
+            </div>
+            <div className="info-item full-width">
+              <span className="info-label">계약만료일</span>
+              {isEditingInfo ? (
+                <input type="date" className="edit-input" name="계약만료일" value={editForm.계약만료일} onChange={handleFormChange} />
+              ) : (
+                <span className="info-value">{customer.계약만료일 || '-'}</span>
+              )}
+            </div>
+            <div className="info-item full-width">
+              <span className="info-label">최종작업내용</span>
+              {isEditingInfo ? (
+                <input className="edit-input" name="최종작업내용" value={editForm.최종작업내용} onChange={handleFormChange} />
+              ) : (
+                <span className="info-value">{customer.최종작업내용 || '-'}</span>
               )}
             </div>
             <div className="info-item full-width">
