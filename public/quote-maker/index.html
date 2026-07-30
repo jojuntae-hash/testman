@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>렌탈 견적서 생성기</title>
+    <!-- Google Fonts - Pretendard 및 Outfit 적용 -->
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <!-- Lucide Icons CDN -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- html2pdf.js CDN (PDF 변환) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <!-- html2canvas CDN (이미지 변환 지원) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <!-- SheetJS CDN (엑셀 변환) -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- 스타일시트 로드 -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- 사이드바: 저장된 견적서 목록 -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h2><i data-lucide="folder-open"></i> 견적서 보관함</h2>
+                <button class="btn-close-sidebar" id="btnCloseSidebar" title="보관함 닫기">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            <div class="sidebar-content">
+                <div class="storage-actions">
+                    <div class="storage-btn-grid">
+                        <button class="btn btn-secondary btn-sm" id="btnSaveQuotation" title="현재 견적서를 보관함 리스트에 저장">
+                            <i data-lucide="bookmark"></i> 보관함 저장
+                        </button>
+                        <button class="btn btn-primary btn-sm" id="btnSaveQuotationFile" title="현재 작성 중인 견적서 data 폴더 저장">
+                            <i data-lucide="file-down"></i> 현재 파일 저장
+                        </button>
+                        <button class="btn btn-purple btn-sm" id="btnExportJSON" title="보관함 전체 백업 파일 저장">
+                            <i data-lucide="archive"></i> 전체 백업
+                        </button>
+                        <button class="btn btn-folder-link btn-sm" id="btnSelectDataFolder" title="data 저장 폴더 연결 설정">
+                            <i data-lucide="folder-link"></i> 폴더 연결 (<span id="folderStatusText">미연결</span>)
+                        </button>
+                        <label class="btn btn-amber-outline btn-sm text-center cursor-pointer col-span-2" for="btnImportJSON" style="margin-bottom:0;" title="백업 파일 불러오기 및 복원">
+                            <i data-lucide="upload-cloud"></i> 백업 파일 불러오기 / 복원
+                        </label>
+                        <input type="file" id="btnImportJSON" accept=".json" style="display: none;">
+                    </div>
+                    <span style="font-size: 11px; color: var(--text-light); text-align: center; display: block; margin-top: 4px;">
+                        💡 <b>폴더 연결</b> 시 <b>data/</b> 폴더로 자동 보관됩니다.
+                    </span>
+                </div>
+                <div class="saved-list-wrapper">
+                    <h3>저장된 견적서 목록</h3>
+                    <ul class="saved-list" id="savedList">
+                        <!-- 동적으로 목록 추가 -->
+                        <li class="empty-list">저장된 견적서가 없습니다.</li>
+                    </ul>
+                </div>
+            </div>
+        </aside>
+
+        <!-- 메인 콘텐츠 영역 -->
+        <main class="main-content">
+            <header class="app-header">
+                <div class="header-title">
+                    <h1><i data-lucide="file-spreadsheet" class="logo-icon"></i> Rental Quotation <span>렌탈 견적서 작성기</span></h1>
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-outline" id="btnOpenSidebar">
+                        <i data-lucide="archive"></i> 보관함 열기 (<span id="savedCount">0</span>)
+                    </button>
+                    <button class="btn btn-danger" id="btnNewQuotation">
+                        <i data-lucide="rotate-ccw"></i> 새로 작성
+                    </button>
+                </div>
+            </header>
+
+            <div class="editor-grid">
+                <!-- 견적서 작성 폼 -->
+                <section class="editor-section">
+                    <!-- 기본 정보 카드 -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h2><i data-lucide="info"></i> 견적서 기본 정보</h2>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-grid">
+                                <div class="form-group col-span-2">
+                                    <div class="flex-between" style="margin-bottom: 6px;">
+                                        <label>회사 로고 등록</label>
+                                        <div class="logo-action-buttons" id="logoActionButtons" style="display: none;">
+                                            <button type="button" class="btn btn-outline btn-sm" id="btnSaveLogoFile" title="로고 이미지 파일로 PC에 저장">
+                                                <i data-lucide="download"></i> 로고 파일 저장
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="logo-uploader" id="logoUploader">
+                                        <div class="logo-preview-container" id="logoPreviewContainer" style="display: none;">
+                                            <img id="logoPreview" src="" alt="로고 미리보기">
+                                            <button type="button" class="btn-remove-logo" id="btnRemoveLogo" title="로고 삭제">
+                                                <i data-lucide="trash-2"></i>
+                                            </button>
+                                        </div>
+                                        <div class="upload-placeholder" id="logoPlaceholder">
+                                            <i data-lucide="image-plus"></i>
+                                            <span>클릭하거나 이미지를 드래그하여 로고를 등록하세요.</span>
+                                            <span class="upload-hint">가로가 긴 로고가 적합합니다. (권장 비율 3:1)</span>
+                                        </div>
+                                        <input type="file" id="logoInput" accept="image/*" style="display: none;">
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="inputDocTitle">견적서 제목</label>
+                                    <input type="text" id="inputDocTitle" placeholder="예: 렌탈 서비스 비교 견적서" value="렌탈 서비스 견적서">
+                                </div>
+                                <div class="form-group">
+                                    <label for="inputCustomer">수신 (고객/업체명)</label>
+                                    <input type="text" id="inputCustomer" placeholder="예: 주식회사 홍길동 귀하">
+                                </div>
+                                <div class="form-group">
+                                    <label for="inputDate">견적일자</label>
+                                    <input type="date" id="inputDate">
+                                </div>
+                                <div class="form-group">
+                                    <label for="inputExpiry">유효기간</label>
+                                    <input type="text" id="inputExpiry" placeholder="예: 견적일로부터 30일" value="견적일로부터 30일">
+                                </div>
+                                <div class="form-group">
+                                    <label for="inputSupplier">발급처 (회사명)</label>
+                                    <input type="text" id="inputSupplier" placeholder="예: (주)렌탈코리아">
+                                </div>
+                                <div class="form-group">
+                                    <label for="inputContact">담당자 및 연락처</label>
+                                    <input type="text" id="inputContact" placeholder="예: 홍길동 팀장 (010-1234-5678)">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 제품 목록 카드 -->
+                    <div class="card margin-top">
+                        <div class="card-header flex-between">
+                            <h2><i data-lucide="package"></i> 견적 제품 목록</h2>
+                            <button type="button" class="btn btn-primary btn-sm" id="btnAddProduct">
+                                <i data-lucide="plus"></i> 제품 추가
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <div class="product-list" id="productList">
+                                <!-- 제품 카드 아이템이 여기에 동적으로 추가됩니다 -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 하단 견적서 비고/특이사항 -->
+                    <div class="card margin-top">
+                        <div class="card-header">
+                            <h2><i data-lucide="file-text"></i> 견적 조건 및 특이사항</h2>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-group">
+                                <textarea id="inputNotes" rows="3" placeholder="견적과 관련된 추가 약정 사항, 배송 설치 조건 등을 입력하세요.">1. 설치비 및 등록비 면제 조건입니다.
+2. 약정 기간 내 해지 시 위약금이 발생할 수 있습니다.
+3. 렌탈료는 부가가치세(VAT)가 포함된 금액입니다.</textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 하단 액션 버튼 (미리보기) -->
+                    <div class="form-actions-bar margin-top">
+                        <button type="button" class="btn btn-success btn-large flex-grow" id="btnOpenPreview">
+                            <i data-lucide="eye"></i> 견적서 미리보기 및 내보내기 (PDF / 이미지 / 인쇄)
+                        </button>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- 미리보기 모달창 -->
+    <div class="modal-overlay" id="previewModal">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h2><i data-lucide="eye"></i> 견적서 미리보기</h2>
+                <div class="modal-actions">
+                    <button class="btn btn-outline" id="btnPrint">
+                        <i data-lucide="printer"></i> 인쇄
+                    </button>
+                    <button class="btn btn-outline" id="btnSaveImage">
+                        <i data-lucide="image"></i> 이미지 저장
+                    </button>
+                    <button class="btn btn-primary" id="btnSavePDF">
+                        <i data-lucide="file-pdf"></i> PDF 파일 저장
+                    </button>
+                    <button class="btn-close-modal" id="btnClosePreview" title="닫기">
+                        <i data-lucide="x"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="modal-body">
+                <!-- A4 비율 견적서 인쇄용 종이 영역 -->
+                <div class="print-paper-container">
+                    <div class="print-paper" id="printPaper">
+                        <!-- A4 견적서 템플릿 실시간 생성 영역 -->
+                        <div class="quote-template">
+                            <!-- 로고 & 타이틀 -->
+                            <div class="quote-header">
+                                <div class="quote-logo-area" id="quoteLogoArea">
+                                    <!-- 로고 이미지 동적 삽입 -->
+                                </div>
+                                <div class="quote-title-area">
+                                    <h1 id="quoteTitle">렌 탈 견 적 서</h1>
+                                </div>
+                            </div>
+
+                            <!-- 견적 기본 정보 (수신 / 발신) -->
+                            <div class="quote-info-section">
+                                <div class="quote-info-left">
+                                    <table class="table-info-client">
+                                        <tr>
+                                            <th>수 신</th>
+                                            <td><span id="quoteCustomer"></span></td>
+                                        </tr>
+                                        <tr>
+                                            <th>일 자</th>
+                                            <td><span id="quoteDate"></span></td>
+                                        </tr>
+                                        <tr>
+                                            <th>유 효 기 간</th>
+                                            <td><span id="quoteExpiry"></span></td>
+                                        </tr>
+                                    </table>
+                                </div>
+                                <div class="quote-info-right">
+                                    <table class="table-info-supplier">
+                                        <tr>
+                                            <th>상 호</th>
+                                            <td><span id="quoteSupplier"></span></td>
+                                        </tr>
+                                        <tr>
+                                            <th>담 당 자</th>
+                                            <td><span id="quoteContact"></span></td>
+                                        </tr>
+                                        <tr>
+                                            <th>연 락 처</th>
+                                            <td><span id="quotePhone"></span></td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- 아래와 같이 견적을 제시합니다 안내문구 -->
+                            <div class="quote-intro">
+                                <p>아래와 같이 견적을 제출합니다.</p>
+                            </div>
+
+                            <!-- 제품 목록 테이블 -->
+                            <div class="quote-table-container">
+                                <table class="quote-table">
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 4%;">No</th>
+                                            <th style="width: 11%;">이미지</th>
+                                            <th style="width: 21%;">제품명 및 약정</th>
+                                            <th style="width: 15%;">할인 항목</th>
+                                            <th style="width: 15%;">추가 혜택</th>
+                                            <th style="width: 7%;">수량</th>
+                                            <th style="width: 12%;">단가</th>
+                                            <th style="width: 15%;">월 렌탈료</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="quoteTableBody">
+                                        <!-- 동적으로 추가되는 행 -->
+                                    </tbody>
+                                    <tfoot>
+                                        <tr>
+                                            <td colspan="7" class="text-right font-bold">합계 월 렌탈료 (VAT 포함)</td>
+                                            <td class="text-right font-bold text-primary text-large"><span id="quoteTotalRental">0</span>원</td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+
+                            <!-- 하단 주의사항 및 서명란 -->
+                            <div class="quote-footer">
+                                <div class="quote-notes">
+                                    <h3><i data-lucide="alert-circle" style="width: 14px; height: 14px; display: inline-block; vertical-align: middle;"></i> 견적 조건 및 유의사항</h3>
+                                    <div id="quoteNotesContent">
+                                        <!-- 동적으로 렌더링 -->
+                                    </div>
+                                </div>
+                                <div class="quote-legal">
+                                    <p>※ 본 견적서는 신청 시점의 프로모션 정책에 따라 실제 가입 시와 다소 차이가 있을 수 있습니다.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 스크립트 파일 로드 -->
+    <script src="app.js"></script>
+</body>
+</html>

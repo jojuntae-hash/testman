@@ -1,0 +1,1283 @@
+/* ==========================================================================
+   디자인 시스템 & 변수 선언
+   ========================================================================== */
+:root {
+    /* Color Palette */
+    --primary: #2563eb;
+    --primary-hover: #1d4ed8;
+    --primary-light: #eff6ff;
+    --secondary: #64748b;
+    --secondary-hover: #475569;
+    --success: #059669;
+    --success-hover: #047857;
+    --success-light: #ecfdf5;
+    --danger: #ef4444;
+    --danger-hover: #dc2626;
+    --danger-light: #fef2f2;
+    
+    --bg-app: #f8fafc;
+    --bg-card: #ffffff;
+    --bg-input: #ffffff;
+    
+    --text-main: #0f172a;
+    --text-muted: #64748b;
+    --text-light: #94a3b8;
+    
+    --border-color: #e2e8f0;
+    --border-focus: #3b82f6;
+    
+    /* Layout & Styling Tokens */
+    --radius-sm: 6px;
+    --radius-md: 12px;
+    --radius-lg: 18px;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03);
+    --shadow-lg: 0 10px 25px -5px rgba(0,0,0,0.08), 0 8px 10px -6px rgba(0,0,0,0.05);
+    
+    --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    
+    /* Print Paper Size */
+    --paper-width: 210mm;
+    --paper-height: 297mm;
+}
+
+/* ==========================================================================
+   기본 스타일 초기화
+   ========================================================================== */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+    background-color: var(--bg-app);
+    color: var(--text-main);
+    line-height: 1.5;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+}
+
+input, select, textarea, button {
+    font-family: inherit;
+    font-size: 14px;
+    color: inherit;
+}
+
+/* ==========================================================================
+   레이아웃 구조
+   ========================================================================== */
+.app-container {
+    display: flex;
+    min-height: 100vh;
+    position: relative;
+}
+
+/* 사이드바 (보관함) */
+.sidebar {
+    width: 290px;
+    background-color: var(--bg-card);
+    border-right: 1px solid var(--border-color);
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: -290px; /* 기본적으로 닫힌 상태 */
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    box-shadow: var(--shadow-lg);
+    transition: var(--transition);
+}
+
+.sidebar.open {
+    left: 0;
+}
+
+.sidebar-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.sidebar-header h2 {
+    font-size: 16px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--primary);
+}
+
+.btn-close-sidebar {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-muted);
+    padding: 4px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition);
+}
+
+.btn-close-sidebar:hover {
+    background-color: var(--primary-light);
+    color: var(--primary);
+}
+
+.sidebar-content {
+    padding: 16px;
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.storage-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    background-color: var(--bg-app);
+    padding: 12px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+}
+
+.storage-btn-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+}
+
+.storage-btn-grid .btn {
+    padding: 7px 6px;
+    font-size: 11.5px;
+    font-weight: 600;
+    justify-content: center;
+    gap: 4px;
+    letter-spacing: -0.3px;
+}
+
+.saved-list-wrapper h3 {
+    font-size: 14px;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+    font-weight: 600;
+}
+
+.saved-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.saved-item {
+    background-color: var(--bg-app);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 12px 14px;
+    cursor: pointer;
+    transition: var(--transition);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.saved-item:hover {
+    border-color: var(--primary);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-sm);
+}
+
+.saved-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.saved-item-title {
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--text-main);
+    word-break: break-all;
+    padding-right: 20px;
+}
+
+.saved-item-customer {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.saved-item-date {
+    font-size: 11px;
+    color: var(--text-light);
+    font-family: 'Outfit', sans-serif;
+}
+
+.btn-delete-saved {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: none;
+    border: none;
+    color: var(--text-light);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    transition: var(--transition);
+}
+
+.btn-delete-saved:hover {
+    color: var(--danger);
+    background-color: var(--danger-light);
+}
+
+.empty-list {
+    text-align: center;
+    color: var(--text-light);
+    padding: 40px 0;
+    font-size: 13px;
+}
+
+/* 메인 영역 */
+.main-content {
+    flex: 1;
+    padding: 30px;
+    max-width: 1200px;
+    margin: 0 auto;
+    width: 100%;
+    transition: var(--transition);
+}
+
+/* 사이드바가 열렸을 때 메인 영역 패딩 조정 (PC) */
+@media (min-width: 1025px) {
+    .app-container.sidebar-open .sidebar {
+        left: 0;
+    }
+    .app-container.sidebar-open .main-content {
+        margin-left: 290px;
+        width: calc(100% - 290px);
+    }
+}
+
+/* 헤더 영역 */
+.app-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    gap: 20px;
+}
+
+.header-title h1 {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--text-main);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.header-title h1 span {
+    font-size: 14px;
+    font-weight: 400;
+    color: var(--text-muted);
+    border-left: 1px solid var(--border-color);
+    padding-left: 10px;
+    margin-left: 5px;
+}
+
+.logo-icon {
+    color: var(--primary);
+    width: 28px;
+    height: 28px;
+}
+
+.header-actions {
+    display: flex;
+    gap: 10px;
+}
+
+/* ==========================================================================
+   컴포넌트: 카드 (Card)
+   ========================================================================== */
+.card {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+}
+
+.card-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.card-header.flex-between {
+    justify-content: space-between;
+}
+
+.card-header h2 {
+    font-size: 16px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.card-body {
+    padding: 24px;
+}
+
+.margin-top {
+    margin-top: 24px;
+}
+
+/* ==========================================================================
+   폼 레이아웃 & 컨트롤
+   ========================================================================== */
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+}
+
+.col-span-2 {
+    grid-column: span 2;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.form-group label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted);
+}
+
+.form-group input[type="text"],
+.form-group input[type="date"],
+.form-group input[type="number"],
+.form-group select,
+.form-group textarea {
+    padding: 10px 14px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    background-color: var(--bg-input);
+    transition: var(--transition);
+    outline: none;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    border-color: var(--border-focus);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+/* 로고 업로더 스타일 */
+.logo-uploader {
+    border: 2px dashed var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 20px;
+    text-align: center;
+    cursor: pointer;
+    background-color: var(--bg-app);
+    transition: var(--transition);
+    position: relative;
+    overflow: hidden;
+    min-height: 100px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.logo-uploader:hover {
+    border-color: var(--primary);
+    background-color: var(--primary-light);
+}
+
+.upload-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-muted);
+}
+
+.upload-placeholder i {
+    width: 32px;
+    height: 32px;
+}
+
+.upload-placeholder span {
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.upload-hint {
+    font-size: 11px !important;
+    color: var(--text-light);
+}
+
+.logo-preview-container {
+    position: relative;
+    max-width: 100%;
+    max-height: 80px;
+}
+
+.logo-preview-container img {
+    max-height: 80px;
+    max-width: 100%;
+    object-fit: contain;
+}
+
+.btn-remove-logo {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background-color: var(--danger);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    padding: 6px;
+    cursor: pointer;
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition);
+}
+
+.btn-remove-logo:hover {
+    transform: scale(1.1);
+    background-color: var(--danger-hover);
+}
+
+/* ==========================================================================
+   동적 제품 목록 디자인
+   ========================================================================== */
+.product-list {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.product-card {
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 20px;
+    background-color: var(--bg-app);
+    position: relative;
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.product-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    padding-bottom: 10px;
+    border-bottom: 1px dashed var(--border-color);
+}
+
+.product-card-title {
+    font-weight: 700;
+    font-size: 15px;
+    color: var(--primary);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.product-card-actions {
+    display: flex;
+    gap: 6px;
+}
+
+.product-grid {
+    display: grid;
+    grid-template-columns: 180px 1fr;
+    gap: 20px;
+}
+
+/* 제품 사진 업로더 */
+.product-photo-uploader {
+    border: 2px dashed var(--border-color);
+    border-radius: var(--radius-md);
+    background-color: var(--bg-card);
+    aspect-ratio: 1 / 1;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    position: relative;
+    overflow: hidden;
+    transition: var(--transition);
+}
+
+.product-photo-uploader:hover {
+    border-color: var(--primary);
+    background-color: var(--primary-light);
+}
+
+.photo-placeholder {
+    color: var(--text-light);
+    text-align: center;
+    padding: 10px;
+}
+
+.photo-placeholder i {
+    width: 28px;
+    height: 28px;
+    margin-bottom: 4px;
+}
+
+.photo-placeholder span {
+    font-size: 11px;
+    display: block;
+}
+
+.product-photo-preview {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.btn-remove-photo {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    background-color: rgba(15, 23, 42, 0.7);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    padding: 5px;
+    cursor: pointer;
+    display: flex;
+    transition: var(--transition);
+}
+
+.btn-remove-photo:hover {
+    background-color: var(--danger);
+}
+
+/* 제품 상세 입력 폼 그리드 */
+.product-fields {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+}
+
+.col-span-full {
+    grid-column: span 2;
+}
+
+/* 렌탈료 투입 필드에 특화 */
+.rental-fee-group input {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--primary);
+    font-family: 'Outfit', sans-serif;
+    text-align: right;
+}
+
+/* ==========================================================================
+   버튼 시스템
+   ========================================================================== */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-weight: 600;
+    padding: 10px 18px;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: var(--transition);
+    border: 1px solid transparent;
+}
+
+.btn-sm {
+    padding: 6px 12px;
+    font-size: 12px;
+}
+
+.btn-large {
+    padding: 14px 28px;
+    font-size: 15px;
+}
+
+.btn-full {
+    width: 100%;
+}
+
+.btn-primary {
+    background-color: var(--primary);
+    color: white;
+}
+.btn-primary:hover {
+    background-color: var(--primary-hover);
+}
+
+.btn-secondary {
+    background-color: var(--secondary);
+    color: white;
+}
+.btn-secondary:hover {
+    background-color: var(--secondary-hover);
+}
+
+.btn-success {
+    background-color: var(--success);
+    color: white;
+}
+.btn-success:hover {
+    background-color: var(--success-hover);
+}
+
+.btn-danger {
+    background-color: var(--danger);
+    color: white;
+}
+.btn-danger:hover {
+    background-color: var(--danger-hover);
+}
+
+.btn-purple {
+    background-color: #6366f1;
+    color: white;
+}
+.btn-purple:hover {
+    background-color: #4f46e5;
+}
+
+.btn-folder-link {
+    background-color: #f0fdf4;
+    border: 1px dashed #10b981;
+    color: #047857;
+}
+.btn-folder-link:hover {
+    background-color: #d1fae5;
+    border-color: #059669;
+}
+
+.btn-amber-outline {
+    background-color: #fffbe6;
+    border: 1px solid #f59e0b;
+    color: #b45309;
+}
+.btn-amber-outline:hover {
+    background-color: #fef3c7;
+    border-color: #d97706;
+}
+
+.btn-outline {
+    background-color: transparent;
+    border-color: var(--border-color);
+    color: var(--text-muted);
+}
+.btn-outline:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+    background-color: var(--primary-light);
+}
+
+.btn-icon-only {
+    padding: 8px;
+    border-radius: var(--radius-sm);
+    background: none;
+    border: none;
+    color: var(--text-light);
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.btn-icon-only:hover {
+    color: var(--primary);
+    background-color: var(--primary-light);
+}
+
+.btn-icon-only.delete:hover {
+    color: var(--danger);
+    background-color: var(--danger-light);
+}
+
+.flex-between {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.cursor-pointer {
+    cursor: pointer;
+}
+
+.text-center {
+    text-align: center;
+}
+
+.flex-grow {
+    flex-grow: 1;
+}
+
+/* 하단 고정액션바 */
+.form-actions-bar {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+/* ==========================================================================
+   미리보기 모달창 (Modal)
+   ========================================================================== */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(4px);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+.modal-overlay.open {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.modal-container {
+    width: 90%;
+    max-width: 900px;
+    height: 90vh;
+    background-color: var(--bg-card);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transform: translateY(20px);
+    transition: transform 0.3s ease;
+}
+
+.modal-overlay.open .modal-container {
+    transform: translateY(0);
+}
+
+.modal-header {
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h2 {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-main);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.modal-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-close-modal {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-muted);
+    padding: 6px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition);
+}
+
+.btn-close-modal:hover {
+    background-color: var(--primary-light);
+    color: var(--primary);
+}
+
+.modal-body {
+    flex: 1;
+    overflow-y: auto;
+    background-color: var(--secondary);
+    padding: 30px 15px;
+    display: flex;
+    justify-content: center;
+}
+
+/* ==========================================================================
+   A4 인쇄용 종이 영역 디자인 (Print Paper CSS) - 극도로 모던하고 세련된 테마
+   ========================================================================== */
+.print-paper-container {
+    display: inline-block;
+    box-shadow: 0 15px 40px rgba(15, 23, 42, 0.15);
+}
+
+.print-paper {
+    width: var(--paper-width);
+    min-height: var(--paper-height);
+    padding: 22mm 18mm;
+    background-color: #ffffff;
+    box-sizing: border-box;
+    position: relative;
+    color: #1e293b; /* 짙은 차콜 */
+}
+
+/* 견적서 실제 템플릿 스타일 */
+.quote-template {
+    font-size: 10pt;
+    line-height: 1.5;
+}
+
+.quote-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 30px;
+    border-bottom: 2px solid #cbd5e1; /* 연하고 맑은 실버 그레이 라인 */
+    padding-bottom: 18px;
+}
+
+.quote-logo-area {
+    width: 200px;
+    height: 55px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+}
+
+.quote-logo-area img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+.quote-title-area h1 {
+    font-size: 18pt; /* 26pt -> 18pt 로 축소하여 로고와의 밸런스 개선 */
+    font-weight: 800;
+    color: #1e293b; /* 부드러운 다크 차콜 */
+    letter-spacing: 6px;
+    margin: 0;
+    line-height: 1.2;
+}
+
+/* 수발신 정보 레이아웃 - 미니멀 라인형태로 고급화 */
+.quote-info-section {
+    display: grid;
+    grid-template-columns: 48% 48%;
+    gap: 4%;
+    margin-bottom: 25px;
+}
+
+.quote-info-left, .quote-info-right {
+    width: 100%;
+}
+
+.table-info-client, .table-info-supplier {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.table-info-client th, .table-info-client td,
+.table-info-supplier th, .table-info-supplier td {
+    border: none;
+    border-bottom: 1px solid #e2e8f0; /* 부드러운 수평 테두리만 */
+    padding: 8px 10px;
+    font-size: 9.5pt;
+    height: 36px;
+    vertical-align: middle;
+}
+
+.table-info-client th, .table-info-supplier th {
+    background-color: transparent;
+    font-weight: 700;
+    text-align: left;
+    color: #64748b; /* 보조 텍스트 컬러 */
+    width: 30%;
+}
+
+.table-info-client td {
+    width: 70%;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.supplier-vertical-title {
+    display: none; /* 공급자 세로 결합셀 제거 대응 */
+}
+
+.table-info-supplier th {
+    width: 30%;
+}
+.table-info-supplier td {
+    width: 70%;
+    font-weight: 600;
+    color: #334155;
+}
+
+.quote-intro {
+    margin-bottom: 20px;
+    font-weight: 600;
+    font-size: 10.5pt;
+    color: #334155;
+    border-left: 3px solid #2563eb;
+    padding-left: 8px;
+}
+
+/* 제품 리스트 견적 테이블 - 모던 미니멀 스타일 */
+.quote-table-container {
+    margin-bottom: 25px;
+}
+
+.quote-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.quote-table th, .quote-table td {
+    border: none;
+    border-bottom: 1px solid #f1f5f9;
+    padding: 12px 10px;
+    font-size: 9.5pt;
+    text-align: center;
+    vertical-align: middle;
+}
+
+.quote-table th {
+    background-color: #f1f5f9; /* 맑고 화사한 그레이 */
+    color: #475569; /* 부드러운 슬레이트 차콜 */
+    font-weight: 700;
+    font-size: 9.5pt;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid #cbd5e1; /* 헤더 하단 경계 라인 명확화 */
+}
+
+.quote-table td {
+    color: #334155;
+}
+
+.quote-table td img {
+    width: 60px;
+    height: 60px;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 1px solid #f1f5f9;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+
+.quote-table-product-cell {
+    text-align: left !important;
+}
+
+.quote-table-product-name {
+    font-weight: 700;
+    color: #0f172a;
+    font-size: 10pt;
+    display: block;
+}
+
+.quote-table-product-term {
+    font-size: 8.5pt;
+    color: #64748b;
+    margin-top: 3px;
+    display: block;
+}
+
+.quote-table-product-link {
+    font-size: 8pt;
+    color: #2563eb;
+    text-decoration: none;
+    display: inline-block;
+    margin-top: 5px;
+    font-weight: 600;
+}
+
+.quote-table-product-link:hover {
+    text-decoration: underline;
+}
+
+.quote-table td ul {
+    list-style-type: none;
+    text-align: left;
+    padding-left: 0;
+}
+
+.quote-table td ul li {
+    font-size: 8.5pt;
+    color: #475569;
+    position: relative;
+    padding-left: 10px;
+    margin-bottom: 3px;
+}
+
+.quote-table td ul li::before {
+    content: "-";
+    position: absolute;
+    left: 0;
+    color: #94a3b8;
+}
+
+.text-right {
+    text-align: right !important;
+    white-space: nowrap;
+}
+.text-large {
+    font-size: 14pt !important;
+    white-space: nowrap;
+}
+.font-bold {
+    font-weight: bold;
+}
+.text-primary {
+    color: #2563eb; /* 세련된 브라이트 블루 */
+}
+.text-nowrap {
+    white-space: nowrap !important;
+}
+.quote-table td.text-right {
+    font-size: 9.5pt;
+}
+.quote-table td.text-right.font-bold {
+    font-size: 10pt;
+}
+
+/* 테이블의 합계라인 데코레이션 */
+.quote-table tfoot tr td {
+    border-top: 2px solid #cbd5e1;
+    border-bottom: 2px solid #cbd5e1;
+    padding: 16px 10px;
+    background-color: #f8fafc;
+}
+
+/* 견적 조건 및 유의사항 영역 - 얼럿박스 형태로 고급화 */
+.quote-footer {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.quote-notes {
+    border: none;
+    border-left: 4px solid #2563eb;
+    background-color: #f8fafc;
+    padding: 16px 20px;
+    border-radius: 0 8px 8px 0;
+}
+
+.quote-notes h3 {
+    font-size: 10pt;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.quote-notes-list {
+    padding-left: 14px;
+    font-size: 8.8pt;
+    color: #475569;
+    line-height: 1.6;
+}
+
+.quote-notes-list li {
+    margin-bottom: 4px;
+}
+
+.quote-legal {
+    font-size: 8pt;
+    color: #94a3b8;
+    text-align: left;
+}
+
+/* ==========================================================================
+   반응형 모바일 미디어 쿼리
+   ========================================================================== */
+@media (max-width: 1024px) {
+    .sidebar {
+        width: 280px;
+        left: -280px;
+    }
+    .sidebar.open {
+        left: 0;
+        box-shadow: 0 0 40px rgba(0,0,0,0.5);
+    }
+    
+    .main-content {
+        padding: 20px;
+    }
+    
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .col-span-2 {
+        grid-column: span 1;
+    }
+}
+
+@media (max-width: 768px) {
+    .app-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+    }
+    .header-actions {
+        width: 100%;
+        justify-content: flex-end;
+    }
+    
+    .product-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .product-photo-uploader {
+        width: 120px;
+        margin: 0 auto;
+    }
+    
+    .product-fields {
+        grid-template-columns: 1fr;
+    }
+    
+    .col-span-full {
+        grid-column: span 1;
+    }
+    
+    .modal-container {
+        width: 96%;
+        height: 95vh;
+    }
+    
+    .modal-header {
+        flex-direction: column;
+        gap: 12px;
+        align-items: flex-start;
+    }
+    .modal-actions {
+        width: 100%;
+        justify-content: space-between;
+    }
+    .modal-actions button {
+        flex: 1;
+        font-size: 12px;
+        padding: 8px;
+    }
+    
+    /* 미리보기 화면 모바일 축소 스케일링 */
+    .print-paper-container {
+        transform: scale(0.7);
+        transform-origin: top center;
+    }
+    .modal-body {
+        padding: 15px 5px;
+        /* 축소로 인해 높이가 작아진 것 처럼 보이므로 scroll 처리를 위해 높이 보장 */
+        min-height: 500px;
+    }
+}
+
+@media (max-width: 580px) {
+    .print-paper-container {
+        transform: scale(0.5);
+        transform-origin: top center;
+    }
+}
+
+@media (max-width: 420px) {
+    .print-paper-container {
+        transform: scale(0.4);
+        transform-origin: top center;
+    }
+    .form-actions-bar {
+        flex-direction: column;
+    }
+}
+
+/* ==========================================================================
+   프린트 전용 미디어 쿼리 (실제 인쇄 시 적용)
+   ========================================================================== */
+@media print {
+    body, html {
+        background-color: #ffffff;
+        color: #000000;
+        width: var(--paper-width);
+        height: var(--paper-height);
+    }
+    
+    /* 화면용 구성요소 전부 숨김 */
+    .app-container,
+    .modal-overlay,
+    .modal-header,
+    .sidebar {
+        display: none !important;
+    }
+    
+    /* 인쇄용 페이퍼만 노출 */
+    .print-paper-container {
+        display: block !important;
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: var(--paper-width);
+        height: var(--paper-height);
+        box-shadow: none !important;
+        transform: scale(1) !important; /* 모바일 축소 스케일링 무시 */
+        transform-origin: unset !important;
+    }
+    
+    .print-paper {
+        margin: 0 !important;
+        border: none !important;
+        padding: 10mm !important; /* 인쇄용 패딩 조정 */
+    }
+    
+    /* PDF/출력 시 끊김 방지 */
+    .quote-template {
+        page-break-inside: avoid;
+    }
+}

@@ -18,7 +18,8 @@ import {
   MoreHorizontal,
   MessageSquare,
   Users,
-  Copy
+  Copy,
+  FileSpreadsheet
 } from 'lucide-react'
 
 export default function BottomNav() {
@@ -384,7 +385,7 @@ export default function BottomNav() {
     )
   }
 
-  const isMoreActive = ['/sms', '/memos', '/settings', '/customers'].includes(pathname)
+  const isMoreActive = ['/sms', '/memos', '/settings', '/customers', '/products', '/quotes'].includes(pathname)
 
   // 일반 내비게이션 바
   return (
@@ -411,6 +412,10 @@ export default function BottomNav() {
             <Link href="/products" className={`more-menu-item ${pathname === '/products' ? 'active' : ''}`} onClick={() => setIsMoreOpen(false)}>
               <LayoutGrid size={18} />
               <span>제품목록</span>
+            </Link>
+            <Link href="/quotes" className={`more-menu-item ${pathname === '/quotes' ? 'active' : ''}`} onClick={() => setIsMoreOpen(false)}>
+              <FileSpreadsheet size={18} />
+              <span>견적서</span>
             </Link>
           </div>
         </div>
