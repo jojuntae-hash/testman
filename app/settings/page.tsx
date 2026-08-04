@@ -11,11 +11,13 @@ import CustomerDeleteModal from '@/components/CustomerDeleteModal'
 import BackupManagerModal from '@/components/BackupManagerModal'
 import LongTermBackupManagerModal from '@/components/LongTermBackupManagerModal'
 import LongTermManualAddModal from '@/components/LongTermManualAddModal'
+import SubscribedBackupManagerModal from '@/components/SubscribedBackupManagerModal'
+import SubscribedManualAddModal from '@/components/SubscribedManualAddModal'
 import PDFBulkUploadModal from '@/components/PDFBulkUploadModal'
 
 export default function SettingsPage() {
   const router = useRouter()
-  const { customers, setCustomers, addCustomer, resetToDefault, clearAllCustomers, longTermCustomers, restoreLongTermFromBackup, clearAllLongTermCustomers, addLongTermCustomer } = useData()
+  const { customers, setCustomers, addCustomer, resetToDefault, clearAllCustomers, longTermCustomers, restoreLongTermFromBackup, clearAllLongTermCustomers, addLongTermCustomer, subscribedCustomers, restoreSubscribedFromBackup, clearAllSubscribedCustomers, addSubscribedCustomer } = useData()
   
   // 기본 설정 상태
   const [defaultSource, setDefaultSource] = useState('')
@@ -31,6 +33,8 @@ export default function SettingsPage() {
   const [isBackupManagerOpen, setIsBackupManagerOpen] = useState(false)
   const [isLongTermBackupManagerOpen, setIsLongTermBackupManagerOpen] = useState(false)
   const [isLongTermManualAddOpen, setIsLongTermManualAddOpen] = useState(false)
+  const [isSubscribedBackupManagerOpen, setIsSubscribedBackupManagerOpen] = useState(false)
+  const [isSubscribedManualAddOpen, setIsSubscribedManualAddOpen] = useState(false)
   const [isPdfBulkModalOpen, setIsPdfBulkModalOpen] = useState(false)
 
   useEffect(() => {
@@ -174,6 +178,59 @@ export default function SettingsPage() {
       alert('모든 장기 고객 데이터가 삭제되었습니다.')
     }
   }
+
+  // 가입고객 데이터 백업 (JSON)
+  const handleBackupSubscribedJSON = () => {
+    const data = {
+      subscribedCustomers,
+      backupDate: new Date().toISOString()
+    }
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `long_term_customer_backup_${new Date().toISOString().split('T')[0]}.json`
+    a.click()
+  }
+
+  // 가입고객 데이터 백업 (Excel)
+  const handleBackupSubscribedExcel = () => {
+    const ws = XLSX.utils.json_to_sheet(subscribedCustomers)
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, "SubscribedCustomers")
+    XLSX.writeFile(wb, `long_term_customer_list_${new Date().toISOString().split('T')[0]}.xlsx`)
+  }
+
+  // 가입고객 데이터 복원
+  const handleRestoreSubscribed = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      try {
+        const json = JSON.parse(event.target?.result as string)
+        if (json.subscribedCustomers) {
+          restoreSubscribedFromBackup(json.subscribedCustomers)
+          alert('가입고객 데이터가 성공적으로 복원되었습니다.')
+        } else {
+          alert('가입고객관리 백업 파일이 아닙니다.')
+        }
+      } catch (err) {
+        alert('올바른 백업 파일이 아닙니다.')
+      }
+    }
+    reader.readAsText(file)
+  }
+
+  // 가입고객 전체 삭제
+  const handleClearAllSubscribed = () => {
+    if (confirm('정말로 모든 "고객관리" 장기 데이터를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) {
+      clearAllSubscribedCustomers()
+      alert('모든 가입고객 데이터가 삭제되었습니다.')
+    }
+  }
+
 
   // Excel/CSV 날짜 변환 헬퍼
   const formatExcelDate = (serial: any) => {
@@ -467,6 +524,31 @@ export default function SettingsPage() {
             </div>
           </div>
 
+          <div className="settings-list-group">
+            <div className="settings-list-header">가입고객 데이터관리</div>
+            <div className="settings-list-items">
+              <button className="settings-list-item" onClick={() => setIsSubscribedManualAddOpen(true)}>
+                <div className="item-left"><Save size={16} color="#3b82f6" /> <span>가입고객 수동 추가 (1건)</span></div>
+              </button>
+              <button className="settings-list-item" onClick={() => setIsSubscribedBackupManagerOpen(true)}>
+                <div className="item-left"><Database size={16} color="#0ea5e9" /> <span>가입고객 자동 백업 관리</span></div>
+              </button>
+              <label className="settings-list-item">
+                <div className="item-left"><Upload size={16} color="#f59e0b" /> <span>가입고객 복원 (JSON)</span></div>
+                <input type="file" accept=".json" onChange={handleRestoreSubscribed} hidden />
+              </label>
+              <button className="settings-list-item" onClick={handleBackupSubscribedJSON}>
+                <div className="item-left"><Download size={16} color="#8b5cf6" /> <span>가입고객 백업 (JSON)</span></div>
+              </button>
+              <button className="settings-list-item" onClick={handleBackupSubscribedExcel}>
+                <div className="item-left"><Download size={16} color="#10b981" /> <span>가입고객 리스트 내보내기 (Excel)</span></div>
+              </button>
+              <button className="settings-list-item" onClick={handleClearAllSubscribed}>
+                <div className="item-left"><Trash2 size={16} color="#ef4444" /> <span>가입고객 모두 삭제</span></div>
+              </button>
+            </div>
+          </div>
+
           <div className="settings-list-group danger-zone">
             <div className="settings-list-header danger">데이터 삭제 및 초기화</div>
             <div className="settings-list-items">
@@ -528,6 +610,27 @@ export default function SettingsPage() {
               setIsLongTermManualAddOpen(false)
             } catch(e) {
               alert('장기 고객 추가에 실패했습니다.')
+            }
+          }}
+        />
+      )}
+
+      {isSubscribedBackupManagerOpen && (
+        <SubscribedBackupManagerModal 
+          onClose={() => setIsSubscribedBackupManagerOpen(false)}
+        />
+      )}
+
+      {isSubscribedManualAddOpen && (
+        <SubscribedManualAddModal 
+          onClose={() => setIsSubscribedManualAddOpen(false)}
+          onAdd={async (data) => {
+            try {
+              await addSubscribedCustomer(data)
+              alert('가입고객이 성공적으로 추가되었습니다.')
+              setIsSubscribedManualAddOpen(false)
+            } catch(e) {
+              alert('가입고객 추가에 실패했습니다.')
             }
           }}
         />

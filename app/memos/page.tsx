@@ -22,10 +22,10 @@ type GroupedCustomer = {
 }
 
 export default function MemosPage() {
-  const { customers, longTermCustomers, updateLongTermCustomer } = useData()
+  const { customers, longTermCustomers, updateLongTermCustomer, subscribedCustomers, updateSubscribedCustomer } = useData()
   const router = useRouter()
   
-  const [activeTab, setActiveTab] = useState<'regular' | 'longTerm'>('regular')
+  const [activeTab, setActiveTab] = useState<'regular' | 'longTerm' | 'subscribed'>('regular')
   const [loading, setLoading] = useState(true)
   const [groupedData, setGroupedData] = useState<GroupedCustomer[]>([])
   const [searchTerm, setSearchTerm] = useState('')
@@ -51,6 +51,16 @@ export default function MemosPage() {
       try {
         await updateLongTermCustomer(editingRecord.id, { 기록: editContent.trim() })
         alert('장기 고객 기록이 수정되었습니다.')
+        setEditingRecord(null)
+      } catch (err: any) {
+        alert(`수정 중 오류가 발생했습니다: ${err.message || err}`)
+      }
+      return
+    }
+    if (activeTab === 'subscribed') {
+      try {
+        await updateSubscribedCustomer(editingRecord.id, { 현장메모: editContent.trim() })
+        alert('가입 고객 기록이 수정되었습니다.')
         setEditingRecord(null)
       } catch (err: any) {
         alert(`수정 중 오류가 발생했습니다: ${err.message || err}`)
@@ -89,6 +99,16 @@ export default function MemosPage() {
       if (!confirm('장기 고객 기록을 삭제하시겠습니까?')) return
       try {
         await updateLongTermCustomer(recordId, { 기록: '' })
+        alert('기록이 삭제되었습니다.')
+      } catch (err: any) {
+        alert(`삭제 중 오류가 발생했습니다: ${err.message || err}`)
+      }
+      return
+    }
+    if (activeTab === 'subscribed') {
+      if (!confirm('가입 고객 기록을 삭제하시겠습니까?')) return
+      try {
+        await updateSubscribedCustomer(recordId, { 현장메모: '' })
         alert('기록이 삭제되었습니다.')
       } catch (err: any) {
         alert(`삭제 중 오류가 발생했습니다: ${err.message || err}`)
@@ -140,6 +160,11 @@ export default function MemosPage() {
       if (activeTab === 'longTerm') {
         // 장기고객의 메모 일괄 비우기
         const updatePromises = selectedRecords.map(record => updateLongTermCustomer(record.id, { 기록: '' }))
+        await Promise.all(updatePromises)
+        alert('선택한 기록들이 삭제되었습니다.')
+      } else if (activeTab === 'subscribed') {
+        // 가입고객의 메모 일괄 비우기
+        const updatePromises = selectedRecords.map(record => updateSubscribedCustomer(record.id, { 현장메모: '' }))
         await Promise.all(updatePromises)
         alert('선택한 기록들이 삭제되었습니다.')
       } else {
@@ -318,7 +343,40 @@ export default function MemosPage() {
     return result
   }, [longTermCustomers, searchTerm, sortOrder])
 
-  const displayData = activeTab === 'regular' ? filteredData : longTermData
+  const subscribedData = useMemo(() => {
+    const valid = (subscribedCustomers || []).filter(c => c.현장메모 && c.현장메모.trim() !== '')
+    const groups: GroupedCustomer[] = valid.map(c => ({
+      customerId: c.id,
+      customerName: c.고객명_상호 || '-',
+      customerNumber: c.고객번호 || '-',
+      latestDate: c.updated_at || c.created_at || new Date().toISOString(),
+      records: [{
+        id: c.id,
+        type: 'memo',
+        content: c.현장메모,
+        date: c.updated_at || c.created_at || new Date().toISOString()
+      }]
+    }))
+    
+    let result = groups
+    if (searchTerm) {
+      const lower = searchTerm.toLowerCase()
+      result = result.filter(g => 
+        g.customerName.toLowerCase().includes(lower) || 
+        g.records.some(r => r.content.toLowerCase().includes(lower))
+      )
+    }
+
+    result.sort((a, b) => {
+      const timeA = new Date(a.latestDate).getTime()
+      const timeB = new Date(b.latestDate).getTime()
+      return sortOrder === 'desc' ? timeB - timeA : timeA - timeB
+    })
+
+    return result
+  }, [subscribedCustomers, searchTerm, sortOrder])
+
+  const displayData = activeTab === 'regular' ? filteredData : (activeTab === 'longTerm' ? longTermData : subscribedData)
 
   return (
     <div className="memos-page">
@@ -346,6 +404,12 @@ export default function MemosPage() {
           onClick={() => setActiveTab('longTerm')}
         >
           장기 고객 관리기록
+        </button>
+        <button 
+          className={`tab-btn ${activeTab === 'subscribed' ? 'active' : ''}`}
+          onClick={() => setActiveTab('subscribed')}
+        >
+          가입 고객 관리기록
         </button>
       </div>
 
@@ -382,7 +446,7 @@ export default function MemosPage() {
             <div key={group.customerId} className="customer-card">
               <div 
                 className="card-header"
-                onClick={() => router.push(activeTab === 'regular' ? `/detail/${group.customerId}` : `/customers/${group.customerId}`)}
+                onClick={() => router.push(activeTab === 'regular' ? `/detail/${group.customerId}` : (activeTab === 'longTerm' ? `/customers/${group.customerId}` : `/subscribed/${group.customerId}`))}
               >
                 <div className="customer-info-row">
                   <h2 className="customer-name">{group.customerName}</h2>
@@ -392,7 +456,7 @@ export default function MemosPage() {
                   className="detail-btn"
                   onClick={(e) => {
                     e.stopPropagation()
-                    router.push(activeTab === 'regular' ? `/detail/${group.customerId}` : `/customers/${group.customerId}`)
+                    router.push(activeTab === 'regular' ? `/detail/${group.customerId}` : (activeTab === 'longTerm' ? `/customers/${group.customerId}` : `/subscribed/${group.customerId}`))
                   }}
                 >
                   상세보기 <ChevronRight size={14} />

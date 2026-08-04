@@ -62,6 +62,34 @@ export interface LongTermCustomer {
   updated_at?: string
 }
 
+export interface SubscribedCustomer {
+  id: string
+  고객번호: string
+  모델명: string
+  계약일자: string
+  계약만료일자: string
+  예약일자: string
+  당월작업: string
+  최종작업내용: string
+  status: string // 폴더 관리용 상태 ('미분류' 등)
+  계약자구분: string
+  고객명_상호: string
+  사업자번호: string
+  전화번호: string
+  핸드폰번호: string
+  주소: string
+  설치처구분: string
+  설치자명: string
+  설치구분: string
+  설치전화번호: string
+  설치핸드폰번호: string
+  설치주소: string
+  설치시특이사항: string
+  현장메모?: string
+  lat?: number
+  lng?: number
+  created_at?: string
+}
 interface DataContextType {
   customers: CustomerData[]
   setCustomers: (data: CustomerData[]) => Promise<void>
@@ -117,6 +145,17 @@ interface DataContextType {
   deleteLongTermCustomers: (ids: string[]) => Promise<void>
   restoreLongTermFromBackup: (backupData: LongTermCustomer[]) => Promise<void>
   clearAllLongTermCustomers: () => Promise<void>
+  
+  // 가입고객 상태 및 함수
+  subscribedCustomers: SubscribedCustomer[]
+  setSubscribedCustomers: (data: SubscribedCustomer[]) => Promise<void>
+  updateSubscribedCustomer: (id: string, updates: Partial<SubscribedCustomer>) => Promise<void>
+  addSubscribedCustomer: (customer: SubscribedCustomer) => Promise<void>
+  changeSubscribedCustomerStatus: (ids: string[], newStatus: string) => Promise<void>
+  deleteSubscribedCustomers: (ids: string[]) => Promise<void>
+  copyToSubscribed: (customerIds: string[]) => Promise<void>
+  clearAllSubscribedCustomers: () => Promise<void>
+  restoreSubscribedFromBackup: (backupData: SubscribedCustomer[]) => Promise<void>
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined)
@@ -137,6 +176,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
   // 장기 고객 관리 상태
   const [longTermCustomers, setLongTermCustomersState] = useState<LongTermCustomer[]>([])
+  const [subscribedCustomers, setSubscribedCustomersState] = useState<SubscribedCustomer[]>([])
 
   // 전화번호 보정 로직 (10으로 시작하면 0 추가)
   const fixPhoneNumber = (phone: string) => {
@@ -230,6 +270,30 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       }
     }
     setLongTermCustomersState(loadedLongTerm)
+
+    // 가입고객 로드 (Supabase or LocalStorage)
+    let loadedSubscribed: SubscribedCustomer[] = []
+    if (isSupabaseConfigured) {
+      try {
+        const { data, error } = await supabase.from('subscribed_customers').select('*').order('created_at', { ascending: false })
+        if (error) throw error
+        if (data) {
+          loadedSubscribed = data as SubscribedCustomer[]
+        }
+      } catch (err) {
+        console.error('Subscribed Supabase load error:', err)
+      }
+    } else {
+      const stored = localStorage.getItem('subscribedCustomers')
+      if (stored) {
+        try {
+          loadedSubscribed = JSON.parse(stored)
+        } catch (e) {
+          console.error(e)
+        }
+      }
+    }
+    setSubscribedCustomersState(loadedSubscribed)
     localStorage.setItem('longTermCustomers', JSON.stringify(loadedLongTerm))
 
     // 2.5 Fetch memos if Supabase is configured
@@ -1049,6 +1113,183 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem('longTermCustomers', JSON.stringify(fixedData))
   }
 
+  // --- 가입고객 관리 함수 ---
+  
+  const setSubscribedCustomers = async (data: SubscribedCustomer[]) => {
+    setSubscribedCustomersState(data)
+    localStorage.setItem('subscribedCustomers', JSON.stringify(data))
+  }
+
+  const addSubscribedCustomer = async (newCustomer: SubscribedCustomer) => {
+    const isSupabaseConfigured = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    if (isSupabaseConfigured) {
+      const { error } = await supabase.from('subscribed_customers').insert([newCustomer])
+      if (error) {
+        console.error('Supabase subscribed insert error:', error)
+        alert('서버 저장 실패')
+      }
+    }
+    setSubscribedCustomersState(prev => {
+      const updated = [newCustomer, ...prev]
+      localStorage.setItem('subscribedCustomers', JSON.stringify(updated))
+      return updated
+    })
+  }
+
+  const updateSubscribedCustomer = async (id: string, updates: Partial<SubscribedCustomer>) => {
+    let targetDb: Partial<SubscribedCustomer> | null = null
+    const updated = subscribedCustomers.map(c => {
+      if (c.id === id) {
+        targetDb = { ...c, ...updates }
+        return targetDb as SubscribedCustomer
+      }
+      return c
+    })
+    setSubscribedCustomersState(updated)
+    localStorage.setItem('subscribedCustomers', JSON.stringify(updated))
+
+    if (targetDb && process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+      const { error } = await supabase.from('subscribed_customers').update(targetDb).eq('id', id)
+      if (error) console.error('Supabase update error:', error)
+    }
+  }
+
+  const changeSubscribedCustomerStatus = async (ids: string[], newStatus: string) => {
+    const updated = subscribedCustomers.map(c => 
+      ids.includes(c.id) ? { ...c, status: newStatus } : c
+    )
+    setSubscribedCustomersState(updated)
+    localStorage.setItem('subscribedCustomers', JSON.stringify(updated))
+
+    if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+      const { error } = await supabase.from('subscribed_customers').update({ status: newStatus }).in('id', ids)
+      if (error) console.error('Supabase status update error:', error)
+    }
+  }
+
+  const deleteSubscribedCustomers = async (ids: string[]) => {
+    const updated = subscribedCustomers.filter(c => !ids.includes(c.id))
+    setSubscribedCustomersState(updated)
+    localStorage.setItem('subscribedCustomers', JSON.stringify(updated))
+
+    if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+      const { error } = await supabase.from('subscribed_customers').delete().in('id', ids)
+      if (error) console.error('Supabase delete error:', error)
+    }
+  }
+
+  const copyToSubscribed = async (customerIds: string[]) => {
+    const isSupabaseConfigured = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    const targets = customers.filter(c => customerIds.includes(c.id))
+    if (targets.length === 0) return
+
+    const newSubscribed: SubscribedCustomer[] = []
+    const updatedSubscribed: SubscribedCustomer[] = []
+    const currentList = [...subscribedCustomers]
+
+    for (const c of targets) {
+      const subId = toUUID(c.id)
+      const existingIndex = currentList.findIndex(sub => sub.id === subId || (sub.고객명_상호 === (c.고객명_상호 || '') && sub.고객번호 === (c.고객번호 || '')))
+      
+      if (existingIndex >= 0) {
+        const existing = currentList[existingIndex]
+        const updatedSub = { ...existing }
+        let hasChanges = false
+
+        if (c.계약만료일자 && updatedSub.계약만료일자 !== c.계약만료일자) { updatedSub.계약만료일자 = c.계약만료일자; hasChanges = true }
+        if (c.전화번호 && updatedSub.전화번호 !== c.전화번호) { updatedSub.전화번호 = c.전화번호; hasChanges = true }
+        if (c.핸드폰번호 && updatedSub.핸드폰번호 !== c.핸드폰번호) { updatedSub.핸드폰번호 = c.핸드폰번호; hasChanges = true }
+        if (c.주소 && updatedSub.주소 !== c.주소) { updatedSub.주소 = c.주소; hasChanges = true }
+
+        if (hasChanges) {
+          currentList[existingIndex] = updatedSub
+          updatedSubscribed.push(updatedSub)
+        }
+      } else {
+        const newSub: SubscribedCustomer = {
+          id: subId,
+          고객번호: c.고객번호 || '',
+          모델명: c.모델명 || '',
+          계약일자: c.계약일자 || '',
+          계약만료일자: c.계약만료일자 || '',
+          예약일자: c.예약일자 || '',
+          당월작업: c.당월작업 || '',
+          최종작업내용: c.최종작업내용 || '',
+          status: '미분류',
+          계약자구분: c.계약자구분 || '',
+          고객명_상호: c.고객명_상호 || '',
+          사업자번호: c.사업자번호 || '',
+          전화번호: c.전화번호 || '',
+          핸드폰번호: c.핸드폰번호 || '',
+          주소: c.주소 || '',
+          설치처구분: c.설치처구분 || '',
+          설치자명: c.설치자명 || '',
+          설치구분: c.설치구분 || '',
+          설치전화번호: c.설치전화번호 || '',
+          설치핸드폰번호: c.설치핸드폰번호 || '',
+          설치주소: c.설치주소 || '',
+          설치시특이사항: c.설치시특이사항 || '',
+          현장메모: c.현장메모 || '',
+          created_at: new Date().toISOString()
+        }
+        newSubscribed.push(newSub)
+        currentList.push(newSub)
+      }
+    }
+
+    if (newSubscribed.length === 0 && updatedSubscribed.length === 0) {
+      alert('업데이트되거나 새로 가입고객으로 복사될 데이터가 없습니다.')
+      return
+    }
+
+    setSubscribedCustomersState(currentList)
+    localStorage.setItem('subscribedCustomers', JSON.stringify(currentList))
+
+    if (isSupabaseConfigured) {
+      try {
+        const upsertData = [...newSubscribed, ...updatedSubscribed]
+        const { error } = await supabase.from('subscribed_customers').upsert(upsertData)
+        if (error) {
+          console.error('Supabase subscribed upsert error:', error)
+          alert(`서버 저장 실패: ${error.message || JSON.stringify(error)}`)
+        }
+      } catch (err) {
+        console.error(err)
+      }
+    }
+  }
+
+  const clearAllSubscribedCustomers = async () => {
+    setSubscribedCustomersState([])
+    localStorage.removeItem('subscribedCustomers')
+    if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+      try {
+        await supabase.from('subscribed_customers').delete().neq('id', 'dummy')
+      } catch(e) {}
+    }
+  }
+
+  const restoreSubscribedFromBackup = async (backupData: SubscribedCustomer[]) => {
+    if (!backupData || !Array.isArray(backupData)) return
+    
+    setSubscribedCustomersState(backupData)
+    localStorage.setItem('subscribedCustomers', JSON.stringify(backupData))
+    
+    if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+      try {
+        await supabase.from('subscribed_customers').delete().neq('id', 'dummy')
+        const chunkSize = 100
+        for (let i = 0; i < backupData.length; i += chunkSize) {
+          const chunk = backupData.slice(i, i + chunkSize)
+          const { error } = await supabase.from('subscribed_customers').insert(chunk)
+          if (error) console.error('Supabase subscribed restore error:', error)
+        }
+      } catch(e) {
+        console.error(e)
+      }
+    }
+  }
+
   // Prevent hydration mismatch by not rendering children until initialized
   if (!isInitialized) return null
 
@@ -1102,7 +1343,16 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       updateLongTermCustomerCoords,
       deleteLongTermCustomers,
       clearAllLongTermCustomers,
-      restoreLongTermFromBackup
+      restoreLongTermFromBackup,
+      subscribedCustomers,
+      setSubscribedCustomers,
+      updateSubscribedCustomer,
+      addSubscribedCustomer,
+      changeSubscribedCustomerStatus,
+      deleteSubscribedCustomers,
+      copyToSubscribed,
+      clearAllSubscribedCustomers,
+      restoreSubscribedFromBackup
     }}>
       {children}
       <WorkCompletionModal />

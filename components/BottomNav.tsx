@@ -4,28 +4,12 @@ import React from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useData } from '@/lib/DataContext'
-import { 
-  LayoutGrid, 
-  Map, 
-  Navigation, 
-  Settings, 
-  FileText, 
-  FolderPlus, 
-  Trash2,
-  Clock,
-  Calendar,
-  CheckCircle2,
-  MoreHorizontal,
-  MessageSquare,
-  Users,
-  Copy,
-  FileSpreadsheet
-} from 'lucide-react'
+import { LayoutGrid, Map, Users, Settings, PlusCircle, CheckCircle2, Copy, UserPlus, Clock, Calendar, Trash2, FolderPlus, MapPin, FileText, MessageSquare, FileSpreadsheet, MoreHorizontal } from 'lucide-react'
 
 export default function BottomNav() {
   const pathname = usePathname()
   const router = useRouter()
-  const { customers, setCustomers, selectedIds, setSelectedIds, changeCustomerStatus, copyToLongTerm } = useData()
+  const { customers, setCustomers, selectedIds, setSelectedIds, copyToLongTerm, copyToSubscribed, changeCustomerStatus } = useData()
   const [isMoreOpen, setIsMoreOpen] = React.useState(false)
 
   // 모달 관련 상태
@@ -93,6 +77,10 @@ export default function BottomNav() {
           <button className="action-btn" onClick={() => { copyToLongTerm(selectedIds); setSelectedIds([]) }}>
             <Copy size={18} />
             <span>고객관리</span>
+          </button>
+          <button className="action-btn" onClick={() => { copyToSubscribed(selectedIds); setSelectedIds([]) }}>
+            <UserPlus size={18} />
+            <span>가입고객</span>
           </button>
           <button className="action-btn" onClick={() => handleBulkStatusChange('작업미완료')}>
             <Clock size={18} />
@@ -397,6 +385,10 @@ export default function BottomNav() {
               <Users size={18} />
               <span>고객관리</span>
             </Link>
+            <Link href="/subscribed" className={`more-menu-item ${pathname === '/subscribed' ? 'active' : ''}`} onClick={() => setIsMoreOpen(false)}>
+              <UserPlus size={18} />
+              <span>가입고객</span>
+            </Link>
             <Link href="/sms" className={`more-menu-item ${pathname === '/sms' ? 'active' : ''}`} onClick={() => setIsMoreOpen(false)}>
               <MessageSquare size={18} />
               <span>문자</span>
@@ -405,10 +397,6 @@ export default function BottomNav() {
               <FileText size={18} />
               <span>메모</span>
             </Link>
-            <Link href="/settings" className={`more-menu-item ${pathname === '/settings' ? 'active' : ''}`} onClick={() => setIsMoreOpen(false)}>
-              <Settings size={18} />
-              <span>설정</span>
-            </Link>
             <Link href="/products" className={`more-menu-item ${pathname === '/products' ? 'active' : ''}`} onClick={() => setIsMoreOpen(false)}>
               <LayoutGrid size={18} />
               <span>제품목록</span>
@@ -416,6 +404,10 @@ export default function BottomNav() {
             <Link href="/quotes" className={`more-menu-item ${pathname === '/quotes' ? 'active' : ''}`} onClick={() => setIsMoreOpen(false)}>
               <FileSpreadsheet size={18} />
               <span>견적서</span>
+            </Link>
+            <Link href="/settings" className={`more-menu-item ${pathname === '/settings' ? 'active' : ''}`} onClick={() => setIsMoreOpen(false)}>
+              <Settings size={18} />
+              <span>설정</span>
             </Link>
           </div>
         </div>
