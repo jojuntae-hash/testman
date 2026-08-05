@@ -373,7 +373,7 @@ export default function BottomNav() {
     )
   }
 
-  const isMoreActive = ['/sms', '/memos', '/settings', '/customers', '/products', '/quotes'].includes(pathname)
+  const isMoreActive = ['/sms', '/memos', '/settings', '/completed', '/products', '/quotes'].includes(pathname)
 
   // 일반 내비게이션 바
   return (
@@ -381,14 +381,11 @@ export default function BottomNav() {
       {isMoreOpen && (
         <div className="more-menu-overlay" onClick={() => setIsMoreOpen(false)}>
           <div className="more-menu-container animated-slide-up" onClick={(e) => e.stopPropagation()}>
-            <Link href="/customers" className={`more-menu-item ${pathname === '/customers' ? 'active' : ''}`} onClick={() => setIsMoreOpen(false)}>
-              <Users size={18} />
-              <span>고객관리</span>
+            <Link href="/completed" className={`more-menu-item ${pathname === '/completed' ? 'active' : ''}`} onClick={() => setIsMoreOpen(false)}>
+              <CheckCircle2 size={18} />
+              <span>작업완료</span>
             </Link>
-            <Link href="/subscribed" className={`more-menu-item ${pathname === '/subscribed' ? 'active' : ''}`} onClick={() => setIsMoreOpen(false)}>
-              <UserPlus size={18} />
-              <span>가입고객</span>
-            </Link>
+
             <Link href="/sms" className={`more-menu-item ${pathname === '/sms' ? 'active' : ''}`} onClick={() => setIsMoreOpen(false)}>
               <MessageSquare size={18} />
               <span>문자</span>
@@ -426,9 +423,13 @@ export default function BottomNav() {
           <Calendar size={22} />
           <span>일정</span>
         </Link>
-        <Link href="/completed" className={`nav-item ${pathname === '/completed' ? 'active' : ''}`}>
-          <CheckCircle2 size={22} />
-          <span>작업완료</span>
+        <Link href="/customers" className={`nav-item ${pathname === '/customers' ? 'active' : ''}`}>
+          <Users size={22} />
+          <span>고객관리</span>
+        </Link>
+        <Link href="/subscribed" className={`nav-item ${pathname === '/subscribed' ? 'active' : ''}`}>
+          <UserPlus size={22} />
+          <span>가입고객</span>
         </Link>
         <button 
           className={`nav-item nav-btn ${isMoreActive ? 'active' : ''} ${isMoreOpen ? 'open' : ''}`}

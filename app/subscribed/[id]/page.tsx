@@ -68,9 +68,10 @@ export default function SubscribedCustomerDetailPage() {
       계약일자: customer.계약일자 || '',
       계약만료일자: customer.계약만료일자 || '',
       주소: customer.주소 || '',
-      설치자명: customer.설치자명 || '',
-      설치전화번호: customer.설치전화번호 || '',
-      설치주소: customer.설치주소 || ''
+      약정: customer.약정 || '',
+      가입유형: customer.가입유형 || '',
+      월렌탈료: customer.월렌탈료 || '',
+      생년월일: customer.생년월일 || ''
     })
     setIsEditingInfo(true)
   }
@@ -262,6 +263,50 @@ export default function SubscribedCustomerDetailPage() {
               )}
             </div>
             
+            <div className="info-item">
+              <span className="info-label">약정</span>
+              {isEditingInfo ? (
+                <input className="edit-input" name="약정" value={editForm.약정 || ''} onChange={handleFormChange} placeholder="예: 3년 / 5년" />
+              ) : (
+                <span className="info-value">{customer.약정 || '-'}</span>
+              )}
+            </div>
+            <div className="info-item">
+              <span className="info-label">가입유형</span>
+              {isEditingInfo ? (
+                <select 
+                  className="edit-input" 
+                  name="가입유형" 
+                  value={editForm.가입유형 || ''} 
+                  onChange={(e) => setEditForm((prev: any) => ({ ...prev, 가입유형: e.target.value }))}
+                  style={{ background: 'white', height: '38px' }}
+                >
+                  <option value="">선택안함</option>
+                  <option value="신규">신규</option>
+                  <option value="패키지">패키지</option>
+                  <option value="재렌탈">재렌탈</option>
+                </select>
+              ) : (
+                <span className="info-value">{customer.가입유형 || '-'}</span>
+              )}
+            </div>
+            <div className="info-item">
+              <span className="info-label">월렌탈료</span>
+              {isEditingInfo ? (
+                <input className="edit-input" name="월렌탈료" value={editForm.월렌탈료 || ''} onChange={handleFormChange} placeholder="예: 29900" />
+              ) : (
+                <span className="info-value">{customer.월렌탈료 ? (isNaN(Number(customer.월렌탈료)) ? customer.월렌탈료 : `${Number(customer.월렌탈료).toLocaleString()}원`) : '-'}</span>
+              )}
+            </div>
+            <div className="info-item">
+              <span className="info-label">생년월일</span>
+              {isEditingInfo ? (
+                <input className="edit-input" name="생년월일" value={editForm.생년월일 || ''} onChange={handleFormChange} placeholder="예: 950615" />
+              ) : (
+                <span className="info-value">{customer.생년월일 || '-'}</span>
+              )}
+            </div>
+
             <div className="info-item full-width">
               <span className="info-label">고객 주소</span>
               {isEditingInfo ? (
@@ -288,72 +333,7 @@ export default function SubscribedCustomerDetailPage() {
           </div>
         </div>
 
-        {/* 설치 정보 카드 */}
-        <div className="info-card">
-          <div className="card-title">설치 정보</div>
-          <div className="info-grid">
-            <div className="info-item">
-              <span className="info-label">설치자명</span>
-              {isEditingInfo ? (
-                <input className="edit-input" name="설치자명" value={editForm.설치자명} onChange={handleFormChange} />
-              ) : (
-                <span className="info-value">{customer.설치자명 || '-'}</span>
-              )}
-            </div>
-            <div className="info-item">
-              <span className="info-label">설치 전화번호</span>
-              {isEditingInfo ? (
-                <input className="edit-input" name="설치전화번호" value={editForm.설치전화번호} onChange={handleFormChange} />
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <span className="info-value">{customer.설치전화번호 || '-'}</span>
-                  {customer.설치전화번호 && (
-                    <div style={{ display: 'flex', gap: '6px' }}>
-                      <a href={`tel:${String(customer.설치전화번호).replace(/[^0-9]/g, '')}`} className="mini-call-btn">
-                        <Phone size={12} />
-                      </a>
-                      <a href={`sms:${String(customer.설치전화번호).replace(/[^0-9]/g, '')}`} className="mini-sms-btn">
-                        <MessageCircle size={12} />
-                      </a>
-                      <button 
-                        className="mini-sms-btn queue" 
-                        onClick={() => {
-                          addToSmsQueue(customer.고객명_상호 || '이름없음', customer.설치전화번호 || '')
-                          alert('문자 전송 목록에 추가되었습니다.')
-                        }}
-                      >
-                        <ListPlus size={12} />
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-            <div className="info-item full-width">
-              <span className="info-label">설치 주소</span>
-              {isEditingInfo ? (
-                <input className="edit-input" name="설치주소" value={editForm.설치주소} onChange={handleFormChange} />
-              ) : (
-                <div className="value-with-action">
-                  <span className="info-value">{customer.설치주소 || '-'}</span>
-                  {customer.설치주소 && (
-                    <div style={{ display: 'flex', gap: '6px' }}>
-                      <button className="mini-map-btn" onClick={() => handleMapClick(customer.설치주소)} title="기본 지도 열기">
-                        <MapPin size={12} />
-                      </button>
-                      <button className="mini-map-btn" onClick={() => openNaverMap(customer.설치주소)} title="네이버 지도 열기">
-                        <span style={{ fontSize: '10px', fontWeight: 'bold' }}>N</span>
-                      </button>
-                      <button className="mini-map-btn" onClick={() => handleCopyAddress(customer.설치주소)} title="주소 복사">
-                        <Copy size={12} />
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+
 
         {/* 기록 카드 */}
         <div className="info-card">

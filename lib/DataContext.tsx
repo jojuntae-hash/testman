@@ -35,6 +35,11 @@ export interface CustomerData {
   lat?: number
   lng?: number
   created_at?: string
+  약정?: string
+  가입유형?: string
+  월렌탈료?: string
+  생년월일?: string
+  이름?: string
 }
 
 export interface LongTermCustomer {
@@ -1123,7 +1128,38 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const addSubscribedCustomer = async (newCustomer: SubscribedCustomer) => {
     const isSupabaseConfigured = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
     if (isSupabaseConfigured) {
-      const { error } = await supabase.from('subscribed_customers').insert([newCustomer])
+      // DB에 실제 존재하는 컬럼만 추출해서 insert (스키마 캐시 오류 방지)
+      const dbPayload: Record<string, unknown> = {
+        id: newCustomer.id,
+        고객번호: newCustomer.고객번호,
+        모델명: newCustomer.모델명,
+        계약일자: newCustomer.계약일자,
+        계약만료일자: newCustomer.계약만료일자,
+        status: newCustomer.status,
+        계약자구분: newCustomer.계약자구분,
+        고객명_상호: newCustomer.고객명_상호,
+        사업자번호: newCustomer.사업자번호,
+        전화번호: newCustomer.전화번호,
+        핸드폰번호: newCustomer.핸드폰번호,
+        주소: newCustomer.주소,
+        설치처구분: newCustomer.설치처구분,
+        설치자명: newCustomer.설치자명,
+        설치구분: newCustomer.설치구분,
+        설치전화번호: newCustomer.설치전화번호,
+        설치핸드폰번호: newCustomer.설치핸드폰번호,
+        설치주소: newCustomer.설치주소,
+        설치시특이사항: newCustomer.설치시특이사항,
+      }
+      // 선택적 컬럼은 값이 있을 때만 포함
+      if (newCustomer.현장메모 !== undefined) dbPayload['현장메모'] = newCustomer.현장메모
+      if (newCustomer.lat !== undefined) dbPayload['lat'] = newCustomer.lat
+      if (newCustomer.lng !== undefined) dbPayload['lng'] = newCustomer.lng
+      if ((newCustomer as any).약정 !== undefined) dbPayload['약정'] = (newCustomer as any).약정
+      if ((newCustomer as any).가입유형 !== undefined) dbPayload['가입유형'] = (newCustomer as any).가입유형
+      if ((newCustomer as any).월렌탈료 !== undefined) dbPayload['월렌탈료'] = (newCustomer as any).월렌탈료
+      if ((newCustomer as any).생년월일 !== undefined) dbPayload['생년월일'] = (newCustomer as any).생년월일
+
+      const { error } = await supabase.from('subscribed_customers').insert([dbPayload])
       if (error) {
         console.error('Supabase subscribed insert error:', error)
         alert('서버 저장 실패')
@@ -1135,6 +1171,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       return updated
     })
   }
+
 
   const updateSubscribedCustomer = async (id: string, updates: Partial<SubscribedCustomer>) => {
     let targetDb: Partial<SubscribedCustomer> | null = null

@@ -2,7 +2,8 @@
 
 import React, { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronLeft, ChevronRight, Search, X, MapPin, FolderPlus, Trash2, Map } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Search, X, MapPin, FolderPlus, Trash2, Map, SlidersHorizontal, UserPlus } from 'lucide-react'
+import FolderOrderModal from '@/components/FolderOrderModal'
 import { useData } from '@/lib/DataContext'
 
 const formatShortAddress = (addr: string) => {
@@ -12,7 +13,7 @@ const formatShortAddress = (addr: string) => {
 
 export default function CustomersPage() {
   const router = useRouter()
-  const { longTermCustomers, changeLongTermCustomerStatus, deleteLongTermCustomers, folderColors, updateFolderColor } = useData()
+  const { longTermCustomers, changeLongTermCustomerStatus, deleteLongTermCustomers, folderColors, updateFolderColor, copyLongTermToSubscribed } = useData()
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedFolder, setSelectedFolder] = useState('전체')
   const [sortOption, setSortOption] = useState('name')
@@ -28,6 +29,8 @@ export default function CustomersPage() {
   const [isFolderModalOpen, setIsFolderModalOpen] = useState(false)
   const [newFolderName, setNewFolderName] = useState('')
   const [newFolderColor, setNewFolderColor] = useState('#3b82f6')
+  const [isOrderModalOpen, setIsOrderModalOpen] = useState(false)
+  const [customOrderVersion, setCustomOrderVersion] = useState(0)
 
   React.useEffect(() => {
     setCurrentPage(1)
@@ -47,8 +50,19 @@ export default function CustomersPage() {
 
   const folders = useMemo(() => {
     const unique = Array.from(new Set(longTermCustomers.map(c => c.status || '미분류')))
+    const savedOrder = typeof window !== 'undefined' ? localStorage.getItem('folderOrder_long') : null
+    if (savedOrder) {
+      try {
+        const orderArr = JSON.parse(savedOrder)
+        const existingSaved = orderArr.filter(f => unique.includes(f))
+        const missing = unique.filter(f => !existingSaved.includes(f))
+        return ['전체', ...existingSaved, ...missing]
+      } catch (e) {
+        console.error(e)
+      }
+    }
     return ['전체', ...unique]
-  }, [longTermCustomers])
+  }, [longTermCustomers, customOrderVersion])
 
   const getModelCategory = (modelName?: string) => {
     if (!modelName) return '기타'
@@ -97,11 +111,11 @@ export default function CustomersPage() {
     )
   }
 
-  const getCompletionBadge = (date?: string) => {
+  const getExpiryBadge = (date?: string) => {
     if (!date) return null
     const parts = date.split('-')
     if (parts.length === 3) {
-      return <span className="model-badge comp-badge">{parts[1]}-{parts[2]} 완료</span>
+      return <span className="model-badge expiry-badge">{parts[0].slice(2)}-{parts[1]}-{parts[2]} 만료</span>
     }
     return null
   }
@@ -130,10 +144,10 @@ export default function CustomersPage() {
       switch (sortOption) {
         case 'model':
           return (getModelCategory(a.모델명) || '').localeCompare(getModelCategory(b.모델명) || '')
-        case 'comp-desc':
-          return (b.작업완료일 || '').localeCompare(a.작업완료일 || '')
-        case 'comp-asc':
-          return (a.작업완료일 || '').localeCompare(b.작업완료일 || '')
+        case 'expiry-desc':
+          return (b.계약만료일 || '').localeCompare(a.계약만료일 || '')
+        case 'expiry-asc':
+          return (a.계약만료일 || '').localeCompare(b.계약만료일 || '')
         case 'months-asc':
           return getElapsedMonths(a.계약일자) - getElapsedMonths(b.계약일자)
         case 'months-desc':
@@ -175,6 +189,14 @@ export default function CustomersPage() {
     if (selectedIds.length === 0) return
     if (confirm('선택한 장기 고객을 삭제하시겠습니까?')) {
       await deleteLongTermCustomers(selectedIds)
+      setSelectedIds([])
+    }
+  }
+
+  const handleCopyToSubscribed = async () => {
+    if (selectedIds.length === 0) return
+    if (confirm(`선택한 ${selectedIds.length}명의 고객을 가입고객 리스트로 복사하시겠습니까?`)) {
+      await copyLongTermToSubscribed(selectedIds)
       setSelectedIds([])
     }
   }
@@ -227,7 +249,7 @@ export default function CustomersPage() {
           {searchTerm && <X size={18} className="clear-icon" onClick={() => setSearchTerm('')} />}
         </div>
         
-        <div className="category-filters">
+        <div className="category-filters" style={{ display: 'flex', alignItems: 'center', gap: '8px', overflowX: 'auto', width: '100%' }}>
           {folders.map(folder => (
             <button 
               key={folder}
@@ -240,6 +262,14 @@ export default function CustomersPage() {
               {folder}
             </button>
           ))}
+          <button 
+            className="cat-btn order-edit-btn" 
+            onClick={() => setIsOrderModalOpen(true)}
+            title="폴더 순서 변경"
+            style={{ padding: '6px 8px', background: '#f8fafc', borderColor: '#e2e8f0', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >
+            <SlidersHorizontal size={14} />
+          </button>
         </div>
       </div>
 
@@ -263,8 +293,8 @@ export default function CustomersPage() {
             >
               <option value="name">이름순</option>
               <option value="model">장비순</option>
-              <option value="comp-desc">완료일 최신순</option>
-              <option value="comp-asc">완료일 오래된순</option>
+              <option value="expiry-desc">만료일 최신순</option>
+              <option value="expiry-asc">만료일 오래된순</option>
               <option value="months-asc">개월수 오름차순</option>
               <option value="months-desc">개월수 내림차순</option>
             </select>
@@ -282,9 +312,9 @@ export default function CustomersPage() {
                 <div className="item-header">
                   <div className="item-title-row">
                     <p className="font-bold">{customer.고객명_상호}</p>
-                    {getCompletionBadge(customer.작업완료일)}
                     {getModelTypeBadge(customer.모델명)}
                     {getElapsedMonthsBadge(customer.계약일자)}
+                    {getExpiryBadge(customer.계약만료일)}
                   </div>
                   <button className="detail-link-btn" onClick={(e) => { e.stopPropagation(); router.push(`/customers/${customer.id}`); }}>
                     상세 <ChevronRight size={14} />
@@ -334,6 +364,10 @@ export default function CustomersPage() {
             <button className="action-btn" onClick={handleMapClick}>
               <Map size={18} />
               <span>지도</span>
+            </button>
+            <button className="action-btn copy-btn" onClick={handleCopyToSubscribed}>
+              <UserPlus size={18} />
+              <span>가입복사</span>
             </button>
             <button className="action-btn folder-btn" onClick={() => setIsFolderModalOpen(true)}>
               <FolderPlus size={18} />
@@ -403,6 +437,16 @@ export default function CustomersPage() {
         </div>
       )}
 
+      <FolderOrderModal
+        isOpen={isOrderModalOpen}
+        onClose={() => setIsOrderModalOpen(false)}
+        folders={folders}
+        onSave={(newOrder) => {
+          localStorage.setItem('folderOrder_long', JSON.stringify(newOrder))
+          setCustomOrderVersion(v => v + 1)
+        }}
+      />
+
       <style jsx>{`
         .customers-page { padding: 0; padding-bottom: 120px; background: #f8fafc; min-height: 100%; }
         .view-header { height: 70px; display: flex; align-items: center; padding: 0 15px; border-bottom: 1px solid #f1f5f9; background: #fff; position: sticky; top: 0; z-index: 100; margin-bottom: 15px; }
@@ -443,6 +487,7 @@ export default function CustomersPage() {
         :global(.model-badge.bidet) { background: #fff7ed; color: #ea580c; }
         :global(.model-badge.elapsed-months) { background: #f1f5f9; color: #475569; }
         :global(.model-badge.comp-badge) { border: 1px solid #10b981; color: #10b981; background: transparent; }
+        :global(.model-badge.expiry-badge) { background: #fef2f2; color: #ef4444; }
         
         .detail-link-btn { display: flex; align-items: center; gap: 2px; background: #fff; color: #64748b; border: 1px solid #e2e8f0; padding: 4px 8px 4px 12px; border-radius: 8px; font-size: 0.75rem; font-weight: 700; cursor: pointer; transition: all 0.2s; }
         .detail-link-btn:active { background: #f1f5f9; }

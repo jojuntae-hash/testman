@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useData } from '@/lib/DataContext'
-import { ChevronLeft, Save, Trash2, Download, Upload, FileUp, Map as MapIcon, Clock, Key, Home, Settings as SettingsIcon, Search, Lock, Unlock, RotateCcw, Database, LogOut } from 'lucide-react'
+import { ChevronLeft, Save, Trash2, Download, Upload, FileUp, Map as MapIcon, Clock, Key, Home, Settings as SettingsIcon, Search, Lock, Unlock, RotateCcw, Database, LogOut, RefreshCw } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import Script from 'next/script'
 import ManualAddModal from '@/components/ManualAddModal'
@@ -17,7 +17,7 @@ import PDFBulkUploadModal from '@/components/PDFBulkUploadModal'
 
 export default function SettingsPage() {
   const router = useRouter()
-  const { customers, setCustomers, addCustomer, resetToDefault, clearAllCustomers, longTermCustomers, restoreLongTermFromBackup, clearAllLongTermCustomers, addLongTermCustomer, subscribedCustomers, restoreSubscribedFromBackup, clearAllSubscribedCustomers, addSubscribedCustomer } = useData()
+  const { customers, setCustomers, addCustomer, resetToDefault, clearAllCustomers, longTermCustomers, restoreLongTermFromBackup, clearAllLongTermCustomers, addLongTermCustomer, subscribedCustomers, restoreSubscribedFromBackup, clearAllSubscribedCustomers, addSubscribedCustomer, syncMemosWithManagement } = useData()
   
   // 기본 설정 상태
   const [defaultSource, setDefaultSource] = useState('')
@@ -36,6 +36,7 @@ export default function SettingsPage() {
   const [isSubscribedBackupManagerOpen, setIsSubscribedBackupManagerOpen] = useState(false)
   const [isSubscribedManualAddOpen, setIsSubscribedManualAddOpen] = useState(false)
   const [isPdfBulkModalOpen, setIsPdfBulkModalOpen] = useState(false)
+  const [isSyncingMemos, setIsSyncingMemos] = useState(false)
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -71,6 +72,26 @@ export default function SettingsPage() {
         setDefaultSource(data.address)
       }
     }).open()
+  }
+
+  // 장기/가입고객 메모 동기화
+  const handleSyncMemos = async () => {
+    if (confirm('현재 일반 고객 리스트의 고객들과 장기/가입고객 리스트를 대조하여 기존 관리기록(메모)을 동기화하시겠습니까? (새 메모가 있을 경우 이전 메모가 아래에 추가됩니다)')) {
+      setIsSyncingMemos(true)
+      try {
+        const { successCount, failedCount } = await syncMemosWithManagement()
+        let msg = `${successCount}명의 고객 메모가 기존 관리기록과 동기화되었습니다.`
+        if (failedCount > 0) {
+          msg += ` (실패: ${failedCount}건)`
+        }
+        alert(msg)
+      } catch (err: any) {
+        console.error(err)
+        alert('동기화 처리 중 오류가 발생했습니다: ' + (err.message || err))
+      } finally {
+        setIsSyncingMemos(false)
+      }
+    }
   }
 
   // 데이터 백업 (JSON)
@@ -480,6 +501,12 @@ export default function SettingsPage() {
               </button>
               <button className="settings-list-item" onClick={() => setIsManualAddOpen(true)}>
                 <div className="item-left"><Upload size={16} color="#3b82f6" /> <span>수동으로 1건 추가</span></div>
+              </button>
+              <button className="settings-list-item" onClick={handleSyncMemos} disabled={isSyncingMemos}>
+                <div className="item-left">
+                  <RefreshCw size={16} color="#8b5cf6" className={isSyncingMemos ? 'animate-spin' : ''} /> 
+                  <span>장기/가입고객 메모 동기화</span>
+                </div>
               </button>
             </div>
           </div>

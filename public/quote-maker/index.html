@@ -90,7 +90,12 @@
                             <div class="form-grid">
                                 <div class="form-group col-span-2">
                                     <div class="flex-between" style="margin-bottom: 6px;">
-                                        <label>회사 로고 등록</label>
+                                        <div style="display: flex; align-items: center; gap: 8px;">
+                                            <label style="margin-bottom: 0;">회사 로고 등록</label>
+                                            <button type="button" class="btn btn-outline btn-sm" id="btnManageLogos" style="padding: 2px 8px; font-size: 11px; display: flex; align-items: center; gap: 4px;">
+                                                <i data-lucide="images" style="width: 12px; height: 12px; display: inline-block; vertical-align: middle;"></i> 로고 불러오기/관리
+                                            </button>
+                                        </div>
                                         <div class="logo-action-buttons" id="logoActionButtons" style="display: none;">
                                             <button type="button" class="btn btn-outline btn-sm" id="btnSaveLogoFile" title="로고 이미지 파일로 PC에 저장">
                                                 <i data-lucide="download"></i> 로고 파일 저장
@@ -297,6 +302,48 @@
                                 </div>
                             </div>
                         </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 로고 관리 모달 -->
+    <div class="modal-overlay" id="logoManagerModal">
+        <div class="modal-container" style="max-width: 500px; height: auto; max-height: 85vh; display: flex; flex-direction: column;">
+            <div class="modal-header">
+                <h2 style="display: flex; align-items: center; gap: 6px; font-size: 1.1rem; font-weight: 800; color: #1e293b;"><i data-lucide="images"></i> 회사 로고 관리</h2>
+                <button type="button" class="btn-close-sidebar" id="btnCloseLogoManager" style="background: none; border: none; cursor: pointer; color: #64748b; display: flex; align-items: center;">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            <div class="modal-body" style="padding: 20px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; justify-content: flex-start; align-items: stretch; background-color: #ffffff;">
+                <!-- 새 로고 추가 폼 -->
+                <div style="background: #f8fafc; border: 1px dashed #cbd5e1; padding: 16px; border-radius: 12px; margin-bottom: 20px;">
+                    <h3 style="margin-top: 0; margin-bottom: 12px; font-size: 0.95rem; font-weight: 700; color: #1e293b;">새 로고 추가</h3>
+                    <div style="display: flex; flex-direction: column; gap: 10px;">
+                        <div class="form-group" style="margin-bottom: 0; display: flex; flex-direction: column; gap: 4px;">
+                            <label style="font-size: 0.8rem; font-weight: 600; color: #475569; display: block; margin-bottom: 0;">회사명 / 브랜드명</label>
+                            <input type="text" id="logoCompanyName" placeholder="예: 코웨이, 쿠쿠" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.9rem; outline: none; background: white; color: #1e293b;">
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0; display: flex; flex-direction: column; gap: 4px;">
+                            <label style="font-size: 0.8rem; font-weight: 600; color: #475569; display: block; margin-bottom: 0;">로고 이미지 선택</label>
+                            <input type="file" id="logoUploadInput" accept="image/*" style="font-size: 0.85rem; width: 100%;">
+                        </div>
+                        <button type="button" class="btn btn-primary" id="btnUploadLogo" style="width: 100%; padding: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                            <i data-lucide="upload-cloud" style="width: 16px; height: 16px;"></i> 로고 서버 업로드 및 저장
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 등록된 로고 목록 -->
+                <h3 style="margin-top: 0; margin-bottom: 10px; font-size: 0.95rem; font-weight: 700; color: #1e293b; display: flex; align-items: center; gap: 6px;">
+                    <i data-lucide="list"></i> 등록된 로고 목록
+                </h3>
+                <div id="logoListContainer" style="display: flex; flex-direction: column; gap: 8px; max-height: 250px; overflow-y: auto; padding-right: 4px;">
+                    <!-- 로고 아이템 동적 주입 -->
+                    <div style="text-align: center; color: #94a3b8; padding: 30px 0; font-size: 0.85rem;">
+                        등록된 로고가 없습니다.
                     </div>
                 </div>
             </div>

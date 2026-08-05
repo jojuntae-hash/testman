@@ -13,8 +13,9 @@ export default function SubscribedManualAddModal({ onClose, onAdd }: SubscribedM
     전화번호: '',
     설치주소: '',
     모델명: '',
-    예약일자: '',
-    당월작업: '',
+    계약일자: '',
+    계약만료일자: '',
+    생년월일: '',
   })
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -32,12 +33,14 @@ export default function SubscribedManualAddModal({ onClose, onAdd }: SubscribedM
     onAdd({
       ...formData,
       id: Date.now().toString(),
-      status: '작업미완료',
+      status: '미분류', // 가입고객 기본 상태
       주소: formData.설치주소, // 주소 기본값 통일
       핸드폰번호: formData.전화번호, // 번호 기본값 통일
       고객번호: formData.고객번호,
-      계약일자: '',
-      계약만료일자: '',
+      계약일자: formData.계약일자,
+      계약만료일자: formData.계약만료일자,
+      예약일자: '',
+      당월작업: '',
       최종점검일: '',
       최종작업내용: '',
       계약자구분: '',
@@ -111,22 +114,31 @@ export default function SubscribedManualAddModal({ onClose, onAdd }: SubscribedM
             />
           </div>
           <div className="form-group">
-            <label>예약일자</label>
+            <label>가입일자</label>
             <input 
               type="date" 
-              name="예약일자" 
-              value={formData.예약일자} 
+              name="계약일자" 
+              value={formData.계약일자} 
               onChange={handleChange} 
             />
           </div>
           <div className="form-group">
-            <label>당월작업</label>
+            <label>만료일자</label>
+            <input 
+              type="date" 
+              name="계약만료일자" 
+              value={formData.계약만료일자} 
+              onChange={handleChange} 
+            />
+          </div>
+          <div className="form-group">
+            <label>생년월일</label>
             <input 
               type="text" 
-              name="당월작업" 
-              value={formData.당월작업} 
+              name="생년월일" 
+              value={formData.생년월일} 
               onChange={handleChange} 
-              placeholder="예: 필터교체"
+              placeholder="예: 950615"
             />
           </div>
           <button type="submit" className="submit-btn">추가하기</button>

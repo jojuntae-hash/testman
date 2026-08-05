@@ -2,7 +2,8 @@
 
 import React, { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronLeft, ChevronRight, Search, X, MapPin, FolderPlus, Trash2, Map } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Search, X, MapPin, FolderPlus, Trash2, Map, UserPlus } from 'lucide-react'
+import SubscribedManualAddModal from '@/components/SubscribedManualAddModal'
 import { useData } from '@/lib/DataContext'
 
 const formatShortAddress = (addr: string) => {
@@ -12,7 +13,7 @@ const formatShortAddress = (addr: string) => {
 
 export default function SubscribedCustomersPage() {
   const router = useRouter()
-  const { subscribedCustomers, changeSubscribedCustomerStatus, deleteSubscribedCustomers, folderColors, updateFolderColor } = useData()
+  const { subscribedCustomers, changeSubscribedCustomerStatus, deleteSubscribedCustomers, folderColors, updateFolderColor, addSubscribedCustomer } = useData()
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedFolder, setSelectedFolder] = useState('전체')
   const [sortOption, setSortOption] = useState('name')
@@ -20,6 +21,7 @@ export default function SubscribedCustomersPage() {
   // 페이징 상태
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState(20)
+  const [isManualAddOpen, setIsManualAddOpen] = useState(false)
 
   // 선택 상태
   const [selectedIds, setSelectedIds] = useState<string[]>([])
@@ -205,14 +207,36 @@ export default function SubscribedCustomersPage() {
 
   return (
     <div className="customers-page">
-      <div className="view-header">
-        <button className="back-btn" onClick={() => router.back()}>
-          <ChevronLeft size={24} />
-        </button>
-        <div className="header-text">
-          <h1>가입고객 리스트</h1>
-          <p>가입고객 관리를 위한 리스트입니다.</p>
+      <div className="view-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <button className="back-btn" onClick={() => router.back()}>
+            <ChevronLeft size={24} />
+          </button>
+          <div className="header-text">
+            <h1>가입고객 리스트</h1>
+            <p>가입고객 관리를 위한 리스트입니다.</p>
+          </div>
         </div>
+        <button 
+          className="add-customer-btn" 
+          onClick={() => setIsManualAddOpen(true)}
+          style={{
+            background: '#3b82f6',
+            color: '#fff',
+            border: 'none',
+            padding: '8px 12px',
+            borderRadius: '10px',
+            fontSize: '0.8rem',
+            fontWeight: '700',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+            boxShadow: '0 2px 8px rgba(59, 130, 246, 0.2)'
+          }}
+        >
+          <UserPlus size={14} /> <span>수동 추가</span>
+        </button>
       </div>
 
       <div className="search-section">
@@ -344,6 +368,17 @@ export default function SubscribedCustomersPage() {
             </button>
           </div>
         </nav>
+      )}
+
+      {isManualAddOpen && (
+        <SubscribedManualAddModal
+          onClose={() => setIsManualAddOpen(false)}
+          onAdd={async (newCustomer) => {
+            await addSubscribedCustomer(newCustomer)
+            setIsManualAddOpen(false)
+            alert('가입 고객이 성공적으로 추가되었습니다.')
+          }}
+        />
       )}
 
       {/* 폴더 변경 모달 */}

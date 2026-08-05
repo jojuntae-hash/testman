@@ -2,9 +2,15 @@
 
 import { useRouter } from 'next/navigation'
 import { ChevronLeft } from 'lucide-react'
+import { useState, useEffect } from 'react'
 
 export default function QuotesPage() {
   const router = useRouter()
+  const [iframeSrc, setIframeSrc] = useState('')
+
+  useEffect(() => {
+    setIframeSrc(`/quote-maker/index.html?v=${Date.now()}`)
+  }, [])
 
   return (
     <div className="quotes-page">
@@ -19,11 +25,13 @@ export default function QuotesPage() {
       </div>
 
       <div className="iframe-container">
-        <iframe 
-          src="/quote-maker/index.html" 
-          title="견적서 만들기"
-          className="quote-iframe"
-        />
+        {iframeSrc && (
+          <iframe 
+            src={iframeSrc} 
+            title="견적서 만들기"
+            className="quote-iframe"
+          />
+        )}
       </div>
 
       <style jsx>{`

@@ -185,6 +185,37 @@ function registerEventListeners() {
     bindEvent("btnPrint", "click", () => window.print());
     bindEvent("btnSaveImage", "click", downloadImage);
     bindEvent("btnSavePDF", "click", downloadPDF);
+
+    // 로고 관리 모달 연동
+    const btnManageLogos = document.getElementById("btnManageLogos");
+    const logoManagerModal = document.getElementById("logoManagerModal");
+    const btnCloseLogoManager = document.getElementById("btnCloseLogoManager");
+    const btnUploadLogo = document.getElementById("btnUploadLogo");
+
+    if (btnManageLogos && logoManagerModal) {
+        btnManageLogos.addEventListener("click", () => {
+            logoManagerModal.classList.add("open");
+            loadCompanyLogos();
+        });
+    }
+
+    if (btnCloseLogoManager && logoManagerModal) {
+        btnCloseLogoManager.addEventListener("click", () => {
+            logoManagerModal.classList.remove("open");
+        });
+    }
+
+    if (logoManagerModal) {
+        logoManagerModal.addEventListener("click", (e) => {
+            if (e.target === logoManagerModal) {
+                logoManagerModal.classList.remove("open");
+            }
+        });
+    }
+
+    if (btnUploadLogo) {
+        btnUploadLogo.addEventListener("click", uploadCompanyLogo);
+    }
 }
 
 /* ==========================================================================
@@ -1377,4 +1408,171 @@ function escapeHtml(text) {
         .replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#039;");
+}
+
+/* ==========================================================================
+   회사 로고 관리 및 Supabase 연동 함수
+   ========================================================================== */
+async function urlToBase64(url) {
+    try {
+        const response = await fetch(url);
+        const blob = await response.blob();
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+        });
+    } catch (e) {
+        console.error("Failed to convert image URL to base64", e);
+        return url;
+    }
+}
+
+async function loadCompanyLogos() {
+    const listContainer = document.getElementById("logoListContainer");
+    if (!listContainer) return;
+
+    try {
+        const response = await fetch('/api/company-logos');
+        const logos = await response.json();
+
+        if (!Array.isArray(logos) || logos.length === 0) {
+            listContainer.innerHTML = `
+                <div style="text-align: center; color: #94a3b8; padding: 30px 0; font-size: 0.85rem;">
+                    등록된 로고가 없습니다.
+                </div>
+            `;
+            return;
+        }
+
+        listContainer.innerHTML = logos.map(logo => `
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; gap: 10px;">
+                <span style="font-size: 0.95rem; font-weight: 600; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; text-align: left;">${logo.company_name}</span>
+                <div style="display: flex; gap: 6px; flex-shrink: 0; align-items: center;">
+                    <button type="button" class="btn btn-outline btn-sm btn-apply-logo" data-url="${logo.logo_url}" style="padding: 6px 12px; font-size: 12px; height: 32px; font-weight: 600;">적용</button>
+                    <button type="button" class="btn btn-danger btn-sm btn-delete-logo" data-id="${logo.id}" style="padding: 6px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;"><i data-lucide="trash-2" style="width: 14px; height: 14px;"></i></button>
+                </div>
+            </div>
+        `).join('');
+
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
+
+        listContainer.querySelectorAll('.btn-apply-logo').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const url = e.target.getAttribute('data-url');
+                btn.innerText = '로딩..';
+                btn.disabled = true;
+                try {
+                    const base64 = await urlToBase64(url);
+                    state.logo = base64;
+                    renderLogoPreview();
+                    document.getElementById("logoManagerModal").classList.remove("open");
+                } catch (err) {
+                    alert('로고 적용에 실패했습니다.');
+                } finally {
+                    btn.innerText = '적용';
+                    btn.disabled = false;
+                }
+            });
+        });
+
+        listContainer.querySelectorAll('.btn-delete-logo').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const id = e.currentTarget.getAttribute('data-id');
+                if (confirm('이 로고를 삭제하시겠습니까?')) {
+                    try {
+                        const res = await fetch(`/api/company-logos?id=${id}`, { method: 'DELETE' });
+                        const data = await res.json();
+                        if (data.success) {
+                            loadCompanyLogos();
+                        } else {
+                            alert('로고 삭제에 실패했습니다: ' + data.error);
+                        }
+                    } catch (err) {
+                        console.error(err);
+                        alert('로고 삭제 중 오류가 발생했습니다.');
+                    }
+                }
+            });
+        });
+
+    } catch (e) {
+        console.error("Failed to load company logos", e);
+        listContainer.innerHTML = `
+            <div style="text-align: center; color: #ef4444; padding: 20px 0; font-size: 0.85rem;">
+                로고 목록을 불러오지 못했습니다.
+            </div>
+        `;
+    }
+}
+
+async function uploadCompanyLogo() {
+    const companyNameInput = document.getElementById("logoCompanyName");
+    const fileInput = document.getElementById("logoUploadInput");
+    const btnUpload = document.getElementById("btnUploadLogo");
+
+    const companyName = companyNameInput.value.trim();
+    if (!companyName) {
+        alert("회사명을 입력하세요.");
+        return;
+    }
+
+    const file = fileInput.files[0];
+    if (!file) {
+        alert("로고 이미지 파일을 선택하세요.");
+        return;
+    }
+
+    btnUpload.disabled = true;
+    btnUpload.innerHTML = '업로드 중...';
+
+    try {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const uploadRes = await fetch('/api/upload-logo', {
+            method: 'POST',
+            body: formData
+        });
+        const uploadData = await uploadRes.json();
+
+        if (uploadData.error) {
+            throw new Error(uploadData.error);
+        }
+
+        const logoUrl = uploadData.url;
+
+        const dbRes = await fetch('/api/company-logos', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                company_name: companyName,
+                logo_url: logoUrl
+            })
+        });
+        const dbData = await dbRes.json();
+
+        if (dbData.error) {
+            throw new Error(dbData.error);
+        }
+
+        companyNameInput.value = '';
+        fileInput.value = '';
+        
+        loadCompanyLogos();
+        alert('로고가 성공적으로 등록되었습니다.');
+
+    } catch (err) {
+        console.error(err);
+        alert('로고 등록에 실패했습니다: ' + err.message);
+    } finally {
+        btnUpload.disabled = false;
+        btnUpload.innerHTML = '<i data-lucide="upload-cloud" style="width: 16px; height: 16px;"></i> 로고 서버 업로드 및 저장';
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
+    }
 }
