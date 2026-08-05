@@ -54,8 +54,8 @@ export default function CustomersPage() {
     if (savedOrder) {
       try {
         const orderArr = JSON.parse(savedOrder)
-        const existingSaved = orderArr.filter(f => unique.includes(f))
-        const missing = unique.filter(f => !existingSaved.includes(f))
+        const existingSaved = orderArr.filter((f: string) => unique.includes(f))
+        const missing = unique.filter((f: string) => !existingSaved.includes(f))
         return ['전체', ...existingSaved, ...missing]
       } catch (e) {
         console.error(e)

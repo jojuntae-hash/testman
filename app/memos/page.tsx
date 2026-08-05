@@ -353,7 +353,7 @@ export default function MemosPage() {
       records: [{
         id: c.id,
         type: 'memo',
-        content: c.현장메모,
+        content: c.현장메모 || '',
         date: c.updated_at || c.created_at || new Date().toISOString()
       }]
     }))

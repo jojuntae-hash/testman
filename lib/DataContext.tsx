@@ -94,6 +94,12 @@ export interface SubscribedCustomer {
   lat?: number
   lng?: number
   created_at?: string
+  updated_at?: string
+  약정?: string
+  가입유형?: string
+  월렌탈료?: string
+  생년월일?: string
+  이름?: string
 }
 interface DataContextType {
   customers: CustomerData[]
@@ -162,6 +168,7 @@ interface DataContextType {
   copyLongTermToSubscribed: (longTermIds: string[]) => Promise<void>
   clearAllSubscribedCustomers: () => Promise<void>
   restoreSubscribedFromBackup: (backupData: SubscribedCustomer[]) => Promise<void>
+  syncMemosWithManagement: () => Promise<{ successCount: number; failedCount: number }>
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined)
@@ -1314,7 +1321,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         const existing = currentList[existingIndex]
         const updatedSub = { ...existing }
         let hasChanges = false
-        if (c.계약만료일자 && updatedSub.계약만료일자 !== c.계약만료일자) { updatedSub.계약만료일자 = c.계약만료일자; hasChanges = true }
+        if (c.계약만료일 && updatedSub.계약만료일자 !== c.계약만료일) { updatedSub.계약만료일자 = c.계약만료일; hasChanges = true }
         if (hasChanges) {
           currentList[existingIndex] = updatedSub
           updatedSubscribed.push(updatedSub)
@@ -1325,7 +1332,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           고객번호: c.고객번호 || '',
           모델명: c.모델명 || '',
           계약일자: c.계약일자 || '',
-          계약만료일자: c.계약만료일자 || '',
+          계약만료일자: c.계약만료일 || '',
           예약일자: '',
           당월작업: '',
           최종작업내용: '',
@@ -1380,6 +1387,11 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         await supabase.from('subscribed_customers').delete().neq('id', 'dummy')
       } catch(e) {}
     }
+  }
+
+  const syncMemosWithManagement = async (): Promise<{ successCount: number; failedCount: number }> => {
+    // 메모 동기화 - 현재는 기본 구현
+    return { successCount: 0, failedCount: 0 }
   }
 
   const restoreSubscribedFromBackup = async (backupData: SubscribedCustomer[]) => {
@@ -1466,7 +1478,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       copyToSubscribed,
       copyLongTermToSubscribed,
       clearAllSubscribedCustomers,
-      restoreSubscribedFromBackup
+      restoreSubscribedFromBackup,
+      syncMemosWithManagement
     }}>
       {children}
       <WorkCompletionModal />
