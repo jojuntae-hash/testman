@@ -159,6 +159,7 @@ interface DataContextType {
   changeSubscribedCustomerStatus: (ids: string[], newStatus: string) => Promise<void>
   deleteSubscribedCustomers: (ids: string[]) => Promise<void>
   copyToSubscribed: (customerIds: string[]) => Promise<void>
+  copyLongTermToSubscribed: (longTermIds: string[]) => Promise<void>
   clearAllSubscribedCustomers: () => Promise<void>
   restoreSubscribedFromBackup: (backupData: SubscribedCustomer[]) => Promise<void>
 }
@@ -1296,6 +1297,81 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  const copyLongTermToSubscribed = async (longTermIds: string[]) => {
+    const isSupabaseConfigured = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    const targets = longTermCustomers.filter(c => longTermIds.includes(c.id))
+    if (targets.length === 0) return
+
+    const newSubscribed: SubscribedCustomer[] = []
+    const updatedSubscribed: SubscribedCustomer[] = []
+    const currentList = [...subscribedCustomers]
+
+    for (const c of targets) {
+      const subId = toUUID(c.id)
+      const existingIndex = currentList.findIndex(sub => sub.id === subId || (sub.고객명_상호 === (c.이름 || '') && sub.고객번호 === (c.고객번호 || '')))
+
+      if (existingIndex >= 0) {
+        const existing = currentList[existingIndex]
+        const updatedSub = { ...existing }
+        let hasChanges = false
+        if (c.계약만료일자 && updatedSub.계약만료일자 !== c.계약만료일자) { updatedSub.계약만료일자 = c.계약만료일자; hasChanges = true }
+        if (hasChanges) {
+          currentList[existingIndex] = updatedSub
+          updatedSubscribed.push(updatedSub)
+        }
+      } else {
+        const newSub: SubscribedCustomer = {
+          id: subId,
+          고객번호: c.고객번호 || '',
+          모델명: c.모델명 || '',
+          계약일자: c.계약일자 || '',
+          계약만료일자: c.계약만료일자 || '',
+          예약일자: '',
+          당월작업: '',
+          최종작업내용: '',
+          status: '미분류',
+          계약자구분: '',
+          고객명_상호: c.이름 || '',
+          사업자번호: '',
+          전화번호: c.전화번호 || '',
+          핸드폰번호: c.핸드폰번호 || '',
+          주소: c.주소 || '',
+          설치처구분: '',
+          설치자명: '',
+          설치구분: '',
+          설치전화번호: c.전화번호 || '',
+          설치핸드폰번호: c.핸드폰번호 || '',
+          설치주소: c.주소 || '',
+          설치시특이사항: '',
+          created_at: new Date().toISOString()
+        }
+        newSubscribed.push(newSub)
+        currentList.push(newSub)
+      }
+    }
+
+    if (newSubscribed.length === 0 && updatedSubscribed.length === 0) {
+      alert('업데이트되거나 새로 가입고객으로 복사될 데이터가 없습니다.')
+      return
+    }
+
+    setSubscribedCustomersState(currentList)
+    localStorage.setItem('subscribedCustomers', JSON.stringify(currentList))
+
+    if (isSupabaseConfigured) {
+      try {
+        const upsertData = [...newSubscribed, ...updatedSubscribed]
+        const { error } = await supabase.from('subscribed_customers').upsert(upsertData)
+        if (error) console.error('Supabase subscribed upsert error:', error)
+      } catch (err) {
+        console.error(err)
+      }
+    }
+
+    if (newSubscribed.length > 0) alert(`${newSubscribed.length}명의 장기고객이 가입고객으로 복사되었습니다.`)
+    if (updatedSubscribed.length > 0) alert(`${updatedSubscribed.length}명의 가입고객 정보가 업데이트되었습니다.`)
+  }
+
   const clearAllSubscribedCustomers = async () => {
     setSubscribedCustomersState([])
     localStorage.removeItem('subscribedCustomers')
@@ -1388,6 +1464,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       changeSubscribedCustomerStatus,
       deleteSubscribedCustomers,
       copyToSubscribed,
+      copyLongTermToSubscribed,
       clearAllSubscribedCustomers,
       restoreSubscribedFromBackup
     }}>
