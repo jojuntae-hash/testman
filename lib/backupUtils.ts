@@ -202,11 +202,11 @@ async function enforceMaxSubscribedBackups(): Promise<void> {
   }
 }
 
-// 장기 고객 데이터 백업 생성
+// 가입 고객 데이터 백업 생성
 export async function saveSubscribedBackup(data: SubscribedCustomer[]): Promise<void> {
   const now = new Date()
   const id = Date.now().toString()
-  const name = `J_LT_${formatDate(now)}`
+  const name = `J_SUB_${formatDate(now)}`
 
   const backupItem: SubscribedBackupItem = {
     id,
@@ -217,14 +217,14 @@ export async function saveSubscribedBackup(data: SubscribedCustomer[]): Promise<
 
   const { error } = await supabase.from('subscribed_backups').insert(backupItem)
   if (error) {
-    console.error('Long term backup save error:', error)
+    console.error('Subscribed backup save error:', error)
     throw error
   }
 
   await enforceMaxSubscribedBackups()
 }
 
-// 장기 고객 데이터 백업 리스트 조회 (데이터 제외)
+// 가입 고객 데이터 백업 리스트 조회 (데이터 제외)
 export async function getSubscribedBackupList(): Promise<Omit<SubscribedBackupItem, 'data'>[]> {
   const { data, error } = await supabase
     .from('subscribed_backups')
@@ -232,13 +232,13 @@ export async function getSubscribedBackupList(): Promise<Omit<SubscribedBackupIt
     .order('timestamp', { ascending: false })
     
   if (error) {
-    console.error('Long term backup list fetch error:', error)
+    console.error('Subscribed backup list fetch error:', error)
     return []
   }
   return data as Omit<SubscribedBackupItem, 'data'>[]
 }
 
-// 특정 장기 고객 데이터 백업 상세 가져오기
+// 특정 가입 고객 데이터 백업 상세 가져오기
 export async function getSubscribedBackupData(id: string): Promise<SubscribedBackupItem | undefined> {
   const { data, error } = await supabase
     .from('subscribed_backups')
@@ -247,17 +247,17 @@ export async function getSubscribedBackupData(id: string): Promise<SubscribedBac
     .single()
     
   if (error) {
-    console.error('Long term backup data fetch error:', error)
+    console.error('Subscribed backup data fetch error:', error)
     return undefined
   }
   return data as SubscribedBackupItem
 }
 
-// 여러 장기 고객 데이터 백업 삭제
+// 여러 가입 고객 데이터 백업 삭제
 export async function deleteSubscribedBackups(ids: string[]): Promise<void> {
   const { error } = await supabase.from('subscribed_backups').delete().in('id', ids)
   if (error) {
-    console.error('Long term backup delete error:', error)
+    console.error('Subscribed backup delete error:', error)
     throw error
   }
 }
