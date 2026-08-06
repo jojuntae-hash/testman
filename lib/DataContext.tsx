@@ -105,6 +105,7 @@ interface DataContextType {
   customers: CustomerData[]
   setCustomers: (data: CustomerData[]) => Promise<void>
   addCustomer: (data: CustomerData) => Promise<void>
+  addCustomers: (data: CustomerData[]) => Promise<void>
   deleteCustomers: (ids: string[]) => Promise<void>
   selectedIds: string[]
   setSelectedIds: (ids: string[]) => void
@@ -547,6 +548,42 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       created_at: newCustomer.created_at || new Date().toISOString()
     }
 
+    const existingIndex = customers.findIndex(c =>
+      c.고객번호 && fixedCustomer.고객번호 &&
+      c.고객번호 === fixedCustomer.고객번호 &&
+      c.고객명_상호 === fixedCustomer.고객명_상호
+    )
+
+    if (existingIndex >= 0) {
+      const existing = customers[existingIndex]
+      const merged: CustomerData = { ...existing }
+      for (const key of Object.keys(fixedCustomer) as (keyof CustomerData)[]) {
+        const newVal = fixedCustomer[key]
+        if (newVal !== undefined && newVal !== null && newVal !== '') {
+          (merged as any)[key] = newVal
+        }
+      }
+      merged.id = existing.id
+
+      setCustomersState(prev => {
+        const updated = [...prev]
+        updated[existingIndex] = merged
+        localStorage.setItem('customers', JSON.stringify(updated))
+        return updated
+      })
+
+      const isSupabaseConfigured = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+      if (isSupabaseConfigured) {
+        try {
+          const { 현장메모, ...dbCustomer } = merged
+          await supabase.from('customers').upsert([dbCustomer])
+        } catch (err) {
+          console.error('Supabase merge error:', err)
+        }
+      }
+      return
+    }
+
     setCustomersState(prev => {
       const updated = [...prev, fixedCustomer]
       localStorage.setItem('customers', JSON.stringify(updated))
@@ -564,6 +601,58 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         }
       } catch (err) {
         console.error('Supabase sync error:', err)
+      }
+    }
+  }
+
+  const addCustomers = async (newCustomers: CustomerData[]) => {
+    const fixedCustomers = newCustomers.map(nc => ({
+      ...nc,
+      전화번호: fixPhoneNumber(nc.전화번호),
+      핸드폰번호: fixPhoneNumber(nc.핸드폰번호),
+      설치전화번호: fixPhoneNumber(nc.설치전화번호),
+      설치핸드폰번호: fixPhoneNumber(nc.설치핸드폰번호),
+      created_at: nc.created_at || new Date().toISOString()
+    }))
+
+    setCustomersState(prev => {
+      const updated = [...prev]
+      for (const fc of fixedCustomers) {
+        const existingIndex = updated.findIndex(c =>
+          c.고객번호 && fc.고객번호 &&
+          c.고객번호 === fc.고객번호 &&
+          c.고객명_상호 === fc.고객명_상호
+        )
+
+        if (existingIndex >= 0) {
+          const existing = updated[existingIndex]
+          const merged: CustomerData = { ...existing }
+          for (const key of Object.keys(fc) as (keyof CustomerData)[]) {
+            const newVal = fc[key]
+            if (newVal !== undefined && newVal !== null && newVal !== '') {
+              (merged as any)[key] = newVal
+            }
+          }
+          merged.id = existing.id
+          updated[existingIndex] = merged
+        } else {
+          updated.push(fc)
+        }
+      }
+      localStorage.setItem('customers', JSON.stringify(updated))
+      return updated
+    })
+
+    const isSupabaseConfigured = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    if (isSupabaseConfigured) {
+      try {
+        const dbData = fixedCustomers.map(({ 현장메모, ...rest }) => rest)
+        for (let i = 0; i < dbData.length; i += 100) {
+          const chunk = dbData.slice(i, i + 100)
+          await supabase.from('customers').upsert(chunk)
+        }
+      } catch (err) {
+        console.error('Supabase bulk merge error:', err)
       }
     }
   }
@@ -1434,6 +1523,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       customers, 
       setCustomers, 
       addCustomer,
+      addCustomers,
       deleteCustomers,
       selectedIds, 
       setSelectedIds, 

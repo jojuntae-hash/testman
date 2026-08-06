@@ -86,7 +86,7 @@ export default function SubscribedCustomerDetailPage() {
     setIsEditingInfo(false)
   }
 
-  const handleFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target
     setEditForm((prev: any) => ({ ...prev, [name]: value }))
   }
@@ -183,7 +183,11 @@ export default function SubscribedCustomerDetailPage() {
             <div className="info-item">
               <span className="info-label">계약자구분</span>
               {isEditingInfo ? (
-                <input className="edit-input" name="계약자구분" value={editForm.계약자구분} onChange={handleFormChange} />
+                <select className="edit-input" name="계약자구분" value={editForm.계약자구분} onChange={handleFormChange}>
+                  <option value="">선택</option>
+                  <option value="개인">개인</option>
+                  <option value="사업자">사업자</option>
+                </select>
               ) : (
                 <span className="info-value">{customer.계약자구분 || '-'}</span>
               )}

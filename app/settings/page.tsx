@@ -17,7 +17,7 @@ import PDFBulkUploadModal from '@/components/PDFBulkUploadModal'
 
 export default function SettingsPage() {
   const router = useRouter()
-  const { customers, setCustomers, addCustomer, resetToDefault, clearAllCustomers, longTermCustomers, restoreLongTermFromBackup, clearAllLongTermCustomers, addLongTermCustomer, subscribedCustomers, restoreSubscribedFromBackup, clearAllSubscribedCustomers, addSubscribedCustomer, syncMemosWithManagement } = useData()
+  const { customers, setCustomers, addCustomer, addCustomers, resetToDefault, clearAllCustomers, longTermCustomers, restoreLongTermFromBackup, clearAllLongTermCustomers, addLongTermCustomer, subscribedCustomers, restoreSubscribedFromBackup, clearAllSubscribedCustomers, addSubscribedCustomer, syncMemosWithManagement } = useData()
   
   // 기본 설정 상태
   const [defaultSource, setDefaultSource] = useState('')
@@ -307,8 +307,8 @@ export default function SettingsPage() {
           return
         }
 
-        if (confirm(`${mappedData.length}개의 데이터를 추가하시겠습니까?`)) {
-          setCustomers([...customers, ...mappedData])
+        if (confirm(`${mappedData.length}개의 데이터를 추가하시겠습니까?\n동일한 고객번호와 이름이 존재하면 자동으로 업데이트(병합)됩니다.`)) {
+          addCustomers(mappedData)
           alert('데이터가 성공적으로 추가되었습니다.')
         }
       } catch (err) {
@@ -333,9 +333,9 @@ export default function SettingsPage() {
   }
 
   const handleClearAll = () => {
-    if (confirm('정말로 모든 고객 데이터를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) {
+    if (confirm('리스트 데이터를 초기화하시겠습니까?\n\n⚠️ 리스트 페이지의 고객 데이터만 삭제됩니다.\n(가입고객, 장기고객 데이터는 삭제되지 않습니다)')) {
       clearAllCustomers()
-      alert('모든 데이터가 삭제되었습니다.')
+      alert('리스트 데이터가 초기화되었습니다.')
     }
   }
 
@@ -577,7 +577,7 @@ export default function SettingsPage() {
           </div>
 
           <div className="settings-list-group danger-zone">
-            <div className="settings-list-header danger">데이터 삭제 및 초기화</div>
+            <div className="settings-list-header danger">리스트 데이터 관리</div>
             <div className="settings-list-items">
               <button className="settings-list-item" onClick={() => setIsDeleteModalOpen(true)}>
                 <div className="item-left"><Trash2 size={16} color="#f43f5e" /> <span>개별 고객 선택 삭제</span></div>
@@ -586,7 +586,7 @@ export default function SettingsPage() {
                 <div className="item-left"><RotateCcw size={16} color="#6366f1" /> <span>샘플 데이터로 리셋</span></div>
               </button>
               <button className="settings-list-item" onClick={handleClearAll}>
-                <div className="item-left"><Trash2 size={16} color="#ef4444" /> <span>모든 데이터 완전 삭제</span></div>
+                <div className="item-left"><Trash2 size={16} color="#ef4444" /> <span>리스트 데이터 초기화</span></div>
               </button>
             </div>
           </div>
@@ -667,8 +667,8 @@ export default function SettingsPage() {
         <PDFBulkUploadModal 
           onClose={() => setIsPdfBulkModalOpen(false)}
           onAddBulk={async (parsedCustomers) => {
-            setCustomers([...customers, ...parsedCustomers])
-            alert(`${parsedCustomers.length}명의 고객이 성공적으로 일괄 추가되었습니다.`)
+            await addCustomers(parsedCustomers)
+            alert(`${parsedCustomers.length}명의 고객이 성공적으로 일괄 추가(병합)되었습니다.`)
             setIsPdfBulkModalOpen(false)
           }}
         />

@@ -4,6 +4,7 @@ import React, { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChevronLeft, ChevronRight, Search, X, MapPin, FolderPlus, Trash2, Map, SlidersHorizontal, UserPlus } from 'lucide-react'
 import FolderOrderModal from '@/components/FolderOrderModal'
+import LongTermManualAddModal from '@/components/LongTermManualAddModal'
 import { useData } from '@/lib/DataContext'
 
 const formatShortAddress = (addr: string) => {
@@ -13,10 +14,11 @@ const formatShortAddress = (addr: string) => {
 
 export default function CustomersPage() {
   const router = useRouter()
-  const { longTermCustomers, changeLongTermCustomerStatus, deleteLongTermCustomers, folderColors, updateFolderColor, copyLongTermToSubscribed } = useData()
+  const { longTermCustomers, changeLongTermCustomerStatus, deleteLongTermCustomers, folderColors, updateFolderColor, copyLongTermToSubscribed, addLongTermCustomer } = useData()
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedFolder, setSelectedFolder] = useState('전체')
   const [sortOption, setSortOption] = useState('name')
+  const [isManualAddOpen, setIsManualAddOpen] = useState(false)
   
   // 페이징 상태
   const [currentPage, setCurrentPage] = useState(1)
@@ -241,14 +243,36 @@ export default function CustomersPage() {
 
   return (
     <div className="customers-page">
-      <div className="view-header">
-        <button className="back-btn" onClick={() => router.back()}>
-          <ChevronLeft size={24} />
-        </button>
-        <div className="header-text">
-          <h1>고객관리 (장기)</h1>
-          <p>지속적인 고객 관리를 위한 리스트입니다.</p>
+      <div className="view-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <button className="back-btn" onClick={() => router.back()}>
+            <ChevronLeft size={24} />
+          </button>
+          <div className="header-text">
+            <h1>고객관리 (장기)</h1>
+            <p>지속적인 고객 관리를 위한 리스트입니다.</p>
+          </div>
         </div>
+        <button 
+          className="add-customer-btn" 
+          onClick={() => setIsManualAddOpen(true)}
+          style={{
+            background: '#3b82f6',
+            color: '#fff',
+            border: 'none',
+            padding: '8px 12px',
+            borderRadius: '10px',
+            fontSize: '0.8rem',
+            fontWeight: '700',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+            boxShadow: '0 2px 8px rgba(59, 130, 246, 0.2)'
+          }}
+        >
+          <UserPlus size={14} /> <span>수동 추가</span>
+        </button>
       </div>
 
       <div className="search-section">
@@ -462,6 +486,17 @@ export default function CustomersPage() {
           setCustomOrderVersion(v => v + 1)
         }}
       />
+
+      {isManualAddOpen && (
+        <LongTermManualAddModal
+          onClose={() => setIsManualAddOpen(false)}
+          onAdd={async (data) => {
+            await addLongTermCustomer(data)
+            setIsManualAddOpen(false)
+            alert('장기 고객이 추가되었습니다.')
+          }}
+        />
+      )}
 
       <style jsx>{`
         .customers-page { padding: 0; padding-bottom: 120px; background: #f8fafc; min-height: 100%; }
