@@ -113,7 +113,7 @@ export default function ManualAddModal({ onClose, onAdd }: ManualAddModalProps) 
           <div className="form-group">
             <label>예약일자</label>
             <input 
-              type="date" 
+              type="date" max="9999-12-31" 
               name="예약일자" 
               value={formData.예약일자} 
               onChange={handleChange} 

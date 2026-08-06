@@ -16,7 +16,8 @@ export default function SubscribedCustomersPage() {
   const { subscribedCustomers, changeSubscribedCustomerStatus, deleteSubscribedCustomers, folderColors, updateFolderColor, addSubscribedCustomer } = useData()
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedFolder, setSelectedFolder] = useState('전체')
-  const [sortOption, setSortOption] = useState('name')
+  const [sortOption, setSortOption] = useState('join-desc')
+  const [monthFilter, setMonthFilter] = useState('')
   
   // 페이징 상태
   const [currentPage, setCurrentPage] = useState(1)
@@ -55,6 +56,13 @@ export default function SubscribedCustomersPage() {
   const getModelCategory = (modelName?: string) => {
     if (!modelName) return '기타'
     const lower = modelName.toLowerCase()
+    if (lower.startsWith('cws')) return '연수기'
+    if (lower.startsWith('crvc')) return '청소기'
+    if (lower.startsWith('crm')) return '매트리스'
+    if (lower.startsWith('crf')) return '프레임'
+    if (lower.startsWith('cfd')) return '음식물 처리기'
+    if (lower.startsWith('cms')) return '안마의자'
+    if (lower.startsWith('cppu')) return 'POU정수기'
     if (lower.startsWith('cp')) return '정수기'
     if (lower.startsWith('ac')) return '공기청정기'
     if (lower.startsWith('cbt')) return '비데'
@@ -67,6 +75,13 @@ export default function SubscribedCustomersPage() {
     if (category === '정수기') typeClass = 'purifier'
     else if (category === '공기청정기') typeClass = 'air-cleaner'
     else if (category === '비데') typeClass = 'bidet'
+    else if (category === '연수기') typeClass = 'water-softener'
+    else if (category === '청소기') typeClass = 'vacuum'
+    else if (category === '매트리스') typeClass = 'mattress'
+    else if (category === '프레임') typeClass = 'frame'
+    else if (category === '음식물 처리기') typeClass = 'food-disposer'
+    else if (category === '안마의자') typeClass = 'massage-chair'
+    else if (category === 'POU정수기') typeClass = 'pou-purifier'
     else return null
 
     return (
@@ -74,6 +89,22 @@ export default function SubscribedCustomersPage() {
         {category}
       </span>
     )
+  }
+
+  const getJoinYearMonthBadge = (contractDate?: string) => {
+    if (!contractDate) return null
+    const date = new Date(contractDate)
+    if (isNaN(date.getTime())) return null
+    const yyyy = date.getFullYear()
+    const mm = String(date.getMonth() + 1).padStart(2, '0')
+    return <span className={`model-badge join-ym`}>{yyyy}-{mm} 가입</span>
+  }
+
+  const getBirthMonthBadge = (birth?: string) => {
+    if (!birth || birth.length < 6) return null
+    const month = birth.substring(2, 4)
+    if (isNaN(Number(month)) || Number(month) < 1 || Number(month) > 12) return null
+    return <span className={`model-badge birth-month`}>{Number(month)}월생</span>
   }
 
   const getElapsedMonths = (contractDate?: string) => {
@@ -116,6 +147,10 @@ export default function SubscribedCustomersPage() {
       list = list.filter(c => (c.status || '미분류') === selectedFolder)
     }
 
+    if (monthFilter) {
+      list = list.filter(c => c.계약일자 && c.계약일자.startsWith(monthFilter))
+    }
+
     if (cleanSearch) {
       list = list.filter(c => {
         const name = (c.고객명_상호 || '').replace(/\s+/g, '').toLowerCase()
@@ -140,12 +175,16 @@ export default function SubscribedCustomersPage() {
           return getElapsedMonths(a.계약일자) - getElapsedMonths(b.계약일자)
         case 'months-desc':
           return getElapsedMonths(b.계약일자) - getElapsedMonths(a.계약일자)
+        case 'birth-asc':
+          return (a.생년월일 || '').localeCompare(b.생년월일 || '')
+        case 'birth-desc':
+          return (b.생년월일 || '').localeCompare(a.생년월일 || '')
         case 'name':
         default:
           return (a.고객명_상호 || '').localeCompare(b.고객명_상호 || '')
       }
     })
-  }, [subscribedCustomers, searchTerm, selectedFolder, sortOption])
+  }, [subscribedCustomers, searchTerm, selectedFolder, sortOption, monthFilter])
 
   const totalPages = Math.ceil(filteredCustomers.length / itemsPerPage)
   const paginatedCustomers = filteredCustomers.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
@@ -252,6 +291,13 @@ export default function SubscribedCustomersPage() {
         </div>
         
         <div className="category-filters">
+          <input 
+            type="month" 
+            className="month-filter-input"
+            value={monthFilter}
+            onChange={(e) => setMonthFilter(e.target.value)}
+            title="가입월 선택"
+          />
           {folders.map(folder => (
             <button 
               key={folder}
@@ -285,10 +331,12 @@ export default function SubscribedCustomersPage() {
                 localStorage.setItem('lastSortOption_sub', e.target.value)
               }}
             >
-              <option value="name">이름순</option>
-              <option value="model">장비순</option>
               <option value="join-desc">가입일 최신순</option>
               <option value="join-asc">가입일 오래된순</option>
+              <option value="name">이름순</option>
+              <option value="model">장비순</option>
+              <option value="birth-desc">생년월일 내림차순</option>
+              <option value="birth-asc">생년월일 오름차순</option>
               <option value="months-asc">개월수 오름차순</option>
               <option value="months-desc">개월수 내림차순</option>
             </select>
@@ -307,6 +355,8 @@ export default function SubscribedCustomersPage() {
                   <div className="item-title-row">
                     <p className="font-bold">{customer.고객명_상호}</p>
                     {getModelTypeBadge(customer.모델명)}
+                    {getJoinYearMonthBadge(customer.계약일자)}
+                    {getBirthMonthBadge(customer.생년월일)}
                     {getElapsedMonthsBadge(customer.계약일자)}
                   </div>
                   <button className="detail-link-btn" onClick={(e) => { e.stopPropagation(); router.push(`/subscribed/${customer.id}`); }}>
@@ -314,8 +364,8 @@ export default function SubscribedCustomersPage() {
                   </button>
                 </div>
                 <div className="item-details">
-                  <div className="detail-text">
-                    {customer.핸드폰번호 || customer.전화번호 || '번호없음'} | {customer.주소 || customer.설치주소 || '주소없음'}
+                  <div className="detail-text" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {customer.현장메모 || '메모 없음'}
                   </div>
                 </div>
               </div>
@@ -475,8 +525,19 @@ export default function SubscribedCustomersPage() {
         :global(.model-badge.purifier) { background: #eff6ff; color: #3b82f6; }
         :global(.model-badge.air-cleaner) { background: #ecfdf5; color: #10b981; }
         :global(.model-badge.bidet) { background: #fff7ed; color: #ea580c; }
+        :global(.model-badge.water-softener) { background: #e0f2fe; color: #0284c7; }
+        :global(.model-badge.vacuum) { background: #f3e8ff; color: #7e22ce; }
+        :global(.model-badge.mattress) { background: #ffedd5; color: #c2410c; }
+        :global(.model-badge.frame) { background: #fef08a; color: #a16207; }
+        :global(.model-badge.food-disposer) { background: #fee2e2; color: #b91c1c; }
+        :global(.model-badge.massage-chair) { background: #dcfce7; color: #15803d; }
+        :global(.model-badge.pou-purifier) { background: #cffafe; color: #0e7490; }
         :global(.model-badge.elapsed-months) { background: #f1f5f9; color: #475569; }
+        :global(.model-badge.join-ym) { background: #f1f5f9; color: #475569; }
+        :global(.model-badge.birth-month) { background: #fce7f3; color: #be185d; }
         :global(.model-badge.comp-badge) { border: 1px solid #10b981; color: #10b981; background: transparent; }
+        
+        .month-filter-input { padding: 4px 10px; border-radius: 20px; border: 1px solid #cbd5e1; font-size: 0.8rem; font-weight: 700; color: #64748b; background: #fff; outline: none; }
         
         .detail-link-btn { display: flex; align-items: center; gap: 2px; background: #fff; color: #64748b; border: 1px solid #e2e8f0; padding: 4px 8px 4px 12px; border-radius: 8px; font-size: 0.75rem; font-weight: 700; cursor: pointer; transition: all 0.2s; }
         .detail-link-btn:active { background: #f1f5f9; }

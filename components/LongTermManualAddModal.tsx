@@ -166,7 +166,7 @@ export default function LongTermManualAddModal({ onClose, onAdd }: LongTermManua
           <div className="form-group">
             <label>작업완료일</label>
             <input 
-              type="date" 
+              type="date" max="9999-12-31" 
               name="작업완료일" 
               value={formData.작업완료일} 
               onChange={handleChange} 

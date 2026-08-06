@@ -112,7 +112,7 @@ export default function VisitLogModal({ customerId, isOpen, onClose }: VisitLogM
             <div className="input-group">
               <label>방문 일자</label>
               <input 
-                type="date" 
+                type="date" max="9999-12-31" 
                 value={newDate} 
                 onChange={(e) => setNewDate(e.target.value)} 
                 className="date-input"

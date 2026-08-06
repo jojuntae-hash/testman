@@ -785,7 +785,7 @@ export default function CalendarPage() {
                 <div className="section-title"><Clock size={16} /> 예약 일정 편집</div>
                 {/* 날짜 선택 */}
                 <input 
-                  type="date" 
+                  type="date" max="9999-12-31" 
                   className="datetime-input"
                   value={editDate}
                   onChange={e => setEditDate(e.target.value)}

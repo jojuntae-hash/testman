@@ -69,7 +69,7 @@ export default function ReservationModal() {
             <label><Calendar size={14} /> 예약 일시</label>
             <div style={{ display: 'flex', gap: '8px' }}>
               <input 
-                type="date" 
+                type="date" max="9999-12-31" 
                 value={date} 
                 onChange={(e) => setDate(e.target.value)} 
                 className="modal-date-picker"

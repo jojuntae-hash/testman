@@ -44,7 +44,7 @@ export default function WorkCompletionModal() {
           <div className="date-input-group">
             <label><Calendar size={14} /> 완료 일자</label>
             <input 
-              type="date" 
+              type="date" max="9999-12-31" 
               value={date} 
               onChange={(e) => setDate(e.target.value)} 
               className="modal-date-picker"

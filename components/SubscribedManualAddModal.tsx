@@ -116,7 +116,7 @@ export default function SubscribedManualAddModal({ onClose, onAdd }: SubscribedM
           <div className="form-group">
             <label>가입일자</label>
             <input 
-              type="date" 
+              type="date" max="9999-12-31" 
               name="계약일자" 
               value={formData.계약일자} 
               onChange={handleChange} 
@@ -125,7 +125,7 @@ export default function SubscribedManualAddModal({ onClose, onAdd }: SubscribedM
           <div className="form-group">
             <label>만료일자</label>
             <input 
-              type="date" 
+              type="date" max="9999-12-31" 
               name="계약만료일자" 
               value={formData.계약만료일자} 
               onChange={handleChange} 

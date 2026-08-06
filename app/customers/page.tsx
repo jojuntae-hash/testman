@@ -67,6 +67,13 @@ export default function CustomersPage() {
   const getModelCategory = (modelName?: string) => {
     if (!modelName) return '기타'
     const lower = modelName.toLowerCase()
+    if (lower.startsWith('cws')) return '연수기'
+    if (lower.startsWith('crvc')) return '청소기'
+    if (lower.startsWith('crm')) return '매트리스'
+    if (lower.startsWith('crf')) return '프레임'
+    if (lower.startsWith('cfd')) return '음식물 처리기'
+    if (lower.startsWith('cms')) return '안마의자'
+    if (lower.startsWith('cppu')) return 'POU정수기'
     if (lower.startsWith('cp')) return '정수기'
     if (lower.startsWith('ac')) return '공기청정기'
     if (lower.startsWith('cbt')) return '비데'
@@ -79,6 +86,13 @@ export default function CustomersPage() {
     if (category === '정수기') typeClass = 'purifier'
     else if (category === '공기청정기') typeClass = 'air-cleaner'
     else if (category === '비데') typeClass = 'bidet'
+    else if (category === '연수기') typeClass = 'water-softener'
+    else if (category === '청소기') typeClass = 'vacuum'
+    else if (category === '매트리스') typeClass = 'mattress'
+    else if (category === '프레임') typeClass = 'frame'
+    else if (category === '음식물 처리기') typeClass = 'food-disposer'
+    else if (category === '안마의자') typeClass = 'massage-chair'
+    else if (category === 'POU정수기') typeClass = 'pou-purifier'
     else return null
 
     return (
@@ -321,8 +335,8 @@ export default function CustomersPage() {
                   </button>
                 </div>
                 <div className="item-details">
-                  <div className="detail-text">
-                    {customer.핸드폰번호 || customer.전화번호 || '번호없음'} | {customer.주소 || customer.설치주소 || '주소없음'}
+                  <div className="detail-text" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {customer.기록 || '메모 없음'}
                   </div>
                 </div>
               </div>
@@ -485,10 +499,16 @@ export default function CustomersPage() {
         :global(.model-badge.purifier) { background: #eff6ff; color: #3b82f6; }
         :global(.model-badge.air-cleaner) { background: #ecfdf5; color: #10b981; }
         :global(.model-badge.bidet) { background: #fff7ed; color: #ea580c; }
+        :global(.model-badge.water-softener) { background: #e0f2fe; color: #0284c7; }
+        :global(.model-badge.vacuum) { background: #f3e8ff; color: #7e22ce; }
+        :global(.model-badge.mattress) { background: #ffedd5; color: #c2410c; }
+        :global(.model-badge.frame) { background: #fef08a; color: #a16207; }
+        :global(.model-badge.food-disposer) { background: #fee2e2; color: #b91c1c; }
+        :global(.model-badge.massage-chair) { background: #dcfce7; color: #15803d; }
+        :global(.model-badge.pou-purifier) { background: #cffafe; color: #0e7490; }
         :global(.model-badge.elapsed-months) { background: #f1f5f9; color: #475569; }
         :global(.model-badge.comp-badge) { border: 1px solid #10b981; color: #10b981; background: transparent; }
-        :global(.model-badge.expiry-badge) { background: #fef2f2; color: #ef4444; }
-        
+        :global(.model-badge.expiry-badge.expired) { background: #fee2e2; color: #ef4444; border: 1px solid #fca5a5; }    
         .detail-link-btn { display: flex; align-items: center; gap: 2px; background: #fff; color: #64748b; border: 1px solid #e2e8f0; padding: 4px 8px 4px 12px; border-radius: 8px; font-size: 0.75rem; font-weight: 700; cursor: pointer; transition: all 0.2s; }
         .detail-link-btn:active { background: #f1f5f9; }
         

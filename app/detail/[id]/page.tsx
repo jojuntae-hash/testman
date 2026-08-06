@@ -428,15 +428,15 @@ export default function DetailPage() {
           </div>
           <div className="info-item">
             <label>계약일자</label>
-            {isEditingInfo ? <input type="date" className="edit-input" name="계약일자" value={editForm.계약일자} onChange={handleFormChange} /> : <span>{customer.계약일자}</span>}
+            {isEditingInfo ? <input type="date" max="9999-12-31" className="edit-input" name="계약일자" value={editForm.계약일자} onChange={handleFormChange} /> : <span>{customer.계약일자}</span>}
           </div>
           <div className="info-item">
             <label>계약만료예정일</label>
-            {isEditingInfo ? <input type="date" className="edit-input" name="계약만료일자" value={editForm.계약만료일자} onChange={handleFormChange} /> : <span>{customer.계약만료일자}</span>}
+            {isEditingInfo ? <input type="date" max="9999-12-31" className="edit-input" name="계약만료일자" value={editForm.계약만료일자} onChange={handleFormChange} /> : <span>{customer.계약만료일자}</span>}
           </div>
           <div className="info-item">
             <label>최종점검일</label>
-            {isEditingInfo ? <input type="date" className="edit-input" name="최종점검일" value={editForm.최종점검일} onChange={handleFormChange} /> : <span>{customer.최종점검일}</span>}
+            {isEditingInfo ? <input type="date" max="9999-12-31" className="edit-input" name="최종점검일" value={editForm.최종점검일} onChange={handleFormChange} /> : <span>{customer.최종점검일}</span>}
           </div>
           <div className="info-item">
             <label>예약일자</label>
@@ -718,7 +718,7 @@ export default function DetailPage() {
                 </div>
                 {/* 날짜 선택 */}
                 <input
-                  type="date"
+                  type="date" max="9999-12-31"
                   style={{
                     width: '100%',
                     padding: '8px 12px',
@@ -803,7 +803,7 @@ export default function DetailPage() {
                   <Calendar size={16} /> 완료 날짜 선택
                 </div>
                 <input
-                  type="date"
+                  type="date" max="9999-12-31"
                   style={{
                     width: '100%',
                     padding: '8px 12px',
