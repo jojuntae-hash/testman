@@ -17,7 +17,8 @@ export default function SubscribedCustomersPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedFolder, setSelectedFolder] = useState('전체')
   const [sortOption, setSortOption] = useState('join-desc')
-  const [monthFilter, setMonthFilter] = useState('')
+  const [filterYear, setFilterYear] = useState('')
+  const [filterMonth, setFilterMonth] = useState('')
   
   // 페이징 상태
   const [currentPage, setCurrentPage] = useState(1)
@@ -52,6 +53,27 @@ export default function SubscribedCustomersPage() {
     const unique = Array.from(new Set(subscribedCustomers.map(c => c.status || '미분류')))
     return ['전체', ...unique]
   }, [subscribedCustomers])
+
+  const availableYears = useMemo(() => {
+    const years = new Set<string>()
+    subscribedCustomers.forEach(c => {
+      if (c.계약일자 && c.계약일자.length >= 4) {
+        years.add(c.계약일자.substring(0, 4))
+      }
+    })
+    return Array.from(years).sort().reverse()
+  }, [subscribedCustomers])
+
+  const availableMonths = useMemo(() => {
+    if (!filterYear) return []
+    const months = new Set<string>()
+    subscribedCustomers.forEach(c => {
+      if (c.계약일자 && c.계약일자.startsWith(filterYear) && c.계약일자.length >= 7) {
+        months.add(c.계약일자.substring(5, 7))
+      }
+    })
+    return Array.from(months).sort()
+  }, [subscribedCustomers, filterYear])
 
   const getModelCategory = (modelName?: string) => {
     if (!modelName) return '기타'
@@ -95,9 +117,9 @@ export default function SubscribedCustomersPage() {
     if (!contractDate) return null
     const date = new Date(contractDate)
     if (isNaN(date.getTime())) return null
-    const yyyy = date.getFullYear()
+    const yy = String(date.getFullYear()).slice(-2)
     const mm = String(date.getMonth() + 1).padStart(2, '0')
-    return <span className={`model-badge join-ym`}>{yyyy}-{mm} 가입</span>
+    return <span className={`model-badge join-ym`}>{yy}-{mm} 가입</span>
   }
 
   const getBirthMonthBadge = (birth?: string) => {
@@ -147,8 +169,9 @@ export default function SubscribedCustomersPage() {
       list = list.filter(c => (c.status || '미분류') === selectedFolder)
     }
 
-    if (monthFilter) {
-      list = list.filter(c => c.계약일자 && c.계약일자.startsWith(monthFilter))
+    if (filterYear) {
+      const prefix = filterMonth ? `${filterYear}-${filterMonth}` : filterYear
+      list = list.filter(c => c.계약일자 && c.계약일자.startsWith(prefix))
     }
 
     if (cleanSearch) {
@@ -175,16 +198,22 @@ export default function SubscribedCustomersPage() {
           return getElapsedMonths(a.계약일자) - getElapsedMonths(b.계약일자)
         case 'months-desc':
           return getElapsedMonths(b.계약일자) - getElapsedMonths(a.계약일자)
-        case 'birth-asc':
-          return (a.생년월일 || '').localeCompare(b.생년월일 || '')
-        case 'birth-desc':
-          return (b.생년월일 || '').localeCompare(a.생년월일 || '')
+        case 'birth-asc': {
+          const aM1 = a.생년월일 && a.생년월일.length >= 6 ? a.생년월일.substring(2, 4) : '99'
+          const bM1 = b.생년월일 && b.생년월일.length >= 6 ? b.생년월일.substring(2, 4) : '99'
+          return aM1.localeCompare(bM1)
+        }
+        case 'birth-desc': {
+          const aM2 = a.생년월일 && a.생년월일.length >= 6 ? a.생년월일.substring(2, 4) : '00'
+          const bM2 = b.생년월일 && b.생년월일.length >= 6 ? b.생년월일.substring(2, 4) : '00'
+          return bM2.localeCompare(aM2)
+        }
         case 'name':
         default:
           return (a.고객명_상호 || '').localeCompare(b.고객명_상호 || '')
       }
     })
-  }, [subscribedCustomers, searchTerm, selectedFolder, sortOption, monthFilter])
+  }, [subscribedCustomers, searchTerm, selectedFolder, sortOption, filterYear, filterMonth])
 
   const totalPages = Math.ceil(filteredCustomers.length / itemsPerPage)
   const paginatedCustomers = filteredCustomers.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
@@ -290,26 +319,40 @@ export default function SubscribedCustomersPage() {
           {searchTerm && <X size={18} className="clear-icon" onClick={() => setSearchTerm('')} />}
         </div>
         
-        <div className="category-filters">
-          <input 
-            type="month" 
-            className="month-filter-input"
-            value={monthFilter}
-            onChange={(e) => setMonthFilter(e.target.value)}
-            title="가입월 선택"
-          />
-          {folders.map(folder => (
-            <button 
-              key={folder}
-              className={`cat-btn ${selectedFolder === folder ? 'active' : ''}`}
-              onClick={() => {
-                setSelectedFolder(folder)
-                localStorage.setItem('lastFolder_sub', folder)
-              }}
-            >
-              {folder}
-            </button>
-          ))}
+        
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px' }}>
+          <div className="category-filters" style={{ margin: 0 }}>
+            {folders.map(folder => (
+              <button 
+                key={folder}
+                className={`cat-btn ${selectedFolder === folder ? 'active' : ''}`}
+                onClick={() => {
+                  setSelectedFolder(folder)
+                  localStorage.setItem('lastFolder_sub', folder)
+                }}
+              >
+                {folder}
+              </button>
+            ))}
+          </div>
+          
+          <div className="custom-month-filter">
+            <select value={filterYear} onChange={e => {
+              setFilterYear(e.target.value)
+              setFilterMonth('') // 년도 변경 시 월 리셋
+            }} className="date-select">
+              <option value="">년도 전체</option>
+              {availableYears.map(y => (
+                <option key={y} value={y}>{y}년</option>
+              ))}
+            </select>
+            <select value={filterMonth} onChange={e => setFilterMonth(e.target.value)} className="date-select" disabled={!filterYear}>
+              <option value="">월 전체</option>
+              {availableMonths.map(m => (
+                <option key={m} value={m}>{Number(m)}월</option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 
@@ -335,8 +378,8 @@ export default function SubscribedCustomersPage() {
               <option value="join-asc">가입일 오래된순</option>
               <option value="name">이름순</option>
               <option value="model">장비순</option>
-              <option value="birth-desc">생년월일 내림차순</option>
-              <option value="birth-asc">생년월일 오름차순</option>
+              <option value="birth-desc">생일월 내림차순</option>
+              <option value="birth-asc">생일월 오름차순</option>
               <option value="months-asc">개월수 오름차순</option>
               <option value="months-desc">개월수 내림차순</option>
             </select>
@@ -363,11 +406,13 @@ export default function SubscribedCustomersPage() {
                     상세 <ChevronRight size={14} />
                   </button>
                 </div>
-                <div className="item-details">
-                  <div className="detail-text" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {customer.현장메모 || '메모 없음'}
+                {customer.현장메모 && (
+                  <div className="item-details">
+                    <div className="detail-text" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {customer.현장메모}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             ))
           )}
@@ -537,7 +582,10 @@ export default function SubscribedCustomersPage() {
         :global(.model-badge.birth-month) { background: #fce7f3; color: #be185d; }
         :global(.model-badge.comp-badge) { border: 1px solid #10b981; color: #10b981; background: transparent; }
         
-        .month-filter-input { padding: 4px 10px; border-radius: 20px; border: 1px solid #cbd5e1; font-size: 0.8rem; font-weight: 700; color: #64748b; background: #fff; outline: none; }
+        .custom-month-filter { display: flex; gap: 6px; }
+        .date-select { padding: 6px 10px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 0.8rem; font-weight: 700; color: #475569; background: #fff; cursor: pointer; outline: none; transition: border-color 0.2s; }
+        .date-select:hover { border-color: #94a3b8; }
+        .date-select:disabled { background: #f1f5f9; color: #94a3b8; cursor: not-allowed; }
         
         .detail-link-btn { display: flex; align-items: center; gap: 2px; background: #fff; color: #64748b; border: 1px solid #e2e8f0; padding: 4px 8px 4px 12px; border-radius: 8px; font-size: 0.75rem; font-weight: 700; cursor: pointer; transition: all 0.2s; }
         .detail-link-btn:active { background: #f1f5f9; }

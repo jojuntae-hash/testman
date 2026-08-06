@@ -334,11 +334,13 @@ export default function CustomersPage() {
                     상세 <ChevronRight size={14} />
                   </button>
                 </div>
-                <div className="item-details">
-                  <div className="detail-text" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {customer.기록 || '메모 없음'}
+                {customer.기록 && (
+                  <div className="item-details">
+                    <div className="detail-text" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {customer.기록}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             ))
           )}
@@ -508,7 +510,7 @@ export default function CustomersPage() {
         :global(.model-badge.pou-purifier) { background: #cffafe; color: #0e7490; }
         :global(.model-badge.elapsed-months) { background: #f1f5f9; color: #475569; }
         :global(.model-badge.comp-badge) { border: 1px solid #10b981; color: #10b981; background: transparent; }
-        :global(.model-badge.expiry-badge.expired) { background: #fee2e2; color: #ef4444; border: 1px solid #fca5a5; }    
+        :global(.model-badge.expiry-badge) { background: #fef2f2; color: #ef4444; border: none; }    
         .detail-link-btn { display: flex; align-items: center; gap: 2px; background: #fff; color: #64748b; border: 1px solid #e2e8f0; padding: 4px 8px 4px 12px; border-radius: 8px; font-size: 0.75rem; font-weight: 700; cursor: pointer; transition: all 0.2s; }
         .detail-link-btn:active { background: #f1f5f9; }
         
