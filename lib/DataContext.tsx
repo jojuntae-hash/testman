@@ -225,13 +225,15 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     const isSupabaseConfigured = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
     // 1. Supabase 연동 시도
+    let supabaseLoaded = false
     if (isSupabaseConfigured) {
       try {
         const { data, error } = await supabase
           .from('customers')
           .select('*')
-        if (!error && data && data.length > 0) {
+        if (!error && data) {
           loadedCustomers = data as CustomerData[]
+          supabaseLoaded = true
         } else if (error) {
           console.error('Supabase load error:', error)
         }
@@ -240,17 +242,18 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
-    // 2. Supabase에 데이터가 없거나 비활성화 시 로컬 스토리지 사용
-    if (loadedCustomers.length === 0) {
+    // 2. Supabase 연동 실패 시 또는 미설정 시 로컬 스토리지 사용
+    if (!supabaseLoaded) {
       const savedCustomers = localStorage.getItem('customers')
-      if (savedCustomers) {
+      if (savedCustomers !== null) {
         try {
           loadedCustomers = JSON.parse(savedCustomers)
         } catch (e) {
-          loadedCustomers = initialCustomers
+          loadedCustomers = []
         }
       } else {
         loadedCustomers = initialCustomers
+        localStorage.setItem('customers', JSON.stringify(initialCustomers))
       }
     }
 
@@ -869,7 +872,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   // 모든 데이터 삭제 및 동기화
   const clearAllCustomers = async () => {
     setCustomersState([])
-    localStorage.removeItem('customers')
+    localStorage.setItem('customers', JSON.stringify([]))
 
     const isSupabaseConfigured = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
     if (isSupabaseConfigured) {
