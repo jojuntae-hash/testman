@@ -421,7 +421,18 @@ export default function MapPage() {
                       </div>
                       {(isActive || mapShowNames) && (
                         <div className="marker-tooltip">
-                          {marker.isGroup ? `${marker.customers.length}명 겹침` : marker.customers[0].고객명_상호}
+                          {marker.customers.map((c: any) => {
+                            let label = c.고객명_상호 || ''
+                            if (selectedFolder === '예약완료' && c.예약일자 && c.예약일자.includes(' ')) {
+                              const parts = c.예약일자.split(' ')
+                              if (parts.length > 1) {
+                                const timePart = parts[1]
+                                const hourStr = timePart.split(':')[0]
+                                label = `${label} ${parseInt(hourStr, 10)}`
+                              }
+                            }
+                            return label
+                          }).join(', ')}
                         </div>
                       )}
                     </div>

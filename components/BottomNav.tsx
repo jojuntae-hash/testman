@@ -9,7 +9,7 @@ import { LayoutGrid, Map, Users, Settings, PlusCircle, CheckCircle2, Copy, UserP
 export default function BottomNav() {
   const pathname = usePathname()
   const router = useRouter()
-  const { customers, setCustomers, selectedIds, setSelectedIds, copyToLongTerm, copyToSubscribed, changeCustomerStatus } = useData()
+  const { customers, setCustomers, selectedIds, setSelectedIds, copyToLongTerm, copyToSubscribed, changeCustomerStatus, deleteCustomers } = useData()
   const [isMoreOpen, setIsMoreOpen] = React.useState(false)
 
   // 모달 관련 상태
@@ -24,6 +24,24 @@ export default function BottomNav() {
 
   const handleBulkStatusChange = async (newStatus: string) => {
     if (selectedIds.length === 0) return
+
+    if (newStatus === '삭제됨') {
+      const allAlreadyDeleted = selectedIds.every(id => {
+        const c = customers.find(x => x.id === id)
+        return c?.status === '삭제됨'
+      })
+      
+      if (allAlreadyDeleted) {
+        if (confirm('완전 삭제하시겠습니까? (이 작업은 되돌릴 수 없습니다)')) {
+          await deleteCustomers(selectedIds)
+          setSelectedIds([])
+          return
+        } else {
+          return
+        }
+      }
+    }
+
     const msg = newStatus === '삭제됨' ? '선택한 고객을 삭제하시겠습니까?' : `선택한 고객을 '${newStatus}' 상태로 변경하시겠습니까?`
     if (confirm(msg)) {
       await changeCustomerStatus(selectedIds, newStatus)
@@ -74,11 +92,19 @@ export default function BottomNav() {
             <FolderPlus size={18} />
             <span>폴더</span>
           </button>
-          <button className="action-btn" onClick={() => { copyToLongTerm(selectedIds); setSelectedIds([]) }}>
+          <button className="action-btn" onClick={() => { 
+            if (confirm('선택한 고객을 고객관리(장기)로 복사하시겠습니까?')) {
+              copyToLongTerm(selectedIds); setSelectedIds([]);
+            }
+          }}>
             <Copy size={18} />
             <span>고객관리</span>
           </button>
-          <button className="action-btn" onClick={() => { copyToSubscribed(selectedIds); setSelectedIds([]) }}>
+          <button className="action-btn" onClick={() => { 
+            if (confirm('선택한 고객을 가입고객으로 복사하시겠습니까?')) {
+              copyToSubscribed(selectedIds); setSelectedIds([]);
+            }
+          }}>
             <UserPlus size={18} />
             <span>가입고객</span>
           </button>

@@ -3,7 +3,8 @@
 import React, { useState, useMemo, useEffect } from 'react'
 import { useData } from '@/lib/DataContext'
 import { useRouter } from 'next/navigation'
-import { Folder, Clock, Calendar, CheckCircle2, ChevronRight, Trash2, FolderPlus, Map, ClipboardList, Search, Phone, Pencil, X, Check } from 'lucide-react'
+import { Folder, Clock, Calendar, CheckCircle2, ChevronRight, Trash2, FolderPlus, Map, ClipboardList, Search, Phone, Pencil, X, Check, UserPlus } from 'lucide-react'
+import ManualAddModal from '@/components/ManualAddModal'
 
 const formatShortAddress = (addr: string) => {
   if (!addr) return ''
@@ -19,6 +20,7 @@ export default function HomePage() {
   const [renamingFolder, setRenamingFolder] = useState<string | null>(null)
   const [renameValue, setRenameValue] = useState('')
   const [renameColor, setRenameColor] = useState('#34495e')
+  const [isManualAddOpen, setIsManualAddOpen] = useState(false)
 
   // 마운트 시 이전에 선택했던 폴더와 정렬 기준 복구
   useEffect(() => {
@@ -244,10 +246,30 @@ export default function HomePage() {
   return (
     <div className="home-page">
       <div className="view-header">
-        <div className="header-text no-back">
+        <div className="header-text">
           <h1>고객 리스트</h1>
           <p>폴더별로 고객을 분류하여 관리합니다.</p>
         </div>
+        <button 
+          className="add-customer-btn" 
+          onClick={() => setIsManualAddOpen(true)}
+          style={{
+            background: '#3b82f6',
+            color: '#fff',
+            border: 'none',
+            padding: '8px 12px',
+            borderRadius: '10px',
+            fontSize: '0.8rem',
+            fontWeight: '700',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+            boxShadow: '0 2px 8px rgba(59, 130, 246, 0.2)'
+          }}
+        >
+          <UserPlus size={14} /> <span>수동 추가</span>
+        </button>
       </div>
 
       <div className="folder-grid">
@@ -385,12 +407,20 @@ export default function HomePage() {
         </div>
       </div>
 
-
+      {isManualAddOpen && (
+        <ManualAddModal
+          onClose={() => setIsManualAddOpen(false)}
+          onAdd={(newCustomer) => {
+            setCustomers([...customers, newCustomer] as any)
+            setIsManualAddOpen(false)
+            alert('고객이 성공적으로 추가되었습니다.')
+          }}
+        />
+      )}
 
       <style jsx>{`
         .home-page { padding: 0; padding-bottom: 100px; background: #f8fafc; min-height: 100%; }
-        .view-header { height: 80px; display: flex; align-items: center; padding: 0 20px; border-bottom: 1px solid #f1f5f9; background: #fff; sticky; top: 0; z-index: 100; margin-bottom: 20px; }
-        .header-text.no-back { margin-left: 52px; } /* 뒤로가기 버튼이 있는 페이지의 타이틀 위치와 완벽 정렬 */
+        .view-header { height: 75px; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; border-bottom: 1px solid #f1f5f9; background: #fff; position: sticky; top: 0; z-index: 100; margin-bottom: 20px; }
         .header-text h1 { font-size: 1.25rem; font-weight: 800; margin: 0; color: #1e293b; }
         .header-text p { font-size: 0.8rem; color: #94a3b8; margin: 0; font-weight: 500; }
         .folder-grid { padding: 0 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 30px; }
@@ -415,6 +445,7 @@ export default function HomePage() {
         .rename-cancel-btn { flex: 1; padding: 3px; background: #f1f5f9; color: #64748b; border: 1px solid #e2e8f0; border-radius: 5px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
 
         @media (max-width: 480px) {
+          .view-header { padding: 0 16px; height: 70px; }
           .folder-grid { padding: 0 16px; gap: 10px; margin-bottom: 20px; }
           .folder-card { padding: 12px 14px; gap: 10px; border-radius: 16px; }
           .folder-icon { width: 38px; height: 38px; border-radius: 10px; }

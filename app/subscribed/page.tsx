@@ -2,8 +2,9 @@
 
 import React, { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronLeft, ChevronRight, Search, X, MapPin, FolderPlus, Trash2, Map, UserPlus } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Search, X, MapPin, FolderPlus, Trash2, Map, UserPlus, SlidersHorizontal } from 'lucide-react'
 import SubscribedManualAddModal from '@/components/SubscribedManualAddModal'
+import FolderOrderModal from '@/components/FolderOrderModal'
 import { useData } from '@/lib/DataContext'
 
 const formatShortAddress = (addr: string) => {
@@ -13,7 +14,7 @@ const formatShortAddress = (addr: string) => {
 
 export default function SubscribedCustomersPage() {
   const router = useRouter()
-  const { subscribedCustomers, changeSubscribedCustomerStatus, deleteSubscribedCustomers, folderColors, updateFolderColor, addSubscribedCustomer } = useData()
+  const { subscribedCustomers, changeSubscribedCustomerStatus, deleteSubscribedCustomers, folderColors, updateFolderColor, renameFolderColor, addSubscribedCustomer } = useData()
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedFolder, setSelectedFolder] = useState('전체')
   const [sortOption, setSortOption] = useState('join-desc')
@@ -32,6 +33,8 @@ export default function SubscribedCustomersPage() {
   const [isFolderModalOpen, setIsFolderModalOpen] = useState(false)
   const [newFolderName, setNewFolderName] = useState('')
   const [newFolderColor, setNewFolderColor] = useState('#3b82f6')
+  const [isOrderModalOpen, setIsOrderModalOpen] = useState(false)
+  const [customOrderVersion, setCustomOrderVersion] = useState(0)
 
   React.useEffect(() => {
     setCurrentPage(1)
@@ -51,8 +54,19 @@ export default function SubscribedCustomersPage() {
 
   const folders = useMemo(() => {
     const unique = Array.from(new Set(subscribedCustomers.map(c => c.status || '미분류')))
+    const savedOrder = typeof window !== 'undefined' ? localStorage.getItem('folderOrder_sub') : null
+    if (savedOrder) {
+      try {
+        const orderArr = JSON.parse(savedOrder)
+        const existingSaved = orderArr.filter((f: string) => unique.includes(f))
+        const missing = unique.filter((f: string) => !existingSaved.includes(f))
+        return ['전체', ...existingSaved, ...missing]
+      } catch (e) {
+        console.error(e)
+      }
+    }
     return ['전체', ...unique]
-  }, [subscribedCustomers])
+  }, [subscribedCustomers, customOrderVersion])
 
   const availableYears = useMemo(() => {
     const years = new Set<string>()
@@ -300,7 +314,8 @@ export default function SubscribedCustomersPage() {
             display: 'flex',
             alignItems: 'center',
             gap: '4px',
-            boxShadow: '0 2px 8px rgba(59, 130, 246, 0.2)'
+            boxShadow: '0 2px 8px rgba(59, 130, 246, 0.2)',
+            marginRight: '10px'
           }}
         >
           <UserPlus size={14} /> <span>수동 추가</span>
@@ -321,7 +336,7 @@ export default function SubscribedCustomersPage() {
         
         
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px' }}>
-          <div className="category-filters" style={{ margin: 0 }}>
+          <div className="category-filters" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px', overflowX: 'auto' }}>
             {folders.map(folder => (
               <button 
                 key={folder}
@@ -334,6 +349,14 @@ export default function SubscribedCustomersPage() {
                 {folder}
               </button>
             ))}
+            <button 
+              className="cat-btn order-edit-btn" 
+              onClick={() => setIsOrderModalOpen(true)}
+              title="폴더 관리"
+              style={{ padding: '6px 8px', background: '#f8fafc', borderColor: '#e2e8f0', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            >
+              <SlidersHorizontal size={14} />
+            </button>
           </div>
           
           <div className="custom-month-filter">
@@ -531,6 +554,34 @@ export default function SubscribedCustomersPage() {
           </div>
         </div>
       )}
+
+      {/* 폴더 순서 및 이름 변경 모달 */}
+      <FolderOrderModal
+        isOpen={isOrderModalOpen}
+        onClose={() => setIsOrderModalOpen(false)}
+        folders={folders}
+        onSave={async (newOrder, renamedMap) => {
+          localStorage.setItem('folderOrder_sub', JSON.stringify(newOrder))
+
+          if (renamedMap && Object.keys(renamedMap).length > 0) {
+            for (const [oldName, newName] of Object.entries(renamedMap)) {
+              if (oldName !== newName) {
+                const targetIds = subscribedCustomers.filter(c => (c.status || '미분류') === oldName).map(c => c.id)
+                if (targetIds.length > 0) {
+                  await changeSubscribedCustomerStatus(targetIds, newName)
+                }
+                renameFolderColor(oldName, newName)
+                if (selectedFolder === oldName) {
+                  setSelectedFolder(newName)
+                  localStorage.setItem('lastFolder_sub', newName)
+                }
+              }
+            }
+          }
+
+          setCustomOrderVersion(v => v + 1)
+        }}
+      />
 
       <style jsx>{`
         .customers-page { padding: 0; padding-bottom: 120px; background: #f8fafc; min-height: 100%; }

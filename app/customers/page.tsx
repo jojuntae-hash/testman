@@ -14,7 +14,7 @@ const formatShortAddress = (addr: string) => {
 
 export default function CustomersPage() {
   const router = useRouter()
-  const { longTermCustomers, changeLongTermCustomerStatus, deleteLongTermCustomers, folderColors, updateFolderColor, copyLongTermToSubscribed, addLongTermCustomer } = useData()
+  const { longTermCustomers, changeLongTermCustomerStatus, deleteLongTermCustomers, folderColors, updateFolderColor, renameFolderColor, copyLongTermToSubscribed, addLongTermCustomer } = useData()
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedFolder, setSelectedFolder] = useState('전체')
   const [sortOption, setSortOption] = useState('name')
@@ -268,7 +268,8 @@ export default function CustomersPage() {
             display: 'flex',
             alignItems: 'center',
             gap: '4px',
-            boxShadow: '0 2px 8px rgba(59, 130, 246, 0.2)'
+            boxShadow: '0 2px 8px rgba(59, 130, 246, 0.2)',
+            marginRight: '10px'
           }}
         >
           <UserPlus size={14} /> <span>수동 추가</span>
@@ -481,8 +482,25 @@ export default function CustomersPage() {
         isOpen={isOrderModalOpen}
         onClose={() => setIsOrderModalOpen(false)}
         folders={folders}
-        onSave={(newOrder) => {
+        onSave={async (newOrder, renamedMap) => {
           localStorage.setItem('folderOrder_long', JSON.stringify(newOrder))
+
+          if (renamedMap && Object.keys(renamedMap).length > 0) {
+            for (const [oldName, newName] of Object.entries(renamedMap)) {
+              if (oldName !== newName) {
+                const targetIds = longTermCustomers.filter(c => (c.status || '미분류') === oldName).map(c => c.id)
+                if (targetIds.length > 0) {
+                  await changeLongTermCustomerStatus(targetIds, newName)
+                }
+                renameFolderColor(oldName, newName)
+                if (selectedFolder === oldName) {
+                  setSelectedFolder(newName)
+                  localStorage.setItem('lastFolder_long', newName)
+                }
+              }
+            }
+          }
+
           setCustomOrderVersion(v => v + 1)
         }}
       />
