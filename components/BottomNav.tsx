@@ -4,7 +4,7 @@ import React from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useData } from '@/lib/DataContext'
-import { LayoutGrid, Map, Users, Settings, PlusCircle, CheckCircle2, Copy, UserPlus, Clock, Calendar, Trash2, FolderPlus, MapPin, FileText, MessageSquare, FileSpreadsheet, MoreHorizontal } from 'lucide-react'
+import { LayoutGrid, Map, Users, Settings, PlusCircle, CheckCircle2, Copy, UserPlus, Clock, Calendar, Trash2, FolderPlus, MapPin, FileText, MessageSquare, FileSpreadsheet, Sparkles, MoreHorizontal } from 'lucide-react'
 
 export default function BottomNav() {
   const pathname = usePathname()
@@ -399,7 +399,7 @@ export default function BottomNav() {
     )
   }
 
-  const isMoreActive = ['/sms', '/memos', '/settings', '/completed', '/products', '/quotes'].includes(pathname)
+  const isMoreActive = ['/sms', '/memos', '/settings', '/completed', '/products', '/quotes', '/insights'].includes(pathname)
 
   // 일반 내비게이션 바
   return (
@@ -427,6 +427,10 @@ export default function BottomNav() {
             <Link href="/quotes" className={`more-menu-item ${pathname === '/quotes' ? 'active' : ''}`} onClick={() => setIsMoreOpen(false)}>
               <FileSpreadsheet size={18} />
               <span>견적서</span>
+            </Link>
+            <Link href="/insights" className={`more-menu-item ${pathname === '/insights' ? 'active' : ''}`} onClick={() => setIsMoreOpen(false)}>
+              <Sparkles size={18} />
+              <span>인사이트</span>
             </Link>
             <Link href="/settings" className={`more-menu-item ${pathname === '/settings' ? 'active' : ''}`} onClick={() => setIsMoreOpen(false)}>
               <Settings size={18} />

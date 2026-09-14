@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useData } from '@/lib/DataContext'
-import { ChevronLeft, Save, Trash2, Download, Upload, FileUp, Map as MapIcon, Clock, Key, Home, Settings as SettingsIcon, Search, Lock, Unlock, RotateCcw, Database, LogOut, RefreshCw } from 'lucide-react'
+import { ChevronLeft, Save, Trash2, Download, Upload, FileUp, Map as MapIcon, Clock, Key, Home, Settings as SettingsIcon, Search, Lock, Unlock, RotateCcw, Database, LogOut, RefreshCw, Sliders, Plus, Tag } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import Script from 'next/script'
 import ManualAddModal from '@/components/ManualAddModal'
@@ -14,10 +14,17 @@ import LongTermManualAddModal from '@/components/LongTermManualAddModal'
 import SubscribedBackupManagerModal from '@/components/SubscribedBackupManagerModal'
 import SubscribedManualAddModal from '@/components/SubscribedManualAddModal'
 import PDFBulkUploadModal from '@/components/PDFBulkUploadModal'
+import ProductRuleManagerModal from '@/components/ProductRuleManagerModal'
 
 export default function SettingsPage() {
   const router = useRouter()
-  const { customers, setCustomers, addCustomer, addCustomers, resetToDefault, clearAllCustomers, longTermCustomers, restoreLongTermFromBackup, clearAllLongTermCustomers, addLongTermCustomer, subscribedCustomers, restoreSubscribedFromBackup, clearAllSubscribedCustomers, addSubscribedCustomer, syncMemosWithManagement } = useData()
+  const { 
+    customers, setCustomers, addCustomer, addCustomers, resetToDefault, clearAllCustomers, 
+    longTermCustomers, restoreLongTermFromBackup, clearAllLongTermCustomers, addLongTermCustomer, 
+    subscribedCustomers, restoreSubscribedFromBackup, clearAllSubscribedCustomers, addSubscribedCustomer, 
+    syncMemosWithManagement,
+    productCategoryRules
+  } = useData()
   
   // 기본 설정 상태
   const [defaultSource, setDefaultSource] = useState('')
@@ -36,6 +43,7 @@ export default function SettingsPage() {
   const [isSubscribedBackupManagerOpen, setIsSubscribedBackupManagerOpen] = useState(false)
   const [isSubscribedManualAddOpen, setIsSubscribedManualAddOpen] = useState(false)
   const [isPdfBulkModalOpen, setIsPdfBulkModalOpen] = useState(false)
+  const [isProductRuleModalOpen, setIsProductRuleModalOpen] = useState(false)
   const [isSyncingMemos, setIsSyncingMemos] = useState(false)
 
   useEffect(() => {
@@ -389,7 +397,33 @@ export default function SettingsPage() {
           </div>
         </section>
 
-
+        {/* 장비별 구분 및 분류 규칙 관리 */}
+        <section className="settings-section">
+          <div className="section-title"><Sliders size={18} color="#3b82f6" /> 장비(제품) 분류 규칙</div>
+          <div className="setting-card">
+            <div className="setting-info">
+              <h3>장비별(제품) 분류 규칙 관리</h3>
+              <p>
+                모델명 접두사 및 키워드 기반 카테고리 자동 분류
+                {productCategoryRules && productCategoryRules.length > 0 && (
+                  <span className="rule-summary-badge">
+                    {productCategoryRules.length}개 분류({productCategoryRules.map(r => r.category).slice(0, 3).join(', ')}{productCategoryRules.length > 3 ? ` 외 ${productCategoryRules.length - 3}개` : ''})
+                  </span>
+                )}
+              </p>
+            </div>
+            <div className="setting-control">
+              <button 
+                type="button" 
+                className="rule-manage-btn"
+                onClick={() => setIsProductRuleModalOpen(true)}
+              >
+                <Sliders size={14} />
+                <span>규칙 관리</span>
+              </button>
+            </div>
+          </div>
+        </section>
 
         {/* 지도 설정 */}
         <section className="settings-section">
@@ -674,6 +708,12 @@ export default function SettingsPage() {
         />
       )}
 
+      {isProductRuleModalOpen && (
+        <ProductRuleManagerModal 
+          onClose={() => setIsProductRuleModalOpen(false)}
+        />
+      )}
+
       <style jsx>{`
         .settings-page { min-height: 100%; background: #f8fafc; padding-bottom: 100px; }
         .view-header { height: 80px; display: flex; align-items: center; padding: 0 20px; border-bottom: 1px solid #e2e8f0; background: #fff; position: sticky; top: 0; z-index: 100; }
@@ -692,6 +732,34 @@ export default function SettingsPage() {
         .setting-info h3 { font-size: 0.95rem; font-weight: 700; color: #1e293b; margin: 0 0 4px 0; }
         .setting-info p { font-size: 0.8rem; color: #94a3b8; margin: 0; line-height: 1.4; }
         
+        .rule-summary-badge {
+          display: block;
+          margin-top: 4px;
+          font-size: 0.75rem;
+          color: #2563eb;
+          font-weight: 700;
+        }
+
+        .rule-manage-btn {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          background: #eff6ff;
+          color: #2563eb;
+          border: 1px solid #bfdbfe;
+          padding: 8px 14px;
+          border-radius: 10px;
+          font-size: 0.82rem;
+          font-weight: 700;
+          cursor: pointer;
+          white-space: nowrap;
+          transition: all 0.2s;
+        }
+        .rule-manage-btn:hover {
+          background: #dbeafe;
+          border-color: #93c5fd;
+        }
+
         .setting-control { display: flex; align-items: center; gap: 8px; }
         .setting-control-group { width: 100%; max-width: 250px; display: flex; flex-direction: column; gap: 8px; }
         
@@ -728,11 +796,8 @@ export default function SettingsPage() {
         .settings-list-item:last-child { border-bottom: none; }
         .settings-list-item:hover { background: #f8fafc; }
         .settings-list-group.danger-zone .settings-list-item:hover { background: #fff1f2; }
-        .settings-list-item:active { background: #f1f5f9; }
-        
-        .item-left { display: flex; align-items: center; gap: 12px; }
-        .item-left span { font-size: 0.9rem; font-weight: 600; color: #334155; }
-        .settings-list-group.danger-zone .item-left span { color: #b91c1c; }
+        .item-left { display: flex; align-items: center; gap: 10px; font-size: 0.88rem; font-weight: 700; color: #334155; }
+        .settings-list-group.danger-zone .item-left span { color: #e11d48; }
         
         @media (max-width: 480px) {
           .settings-list-item { padding: 12px 14px; }

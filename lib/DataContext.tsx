@@ -170,7 +170,28 @@ interface DataContextType {
   clearAllSubscribedCustomers: () => Promise<void>
   restoreSubscribedFromBackup: (backupData: SubscribedCustomer[]) => Promise<void>
   syncMemosWithManagement: () => Promise<{ successCount: number; failedCount: number }>
+
+  // 장비/제품 분류 규칙
+  productCategoryRules: ProductCategoryRule[]
+  updateProductCategoryRules: (rules: ProductCategoryRule[]) => void
+  resetProductCategoryRules: () => void
 }
+
+export interface ProductCategoryRule {
+  id: string
+  category: string
+  prefixes: string[]
+  keywords: string[]
+}
+
+export const DEFAULT_PRODUCT_RULES: ProductCategoryRule[] = [
+  { id: 'water_purifier', category: '정수기', prefixes: ['CP', 'CPPU', 'CHP', 'CPI'], keywords: ['정수기'] },
+  { id: 'bidet', category: '비데', prefixes: ['CBT', 'BPS', 'BAS'], keywords: ['비데'] },
+  { id: 'air_cleaner', category: '공기청정기', prefixes: ['AC', 'AP'], keywords: ['공기청정기', '청정기'] },
+  { id: 'water_softener', category: '연수기', prefixes: ['CWS', 'CCW'], keywords: ['연수기'] },
+  { id: 'mattress', category: '매트리스', prefixes: ['CM', 'CMS'], keywords: ['매트리스'] },
+  { id: 'massage', category: '안마의자', prefixes: ['CA'], keywords: ['안마의자'] }
+]
 
 const DataContext = createContext<DataContextType | undefined>(undefined)
 
@@ -191,6 +212,39 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   // 장기 고객 관리 상태
   const [longTermCustomers, setLongTermCustomersState] = useState<LongTermCustomer[]>([])
   const [subscribedCustomers, setSubscribedCustomersState] = useState<SubscribedCustomer[]>([])
+
+  // 제품/장비 분류 규칙 상태
+  const [productCategoryRules, setProductCategoryRulesState] = useState<ProductCategoryRule[]>(DEFAULT_PRODUCT_RULES)
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('product_category_rules')
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored)
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setProductCategoryRulesState(parsed)
+          }
+        } catch (e) {
+          console.error('Failed to parse stored product rules:', e)
+        }
+      }
+    }
+  }, [])
+
+  const updateProductCategoryRules = (rules: ProductCategoryRule[]) => {
+    setProductCategoryRulesState(rules)
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('product_category_rules', JSON.stringify(rules))
+    }
+  }
+
+  const resetProductCategoryRules = () => {
+    setProductCategoryRulesState(DEFAULT_PRODUCT_RULES)
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('product_category_rules', JSON.stringify(DEFAULT_PRODUCT_RULES))
+    }
+  }
 
   // 전화번호 보정 로직 (10으로 시작하면 0 추가)
   const fixPhoneNumber = (phone: string) => {
@@ -1583,7 +1637,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       copyLongTermToSubscribed,
       clearAllSubscribedCustomers,
       restoreSubscribedFromBackup,
-      syncMemosWithManagement
+      syncMemosWithManagement,
+      productCategoryRules,
+      updateProductCategoryRules,
+      resetProductCategoryRules
     }}>
       {children}
       <WorkCompletionModal />
