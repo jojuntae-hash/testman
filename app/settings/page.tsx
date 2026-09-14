@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useData } from '@/lib/DataContext'
-import { ChevronLeft, Save, Trash2, Download, Upload, FileUp, Map as MapIcon, Clock, Key, Home, Settings as SettingsIcon, Search, Lock, Unlock, RotateCcw, Database, LogOut, RefreshCw, Sliders, Plus, Tag } from 'lucide-react'
+import { ChevronLeft, Save, Trash2, Download, Upload, FileUp, Map as MapIcon, Clock, Key, Home, Settings as SettingsIcon, Search, Lock, Unlock, RotateCcw, Database, LogOut, RefreshCw, Sliders, Plus, Tag, Sparkles } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import Script from 'next/script'
 import ManualAddModal from '@/components/ManualAddModal'
@@ -606,6 +606,57 @@ export default function SettingsPage() {
               </button>
               <button className="settings-list-item" onClick={handleClearAllSubscribed}>
                 <div className="item-left"><Trash2 size={16} color="#ef4444" /> <span>가입고객 모두 삭제</span></div>
+              </button>
+            </div>
+          </div>
+
+          <div className="settings-list-group">
+            <div className="settings-list-header">인사이트 데이터관리</div>
+            <div className="settings-list-items">
+              <button className="settings-list-item" onClick={() => {
+                const saved = localStorage.getItem('insights_data_v1')
+                if (!saved) { alert('백업할 인사이트 데이터가 없습니다.'); return }
+                try {
+                  const insights = JSON.parse(saved)
+                  const backupData = { insights, backupDate: new Date().toISOString(), version: 'insights_v1', totalCount: insights.length }
+                  const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' })
+                  const url = URL.createObjectURL(blob)
+                  const a = document.createElement('a')
+                  a.href = url
+                  a.download = `insights_backup_${new Date().toISOString().split('T')[0]}.json`
+                  a.click()
+                  URL.revokeObjectURL(url)
+                  alert(`${insights.length}개의 인사이트가 백업되었습니다.`)
+                } catch { alert('백업 중 오류가 발생했습니다.') }
+              }}>
+                <div className="item-left"><Download size={16} color="#8b5cf6" /> <span>인사이트 백업 (JSON)</span></div>
+              </button>
+              <label className="settings-list-item">
+                <div className="item-left"><Upload size={16} color="#f59e0b" /> <span>인사이트 복원 (JSON)</span></div>
+                <input type="file" accept=".json" onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  if (!file) return
+                  const reader = new FileReader()
+                  reader.onload = (event) => {
+                    try {
+                      const json = JSON.parse(event.target?.result as string)
+                      let data = json.insights || (Array.isArray(json) ? json : null)
+                      if (!data) { alert('올바른 인사이트 백업 파일이 아닙니다.'); return }
+                      localStorage.setItem('insights_data_v1', JSON.stringify(data))
+                      alert(`${data.length}개의 인사이트가 복원되었습니다. 인사이트 페이지에서 확인하세요.`)
+                    } catch { alert('올바른 백업 파일이 아닙니다.') }
+                  }
+                  reader.readAsText(file)
+                  e.target.value = ''
+                }} hidden />
+              </label>
+              <button className="settings-list-item" onClick={() => {
+                if (confirm('모든 인사이트 데이터를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) {
+                  localStorage.removeItem('insights_data_v1')
+                  alert('모든 인사이트 데이터가 삭제되었습니다.')
+                }
+              }}>
+                <div className="item-left"><Trash2 size={16} color="#ef4444" /> <span>인사이트 전체 삭제</span></div>
               </button>
             </div>
           </div>

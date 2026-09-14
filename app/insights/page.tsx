@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase'
 import { 
   ChevronLeft, Plus, Search, Sparkles, Video, BookOpen, Newspaper, 
   Lightbulb, ExternalLink, Trash2, Edit3, Copy, Check, 
-  Key, X, Tag, Play, FileText, Bookmark, RefreshCw
+  Key, X, Tag, Play, FileText, Bookmark, RefreshCw, Download, Upload
 } from 'lucide-react'
 
 export interface InsightItem {
@@ -422,6 +422,107 @@ export default function InsightsPage() {
     setTimeout(() => setCopied(false), 2000)
   }
 
+  // 파일 입력 ref
+  const restoreFileRef = React.useRef<HTMLInputElement>(null)
+
+  // 인사이트 백업 (JSON 파일 다운로드)
+  const handleBackupInsights = () => {
+    if (insights.length === 0) {
+      alert('백업할 인사이트 데이터가 없습니다.')
+      return
+    }
+    const backupData = {
+      insights,
+      backupDate: new Date().toISOString(),
+      version: 'insights_v1',
+      totalCount: insights.length
+    }
+    const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `insights_backup_${new Date().toISOString().split('T')[0]}.json`
+    a.click()
+    URL.revokeObjectURL(url)
+    alert(`${insights.length}개의 인사이트가 백업되었습니다.`)
+  }
+
+  // 인사이트 복원 (JSON 파일 업로드)
+  const handleRestoreInsights = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onload = async (event) => {
+      try {
+        const json = JSON.parse(event.target?.result as string)
+        let restoredData: InsightItem[] = []
+
+        if (json.insights && Array.isArray(json.insights)) {
+          restoredData = json.insights
+        } else if (Array.isArray(json)) {
+          restoredData = json
+        } else {
+          alert('올바른 인사이트 백업 파일이 아닙니다.')
+          return
+        }
+
+        if (restoredData.length === 0) {
+          alert('복원할 데이터가 없습니다.')
+          return
+        }
+
+        const mode = confirm(
+          `${restoredData.length}개의 인사이트를 복원합니다.\n\n[확인] 기존 데이터에 합치기\n[취소] 기존 데이터 교체`
+        )
+
+        let finalData: InsightItem[]
+        if (mode) {
+          // 합치기: 중복 ID 제거 (복원 데이터 우선)
+          const existingMap = new Map(insights.map(i => [i.id, i]))
+          restoredData.forEach(item => existingMap.set(item.id, item))
+          finalData = Array.from(existingMap.values())
+        } else {
+          finalData = restoredData
+        }
+
+        saveInsightsLocal(finalData)
+
+        // Supabase 동기화: 전체 upsert
+        try {
+          for (const item of finalData) {
+            await supabase
+              .from('insights')
+              .upsert({
+                id: item.id,
+                title: item.title,
+                url: item.url || '',
+                type: item.type,
+                thumbnail: item.thumbnail || '',
+                video_id: item.videoId || '',
+                summary: item.summary || '',
+                user_notes: item.userNotes || '',
+                tags: item.tags || [],
+                created_at: item.createdAt ? new Date(item.createdAt).toISOString() : new Date().toISOString(),
+                updated_at: item.updatedAt ? new Date(item.updatedAt).toISOString() : new Date().toISOString()
+              })
+          }
+        } catch (err) {
+          console.warn('Supabase restore sync failed:', err)
+        }
+
+        alert(`${finalData.length}개의 인사이트가 복원되었습니다.`)
+      } catch (err) {
+        console.error(err)
+        alert('올바른 백업 파일이 아닙니다.')
+      }
+    }
+    reader.readAsText(file)
+
+    // 같은 파일 재선택 가능하도록 초기화
+    e.target.value = ''
+  }
+
   // 필터링
   const filteredInsights = insights.filter(item => {
     const matchType = selectedType === 'all' || item.type === selectedType
@@ -459,6 +560,27 @@ export default function InsightsPage() {
             <RefreshCw size={16} className={isLoading ? 'spin-icon' : ''} />
             <span>{isLoading ? '동기화 중...' : '동기화'}</span>
           </button>
+
+          <button 
+            className="sync-btn"
+            onClick={handleBackupInsights}
+            title="인사이트 데이터 백업 (JSON)"
+          >
+            <Download size={16} />
+            <span>백업</span>
+          </button>
+
+          <label className="sync-btn" title="인사이트 데이터 복원 (JSON)" style={{ cursor: 'pointer' }}>
+            <Upload size={16} />
+            <span>복원</span>
+            <input 
+              type="file" 
+              accept=".json" 
+              onChange={handleRestoreInsights} 
+              ref={restoreFileRef}
+              hidden 
+            />
+          </label>
 
           <button 
             className={`api-key-btn ${geminiApiKey ? 'active' : ''}`}
@@ -546,27 +668,16 @@ export default function InsightsPage() {
               className="insight-card"
               onClick={() => { setSelectedInsight(item); setIsDetailModalOpen(true); }}
             >
-              {/* 썸네일 영역 */}
-              {item.type === 'youtube' && item.thumbnail ? (
-                <div className="card-media">
-                  <img src={item.thumbnail} alt={item.title} />
-                  <div className="play-overlay">
-                    <Play size={20} fill="#fff" color="#fff" />
-                  </div>
-                  <span className="type-badge yt">
-                    <Video size={12} /> 유튜브
-                  </span>
-                </div>
-              ) : (
-                <div className={`card-header-pattern ${item.type}`}>
-                  <span className={`type-badge ${item.type}`}>
-                    {item.type === 'blog' && <><BookOpen size={12} /> 블로그</>}
-                    {item.type === 'article' && <><Newspaper size={12} /> 웹진</>}
-                    {item.type === 'memo' && <><Lightbulb size={12} /> 메모</>}
-                  </span>
-                  <span className="date-text">{item.createdAt}</span>
-                </div>
-              )}
+              {/* 타입 헤더 */}
+              <div className={`card-header-pattern ${item.type}`}>
+                <span className={`type-badge ${item.type}`}>
+                  {item.type === 'youtube' && <><Video size={12} /> 유튜브</>}
+                  {item.type === 'blog' && <><BookOpen size={12} /> 블로그</>}
+                  {item.type === 'article' && <><Newspaper size={12} /> 웹진</>}
+                  {item.type === 'memo' && <><Lightbulb size={12} /> 메모</>}
+                </span>
+                <span className="date-text">{item.createdAt}</span>
+              </div>
 
               <div className="card-body">
                 <h3 className="card-title">{item.title}</h3>
@@ -1142,6 +1253,7 @@ export default function InsightsPage() {
           align-items: center;
           background: #f1f5f9;
         }
+        .card-header-pattern.youtube { background: #fef2f2; }
         .card-header-pattern.blog { background: #ecfdf5; }
         .card-header-pattern.article { background: #eff6ff; }
         .card-header-pattern.memo { background: #fffbeb; }
@@ -1162,6 +1274,7 @@ export default function InsightsPage() {
           background: rgba(239, 68, 68, 0.9);
           color: #fff;
         }
+        .type-badge.youtube { background: #fee2e2; color: #dc2626; }
         .type-badge.blog { background: #d1fae5; color: #059669; }
         .type-badge.article { background: #dbeafe; color: #2563eb; }
         .type-badge.memo { background: #fef3c7; color: #d97706; }

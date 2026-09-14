@@ -35,6 +35,10 @@ const createMockBuilder = () => {
       console.warn('Supabase is not configured! Delete ignored.')
       return builder
     },
+    upsert: () => {
+      console.warn('Supabase is not configured! Upsert ignored.')
+      return builder
+    },
     // Support then/catch for promise/await parsing
     then: (resolve: any) => Promise.resolve({ data: [], error: null }).then(resolve),
     catch: (reject: any) => Promise.resolve({ data: [], error: null }).catch(reject),
