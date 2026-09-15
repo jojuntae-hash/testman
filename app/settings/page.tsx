@@ -13,6 +13,7 @@ import LongTermBackupManagerModal from '@/components/LongTermBackupManagerModal'
 import LongTermManualAddModal from '@/components/LongTermManualAddModal'
 import SubscribedBackupManagerModal from '@/components/SubscribedBackupManagerModal'
 import SubscribedManualAddModal from '@/components/SubscribedManualAddModal'
+import InsightsBackupManagerModal from '@/components/InsightsBackupManagerModal'
 import PDFBulkUploadModal from '@/components/PDFBulkUploadModal'
 import ProductRuleManagerModal from '@/components/ProductRuleManagerModal'
 
@@ -42,6 +43,7 @@ export default function SettingsPage() {
   const [isLongTermManualAddOpen, setIsLongTermManualAddOpen] = useState(false)
   const [isSubscribedBackupManagerOpen, setIsSubscribedBackupManagerOpen] = useState(false)
   const [isSubscribedManualAddOpen, setIsSubscribedManualAddOpen] = useState(false)
+  const [isInsightsBackupManagerOpen, setIsInsightsBackupManagerOpen] = useState(false)
   const [isPdfBulkModalOpen, setIsPdfBulkModalOpen] = useState(false)
   const [isProductRuleModalOpen, setIsProductRuleModalOpen] = useState(false)
   const [isSyncingMemos, setIsSyncingMemos] = useState(false)
@@ -613,6 +615,9 @@ export default function SettingsPage() {
           <div className="settings-list-group">
             <div className="settings-list-header">인사이트 데이터관리</div>
             <div className="settings-list-items">
+              <button className="settings-list-item" onClick={() => setIsInsightsBackupManagerOpen(true)}>
+                <div className="item-left"><Database size={16} color="#0ea5e9" /> <span>인사이트 자동 백업 관리</span></div>
+              </button>
               <button className="settings-list-item" onClick={() => {
                 const saved = localStorage.getItem('insights_data_v1')
                 if (!saved) { alert('백업할 인사이트 데이터가 없습니다.'); return }
@@ -730,6 +735,12 @@ export default function SettingsPage() {
       {isSubscribedBackupManagerOpen && (
         <SubscribedBackupManagerModal 
           onClose={() => setIsSubscribedBackupManagerOpen(false)}
+        />
+      )}
+
+      {isInsightsBackupManagerOpen && (
+        <InsightsBackupManagerModal 
+          onClose={() => setIsInsightsBackupManagerOpen(false)}
         />
       )}
 

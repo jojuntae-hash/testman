@@ -261,3 +261,77 @@ export async function deleteSubscribedBackups(ids: string[]): Promise<void> {
     throw error
   }
 }
+
+// ============================================
+// 인사이트 백업 (localStorage 기반)
+// ============================================
+
+const INSIGHTS_BACKUP_KEY = 'insights_backups'
+const MAX_INSIGHTS_BACKUPS = 20
+
+export interface InsightsBackupItem {
+  id: string
+  name: string
+  timestamp: number
+  data: any[]
+}
+
+// 인사이트 백업 생성
+export function saveInsightsBackup(data: any[]): void {
+  const now = new Date()
+  const id = Date.now().toString()
+  const name = `INS_${formatDate(now)}`
+
+  const backupItem: InsightsBackupItem = {
+    id,
+    name,
+    timestamp: now.getTime(),
+    data: JSON.parse(JSON.stringify(data)),
+  }
+
+  const existing = getInsightsBackupListFull()
+  existing.push(backupItem)
+
+  // 최대 개수 초과 시 오래된 것 삭제
+  while (existing.length > MAX_INSIGHTS_BACKUPS) {
+    existing.shift()
+  }
+
+  localStorage.setItem(INSIGHTS_BACKUP_KEY, JSON.stringify(existing))
+}
+
+// 인사이트 백업 리스트 조회 (데이터 제외)
+export function getInsightsBackupList(): Omit<InsightsBackupItem, 'data'>[] {
+  const saved = localStorage.getItem(INSIGHTS_BACKUP_KEY)
+  if (!saved) return []
+  try {
+    const list: InsightsBackupItem[] = JSON.parse(saved)
+    return list.map(({ id, name, timestamp }) => ({ id, name, timestamp })).sort((a, b) => b.timestamp - a.timestamp)
+  } catch {
+    return []
+  }
+}
+
+// 인사이트 백업 리스트 전체 (내부용)
+function getInsightsBackupListFull(): InsightsBackupItem[] {
+  const saved = localStorage.getItem(INSIGHTS_BACKUP_KEY)
+  if (!saved) return []
+  try {
+    return JSON.parse(saved)
+  } catch {
+    return []
+  }
+}
+
+// 특정 인사이트 백업 데이터 가져오기
+export function getInsightsBackupData(id: string): InsightsBackupItem | undefined {
+  const list = getInsightsBackupListFull()
+  return list.find(item => item.id === id)
+}
+
+// 여러 인사이트 백업 삭제
+export function deleteInsightsBackups(ids: string[]): void {
+  const list = getInsightsBackupListFull()
+  const filtered = list.filter(item => !ids.includes(item.id))
+  localStorage.setItem(INSIGHTS_BACKUP_KEY, JSON.stringify(filtered))
+}

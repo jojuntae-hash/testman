@@ -15,7 +15,12 @@ export default function HomePage() {
   const { customers, setCustomers, selectedIds, setSelectedIds, folderColors, renameFolderColor } = useData()
   const router = useRouter()
   const [selectedFolder, setSelectedFolder] = useState<string | null>('전체리스트')
-  const [searchTerm, setSearchTerm] = useState('')
+  const [searchTerm, setSearchTerm] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('lastSearchTerm') || ''
+    }
+    return ''
+  })
   const [sortOption, setSortOption] = useState<string>('name')
   const [renamingFolder, setRenamingFolder] = useState<string | null>(null)
   const [renameValue, setRenameValue] = useState('')
@@ -135,12 +140,13 @@ export default function HomePage() {
     }
     if (searchTerm.trim() !== '') {
       const lowerTerm = searchTerm.toLowerCase()
+      const digitsTerm = searchTerm.replace(/[-\s]/g, '')
       list = list.filter(c => 
         (c.고객명_상호 && c.고객명_상호.toLowerCase().includes(lowerTerm)) ||
-        (c.전화번호 && c.전화번호.includes(lowerTerm)) ||
-        (c.핸드폰번호 && c.핸드폰번호.includes(lowerTerm)) ||
-        (c.설치전화번호 && c.설치전화번호.includes(lowerTerm)) ||
-        (c.설치핸드폰번호 && c.설치핸드폰번호.includes(lowerTerm)) ||
+        (c.전화번호 && (c.전화번호.includes(lowerTerm) || c.전화번호.replace(/[-\s]/g, '').includes(digitsTerm))) ||
+        (c.핸드폰번호 && (c.핸드폰번호.includes(lowerTerm) || c.핸드폰번호.replace(/[-\s]/g, '').includes(digitsTerm))) ||
+        (c.설치전화번호 && (c.설치전화번호.includes(lowerTerm) || c.설치전화번호.replace(/[-\s]/g, '').includes(digitsTerm))) ||
+        (c.설치핸드폰번호 && (c.설치핸드폰번호.includes(lowerTerm) || c.설치핸드폰번호.replace(/[-\s]/g, '').includes(digitsTerm))) ||
         (c.설치주소 && c.설치주소.toLowerCase().includes(lowerTerm)) ||
         (c.주소 && c.주소.toLowerCase().includes(lowerTerm)) ||
         (c.모델명 && c.모델명.toLowerCase().includes(lowerTerm)) ||
@@ -339,7 +345,10 @@ export default function HomePage() {
             type="text" 
             placeholder="이름, 전화번호, 주소, 모델명으로 검색" 
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => {
+              setSearchTerm(e.target.value)
+              localStorage.setItem('lastSearchTerm', e.target.value)
+            }}
           />
         </div>
       </div>

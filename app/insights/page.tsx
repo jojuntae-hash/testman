@@ -552,37 +552,6 @@ export default function InsightsPage() {
 
         <div className="header-actions">
           <button 
-            className={`sync-btn ${isLoading ? 'loading' : ''}`}
-            onClick={fetchInsights}
-            title="클라우드 동기화 새로고침"
-            disabled={isLoading}
-          >
-            <RefreshCw size={16} className={isLoading ? 'spin-icon' : ''} />
-            <span>{isLoading ? '동기화 중...' : '동기화'}</span>
-          </button>
-
-          <button 
-            className="sync-btn"
-            onClick={handleBackupInsights}
-            title="인사이트 데이터 백업 (JSON)"
-          >
-            <Download size={16} />
-            <span>백업</span>
-          </button>
-
-          <label className="sync-btn" title="인사이트 데이터 복원 (JSON)" style={{ cursor: 'pointer' }}>
-            <Upload size={16} />
-            <span>복원</span>
-            <input 
-              type="file" 
-              accept=".json" 
-              onChange={handleRestoreInsights} 
-              ref={restoreFileRef}
-              hidden 
-            />
-          </label>
-
-          <button 
             className={`api-key-btn ${geminiApiKey ? 'active' : ''}`}
             onClick={() => setIsKeyModalOpen(true)}
             title="Google Gemini API 설정"
@@ -665,26 +634,19 @@ export default function InsightsPage() {
           filteredInsights.map(item => (
             <div 
               key={item.id} 
-              className="insight-card"
+              className={`insight-card type-${item.type}`}
               onClick={() => { setSelectedInsight(item); setIsDetailModalOpen(true); }}
             >
-              {/* 타입 헤더 */}
-              <div className={`card-header-pattern ${item.type}`}>
-                <span className={`type-badge ${item.type}`}>
-                  {item.type === 'youtube' && <><Video size={12} /> 유튜브</>}
-                  {item.type === 'blog' && <><BookOpen size={12} /> 블로그</>}
-                  {item.type === 'article' && <><Newspaper size={12} /> 웹진</>}
-                  {item.type === 'memo' && <><Lightbulb size={12} /> 메모</>}
-                </span>
-                <span className="date-text">{item.createdAt}</span>
-              </div>
-
               <div className="card-body">
-                <h3 className="card-title">{item.title}</h3>
-                
-                <p className="card-preview">
-                  {item.summary.replace(/#/g, '').replace(/\*/g, '').slice(0, 110)}...
-                </p>
+                <div className={`card-title-area type-${item.type}`}>
+                  <span className="card-title-icon">
+                    {item.type === 'youtube' && <Video size={15} />}
+                    {item.type === 'blog' && <BookOpen size={15} />}
+                    {item.type === 'article' && <Newspaper size={15} />}
+                    {item.type === 'memo' && <Lightbulb size={15} />}
+                  </span>
+                  <h3 className="card-title">{item.title}</h3>
+                </div>
 
                 {item.tags && item.tags.length > 0 && (
                   <div className="tag-list">
@@ -1218,92 +1180,43 @@ export default function InsightsPage() {
           border-color: #cbd5e1;
         }
 
-        .card-media {
-          position: relative;
-          width: 100%;
-          height: 170px;
-          background: #0f172a;
-          overflow: hidden;
-        }
-        .card-media img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-          opacity: 0.9;
-        }
-        .play-overlay {
-          position: absolute;
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%);
-          width: 44px;
-          height: 44px;
-          background: rgba(0,0,0,0.6);
-          backdrop-filter: blur(2px);
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-        .card-header-pattern {
-          height: 60px;
-          padding: 14px 16px;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          background: #f1f5f9;
-        }
-        .card-header-pattern.youtube { background: #fef2f2; }
-        .card-header-pattern.blog { background: #ecfdf5; }
-        .card-header-pattern.article { background: #eff6ff; }
-        .card-header-pattern.memo { background: #fffbeb; }
-
-        .type-badge {
-          display: inline-flex;
-          align-items: center;
-          gap: 4px;
-          padding: 4px 8px;
-          border-radius: 6px;
-          font-size: 0.72rem;
-          font-weight: 800;
-        }
-        .type-badge.yt {
-          position: absolute;
-          top: 10px;
-          left: 10px;
-          background: rgba(239, 68, 68, 0.9);
-          color: #fff;
-        }
-        .type-badge.youtube { background: #fee2e2; color: #dc2626; }
-        .type-badge.blog { background: #d1fae5; color: #059669; }
-        .type-badge.article { background: #dbeafe; color: #2563eb; }
-        .type-badge.memo { background: #fef3c7; color: #d97706; }
-
         .card-body {
-          padding: 16px;
+          padding: 0;
           flex: 1;
           display: flex;
           flex-direction: column;
         }
+        .card-title-area {
+          display: flex;
+          align-items: flex-start;
+          gap: 8px;
+          padding: 14px 16px;
+          border-radius: 14px 14px 0 0;
+          background: linear-gradient(135deg, #f1f5f9 0%, #fff 100%);
+        }
+        .card-title-area.type-youtube { background: linear-gradient(135deg, #fef2f2 0%, #fff 100%); }
+        .card-title-area.type-blog { background: linear-gradient(135deg, #ecfdf5 0%, #fff 100%); }
+        .card-title-area.type-article { background: linear-gradient(135deg, #eff6ff 0%, #fff 100%); }
+        .card-title-area.type-memo { background: linear-gradient(135deg, #fffbeb 0%, #fff 100%); }
+        .card-title-icon {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+          margin-top: 2px;
+        }
+        .card-title-area.type-youtube .card-title-icon { color: #ef4444; }
+        .card-title-area.type-blog .card-title-icon { color: #10b981; }
+        .card-title-area.type-article .card-title-icon { color: #3b82f6; }
+        .card-title-area.type-memo .card-title-icon { color: #f59e0b; }
         .card-title {
-          font-size: 1rem;
+          font-size: 0.95rem;
           font-weight: 800;
           color: #1e293b;
-          margin: 0 0 8px 0;
+          margin: 0;
           line-height: 1.4;
           display: -webkit-box;
           -webkit-line-clamp: 2;
-          -webkit-box-orient: vertical;
-          overflow: hidden;
-        }
-        .card-preview {
-          font-size: 0.82rem;
-          color: #64748b;
-          line-height: 1.5;
-          margin: 0 0 14px 0;
-          flex: 1;
-          display: -webkit-box;
-          -webkit-line-clamp: 3;
           -webkit-box-orient: vertical;
           overflow: hidden;
         }
@@ -1313,6 +1226,7 @@ export default function InsightsPage() {
           flex-wrap: wrap;
           gap: 5px;
           margin-top: auto;
+          padding: 8px 16px 0 16px;
         }
         .tag-badge {
           background: #f1f5f9;
@@ -1736,10 +1650,32 @@ export default function InsightsPage() {
         }
 
         @media (max-width: 640px) {
-          .page-header { flex-direction: column; align-items: flex-start; }
-          .header-actions { width: 100%; justify-content: space-between; }
-          .filter-bar { flex-direction: column; align-items: stretch; }
+          .insights-container { padding: 16px 12px 80px 12px; }
+          .page-header { flex-direction: column; align-items: flex-start; gap: 12px; }
+          .badge-wrapper h1 { font-size: 1.1rem; }
+          .header-titles p { font-size: 0.75rem; }
+          .header-actions { 
+            width: 100%; 
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            gap: 6px;
+            padding-bottom: 4px;
+          }
+          .header-actions::-webkit-scrollbar { display: none; }
+          .sync-btn { padding: 8px 10px; font-size: 0.75rem; flex-shrink: 0; white-space: nowrap; }
+          .sync-btn span { display: inline; }
+          .api-key-btn { padding: 8px 10px; font-size: 0.75rem; flex-shrink: 0; white-space: nowrap; }
+          .add-insight-btn { padding: 8px 12px; font-size: 0.8rem; flex-shrink: 0; white-space: nowrap; }
+          .filter-bar { flex-direction: column; align-items: stretch; gap: 8px; padding: 10px 12px; }
+          .category-tabs { 
+            overflow-x: auto; 
+            -webkit-overflow-scrolling: touch;
+            padding-bottom: 4px;
+          }
+          .category-tabs::-webkit-scrollbar { display: none; }
+          .tab-btn { padding: 6px 10px; font-size: 0.78rem; flex-shrink: 0; }
           .search-box { max-width: 100%; }
+          .content-grid { grid-template-columns: 1fr; gap: 12px; }
         }
       `}</style>
     </div>

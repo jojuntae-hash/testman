@@ -440,6 +440,24 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         }).catch(err => console.error('Subscribed auto backup failed', err))
       })
     }
+
+    // 인사이트는 1일(24시간 = 86,400,000ms) 경과 시 자동 백업 (localStorage 기반)
+    const lastInsightsBackupTime = parseInt(localStorage.getItem('lastInsightsBackupTime') || '0', 10)
+    const insightsData = localStorage.getItem('insights_data_v1')
+    if (now - lastInsightsBackupTime >= 86400000 && insightsData) {
+      try {
+        const insights = JSON.parse(insightsData)
+        if (insights.length > 0) {
+          import('./backupUtils').then(({ saveInsightsBackup }) => {
+            saveInsightsBackup(insights)
+            localStorage.setItem('lastInsightsBackupTime', now.toString())
+            console.log('Insights auto backup created successfully.')
+          })
+        }
+      } catch (err) {
+        console.error('Insights auto backup failed', err)
+      }
+    }
   }
 
   // Load data on mount

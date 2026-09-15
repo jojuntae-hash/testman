@@ -7,6 +7,15 @@ import { ChevronLeft, ChevronRight, Calendar, Phone, MapPin, ExternalLink, Save,
 import { supabase } from '@/lib/supabase'
 import VisitLogModal from '@/components/VisitLogModal'
 
+// 로컬 시간 기준으로 YYYY-MM-DD 문자열을 반환하는 헬퍼 함수
+// toISOString()은 UTC 기준이므로 한국(KST, UTC+9)에서는 날짜가 어긋남
+function toLocalDateStr(date: Date): string {
+  const y = date.getFullYear()
+  const m = (date.getMonth() + 1).toString().padStart(2, '0')
+  const d = date.getDate().toString().padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
 // 예약 정보의 시간 정보를 파싱하는 헬퍼 함수
 // 예약일자에 날짜+시간이 명시된 경우(YYYY-MM-DD HH:mm)만 파싱.
 // 메모·방문기록 등 다른 필드는 무시.
@@ -98,12 +107,9 @@ export default function CalendarPage() {
     setLoadingExtra(false)
   }
 
-  // 오늘 날짜 구하기 (KST 기준)
+  // 오늘 날짜 구하기 (로컬 시간 기준)
   const todayStr = useMemo(() => {
-    const today = new Date()
-    const offset = today.getTimezoneOffset() * 60000
-    const kstToday = new Date(today.getTime() - offset)
-    return kstToday.toISOString().split('T')[0]
+    return toLocalDateStr(new Date())
   }, [])
 
   // 기준일(currentDate)부터 연속된 4일 날짜 리스트 생성 (빽빽함 해결)
@@ -144,8 +150,7 @@ export default function CalendarPage() {
 
   // 특정 날짜 및 시간대의 예약 목록 필터링 (분 기준 오름차순 정렬)
   const getReservationsFor = (date: Date, hour: number) => {
-    const offset = date.getTimezoneOffset() * 60000
-    const dateStr = new Date(date.getTime() - offset).toISOString().split('T')[0]
+    const dateStr = toLocalDateStr(date)
     
     return reservations
       .filter(r => r.timeInfo.date === dateStr && r.timeInfo.hour === hour)
@@ -285,7 +290,7 @@ export default function CalendarPage() {
         }
       }
 
-      const dateIndex = weekDays.findIndex(d => d.toISOString().split('T')[0] === originalDateStr)
+      const dateIndex = weekDays.findIndex(d => toLocalDateStr(d) === originalDateStr)
       dragStartCellInfo.current = {
         dateIndex: dateIndex !== -1 ? dateIndex : 0,
         hour: originalHour,
@@ -323,7 +328,7 @@ export default function CalendarPage() {
 
       const targetDate = weekDays[newColIndex]
       if (targetDate) {
-        const targetDateStr = targetDate.toISOString().split('T')[0]
+        const targetDateStr = toLocalDateStr(targetDate)
         setActiveDropCell({ date: targetDateStr, hour: newHour })
       }
     }
@@ -352,7 +357,7 @@ export default function CalendarPage() {
         
         const targetDate = weekDays[newColIndex]
         if (targetDate) {
-          const targetDateStr = targetDate.toISOString().split('T')[0]
+          const targetDateStr = toLocalDateStr(targetDate)
           handleDropToCell(draggingId, targetDateStr, newHour)
         }
       }
@@ -533,7 +538,7 @@ export default function CalendarPage() {
         <div className="weeks-scroll">
           {weekDays.map(date => {
             const dayNum = date.getDay()
-            const isToday = date.toISOString().split('T')[0] === todayStr
+            const isToday = toLocalDateStr(date) === todayStr
             const dayNames = ['일', '월', '화', '수', '목', '금', '토']
             const dayName = dayNames[dayNum]
 
@@ -548,24 +553,25 @@ export default function CalendarPage() {
                 {/* 각 시간 셀 */}
                 {HOURS.map(hour => {
                   const dayReservations = getReservationsFor(date, hour)
-                  const isOver = activeDropCell && activeDropCell.date === date.toISOString().split('T')[0] && activeDropCell.hour === hour
+                  const cellDateStr = toLocalDateStr(date)
+                  const isOver = activeDropCell && activeDropCell.date === cellDateStr && activeDropCell.hour === hour
                   
                   return (
                     <div 
                       key={hour} 
                       className={`grid-cell ${isOver ? 'drag-over' : ''}`}
-                      data-date={date.toISOString().split('T')[0]}
+                      data-date={cellDateStr}
                       data-hour={hour}
                       onDragOver={(e) => {
                         e.preventDefault()
-                        setActiveDropCell({ date: date.toISOString().split('T')[0], hour })
+                        setActiveDropCell({ date: cellDateStr, hour })
                       }}
                       onDragLeave={() => setActiveDropCell(null)}
                       onDrop={(e) => {
                         e.preventDefault()
                         const droppedId = e.dataTransfer.getData('text/plain')
                         if (droppedId) {
-                          handleDropToCell(droppedId, date.toISOString().split('T')[0], hour)
+                          handleDropToCell(droppedId, cellDateStr, hour)
                         }
                         setActiveDropCell(null)
                         setDraggingId(null)
