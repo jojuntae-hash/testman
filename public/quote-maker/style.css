@@ -1246,25 +1246,52 @@ input, select, textarea, button {
         background-color: #ffffff;
         color: #000000;
         width: var(--paper-width);
-        height: var(--paper-height);
+        height: auto;
+        margin: 0;
+        padding: 0;
     }
     
     /* 화면용 구성요소 전부 숨김 */
     .app-container,
-    .modal-overlay,
-    .modal-header,
     .sidebar {
         display: none !important;
+    }
+
+    /* 모달 헤더(버튼 영역)만 숨김 */
+    .modal-header {
+        display: none !important;
+    }
+    
+    /* 모달 오버레이: 인쇄 시 투명 배경으로 일반 블록 표시 */
+    .modal-overlay {
+        display: block !important;
+        position: static !important;
+        background: none !important;
+        overflow: visible !important;
+    }
+
+    .modal-container {
+        position: static !important;
+        box-shadow: none !important;
+        background: none !important;
+        max-height: none !important;
+        overflow: visible !important;
+        width: auto !important;
+        height: auto !important;
+    }
+
+    .modal-body {
+        overflow: visible !important;
+        padding: 0 !important;
+        background: none !important;
     }
     
     /* 인쇄용 페이퍼만 노출 */
     .print-paper-container {
         display: block !important;
-        position: absolute;
-        top: 0;
-        left: 0;
+        position: static !important;
         width: var(--paper-width);
-        height: var(--paper-height);
+        height: auto;
         box-shadow: none !important;
         transform: scale(1) !important; /* 모바일 축소 스케일링 무시 */
         transform-origin: unset !important;
@@ -1274,6 +1301,10 @@ input, select, textarea, button {
         margin: 0 !important;
         border: none !important;
         padding: 10mm !important; /* 인쇄용 패딩 조정 */
+        width: var(--paper-width) !important;
+        height: auto !important;
+        max-height: none !important;
+        overflow: visible !important;
     }
     
     /* PDF/출력 시 끊김 방지 */

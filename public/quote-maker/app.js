@@ -1218,38 +1218,24 @@ async function downloadPDF() {
     const container = document.querySelector(".print-paper-container");
     const modalBody = document.querySelector(".modal-body");
 
-    // 1. 레이아웃 변형 및 스크롤 위치 보정
-    let originalTransform = "";
-    let originalTransformOrigin = "";
-    let originalHeight = "";
-    let originalMaxHeight = "";
-    let originalOverflow = "";
-    let originalBoxSizing = "";
-    let prevScrollTop = 0;
-
     try {
-        if (container) {
-            originalTransform = container.style.transform;
-            originalTransformOrigin = container.style.transformOrigin;
-            container.style.transform = "none";
-            container.style.transformOrigin = "unset";
-        }
+        // 1. 원본을 복제하여 화면 밖에 배치 (원본 DOM에 영향 없음)
+        const clone = printPaper.cloneNode(true);
+        clone.style.position = "absolute";
+        clone.style.left = "-9999px";
+        clone.style.top = "0";
+        clone.style.width = "210mm";
+        clone.style.height = "auto";
+        clone.style.maxHeight = "none";
+        clone.style.overflow = "visible";
+        clone.style.boxSizing = "border-box";
+        clone.style.transform = "none";
+        clone.style.padding = "22mm 18mm";
+        clone.style.backgroundColor = "#ffffff";
+        document.body.appendChild(clone);
 
-        if (printPaper) {
-            originalHeight = printPaper.style.height;
-            originalMaxHeight = printPaper.style.maxHeight;
-            originalOverflow = printPaper.style.overflow;
-            originalBoxSizing = printPaper.style.boxSizing;
-
-            // A4 높이(297mm)보다 살짝 작게 290mm로 고정하여 2페이지 생성을 100% 방지
-            printPaper.style.height = "290mm";
-            printPaper.style.maxHeight = "290mm";
-            printPaper.style.overflow = "hidden";
-            printPaper.style.boxSizing = "border-box";
-        }
-
-        prevScrollTop = modalBody ? modalBody.scrollTop : 0;
-        if (modalBody) modalBody.scrollTop = 0;
+        // 2. DOM 렌더링 리플로우 유도
+        await new Promise(resolve => setTimeout(resolve, 300));
 
         const safeCustomer = state.customer ? state.customer.replace(/[\/\\:*?"<>|]/g, "_") : '고객';
         const filename = `${safeCustomer}_렌탈견적서.pdf`;
@@ -1265,36 +1251,29 @@ async function downloadPDF() {
                 logging: false,
                 backgroundColor: '#ffffff',
                 scrollX: 0,
-                scrollY: 0
+                scrollY: 0,
+                windowWidth: clone.scrollWidth,
+                windowHeight: clone.scrollHeight
             },
             jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
             pagebreak:    { mode: 'avoid-all' }
         };
 
-        // DOM 렌더링 리플로우 유도
-        await new Promise(resolve => setTimeout(resolve, 200));
+        // 3. 복제본에서 PDF 생성
+        await html2pdf().set(opt).from(clone).save();
 
-        // PDF 생성 및 저장 실행
-        await html2pdf().set(opt).from(printPaper).save();
+        // 4. 복제본 제거
+        document.body.removeChild(clone);
 
     } catch (err) {
         console.error("PDF 생성 오류:", err);
         alert(`PDF 파일 저장 중 오류가 발생했습니다: ${err.message || err}`);
+        // 실패 시에도 복제본 정리
+        const leftover = document.querySelector('[style*="-9999px"]');
+        if (leftover && leftover.id === "printPaper") {
+            leftover.remove();
+        }
     } finally {
-        // 성공 및 실패 상관없이 무조건 100% 버튼 상태와 DOM 원상 복원
-        if (container) {
-            container.style.transform = originalTransform;
-            container.style.transformOrigin = originalTransformOrigin;
-        }
-        if (printPaper) {
-            printPaper.style.height = originalHeight;
-            printPaper.style.maxHeight = originalMaxHeight;
-            printPaper.style.overflow = originalOverflow;
-            printPaper.style.boxSizing = originalBoxSizing;
-        }
-        if (modalBody) {
-            modalBody.scrollTop = prevScrollTop;
-        }
         if (btn) {
             btn.disabled = false;
             btn.innerHTML = btn.dataset.originHtml || '<i data-lucide="file-pdf"></i> PDF 파일 저장';
