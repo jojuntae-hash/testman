@@ -1608,24 +1608,38 @@ async function uploadCompanyLogo() {
  * 탭 스위칭 함수 (견적서 작성기 <-> 메일 작성기)
  */
 function switchMainTab(tabName) {
-    const btnQuote = document.getElementById("btnTabQuote");
-    const btnMail = document.getElementById("btnTabMail");
-    const quoteView = document.getElementById("quoteViewSection");
-    const mailView = document.getElementById("mailViewSection");
+    try {
+        const btnQuote = document.getElementById("btnTabQuote");
+        const btnMail = document.getElementById("btnTabMail");
+        const quoteView = document.getElementById("quoteViewSection");
+        const mailView = document.getElementById("mailViewSection");
 
-    if (tabName === "mail") {
-        if (btnQuote) btnQuote.classList.remove("active");
-        if (btnMail) btnMail.classList.add("active");
-        if (quoteView) quoteView.style.display = "none";
-        if (mailView) mailView.classList.add("active");
+        if (tabName === "mail") {
+            if (btnQuote) btnQuote.classList.remove("active");
+            if (btnMail) btnMail.classList.add("active");
+            if (quoteView) quoteView.style.display = "none";
+            if (mailView) {
+                mailView.classList.add("active");
+                mailView.style.display = "block";
+            }
 
-        // 메일 작성 탭으로 이동 시 실시간 템플릿 갱신
-        updateMailView();
-    } else {
-        if (btnMail) btnMail.classList.remove("active");
-        if (btnQuote) btnQuote.classList.add("active");
-        if (mailView) mailView.classList.remove("active");
-        if (quoteView) quoteView.style.display = "block";
+            // 메일 작성 탭으로 이동 시 실시간 템플릿 갱신
+            updateMailView();
+        } else {
+            if (btnMail) btnMail.classList.remove("active");
+            if (btnQuote) btnQuote.classList.add("active");
+            if (mailView) {
+                mailView.classList.remove("active");
+                mailView.style.display = "none";
+            }
+            if (quoteView) quoteView.style.display = "block";
+        }
+
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
+    } catch (err) {
+        console.error("switchMainTab 실행 중 오류:", err);
     }
 }
 
@@ -1633,91 +1647,108 @@ function switchMainTab(tabName) {
  * 견적서 상태 데이터를 기반으로 이메일 템플릿 자동 생성
  */
 function generateMailTemplate() {
-    const customer = state.customer ? `${state.customer}` : "고객님";
-    const supplier = state.supplier || "렌탈의정원";
-    const dateFormatted = formatDateKorean(state.date);
-    const expiry = state.expiry || "견적일로부터 30일";
-    const phone = state.phone || state.contact || "-";
+    try {
+        const customer = (state.customer && typeof state.customer === 'string') ? state.customer : "고객님";
+        const supplier = state.supplier || "렌탈의정원";
+        const dateFormatted = formatDateKorean(state.date);
+        const expiry = state.expiry || "견적일로부터 30일";
+        const phone = state.phone || state.contact || "-";
 
-    let text = `안녕하세요, ${customer}. ${supplier} 입니다.\n요청하신 내용을 적용하여 렌탈 서비스 견적서를 아래와 같이 안내드립니다.\n첨부파일로도 견적서 이미지파일 첨부해드렸습니다.\n\n`;
+        let text = `안녕하세요, ${customer}. ${supplier} 입니다.\n요청하신 내용을 적용하여 렌탈 서비스 견적서를 아래와 같이 안내드립니다.\n첨부파일로도 견적서 이미지파일 첨부해드렸습니다.\n\n`;
 
-    text += `■ 견적 정보\n`;
-    text += `- 견적일자: ${dateFormatted}\n`;
-    text += `- 유효기간: ${expiry}\n`;
-    text += `- 담당자: ${phone}\n\n`;
+        text += `■ 견적 정보\n`;
+        text += `- 견적일자: ${dateFormatted}\n`;
+        text += `- 유효기간: ${expiry}\n`;
+        text += `- 담당자: ${phone}\n\n`;
 
-    text += `■ 견적 내역\n`;
-    const activeProducts = state.products.filter(p => p.name.trim() !== "");
-    let totalFee = 0;
+        text += `■ 견적 내역\n`;
+        const activeProducts = Array.isArray(state.products) 
+            ? state.products.filter(p => p && p.name && typeof p.name === 'string' && p.name.trim() !== "") 
+            : [];
 
-    activeProducts.forEach((prod, idx) => {
-        const qty = prod.quantity || 1;
-        const subtotal = prod.fee * qty;
-        totalFee += subtotal;
+        let totalFee = 0;
 
-        const termStr = prod.term ? ` (약정 ${prod.term})` : "";
-        const colorStr = prod.color ? ` - 색상: ${prod.color}` : "";
+        activeProducts.forEach((prod, idx) => {
+            const qty = prod.quantity || 1;
+            const feeNum = Number(prod.fee) || 0;
+            const subtotal = feeNum * qty;
+            totalFee += subtotal;
 
-        text += `${idx + 1}. ${prod.name}${termStr}${colorStr}\n`;
-        
-        let qtyFeeStr = `- 수량: ${qty}대 / 월 렌탈료: ${formatNumber(subtotal)}원`;
-        if (qty > 1) {
-            qtyFeeStr += ` (단가 ${formatNumber(prod.fee)}원)`;
+            const termStr = prod.term ? ` (약정 ${prod.term})` : "";
+            const colorStr = prod.color ? ` - 색상: ${prod.color}` : "";
+
+            text += `${idx + 1}. ${prod.name}${termStr}${colorStr}\n`;
+            
+            let qtyFeeStr = `- 수량: ${qty}대 / 월 렌탈료: ${formatNumber(subtotal)}원`;
+            if (qty > 1) {
+                qtyFeeStr += ` (단가 ${formatNumber(feeNum)}원)`;
+            }
+            text += `${qtyFeeStr}\n`;
+
+            const discounts = [];
+            if (prod.discount1 && typeof prod.discount1 === 'string' && prod.discount1.trim()) discounts.push(prod.discount1.trim());
+            if (prod.discount2 && typeof prod.discount2 === 'string' && prod.discount2.trim()) discounts.push(prod.discount2.trim());
+            if (discounts.length > 0) {
+                text += `- 할인: ${discounts.join(" / ")}\n`;
+            }
+
+            if (prod.link && typeof prod.link === 'string' && prod.link.trim()) {
+                text += `- 상세보기: ${prod.link.trim()}\n`;
+            }
+
+            text += `\n`;
+        });
+
+        text += `■ 합계 월 렌탈료 (VAT 포함): ${formatNumber(totalFee)}원\n\n`;
+
+        text += `■ 유의사항\n`;
+        if (state.notes && typeof state.notes === 'string' && state.notes.trim()) {
+            text += `${state.notes.trim()}\n\n`;
+        } else {
+            text += `1. 설치비 및 등록비 면제 조건입니다.\n2. 약정 기간 내 해지 시 위약금이 발생할 수 있습니다.\n3. 렌탈료는 부가가치세(VAT)가 포함된 금액입니다.\n\n`;
         }
-        text += `${qtyFeeStr}\n`;
 
-        const discounts = [];
-        if (prod.discount1 && prod.discount1.trim()) discounts.push(prod.discount1.trim());
-        if (prod.discount2 && prod.discount2.trim()) discounts.push(prod.discount2.trim());
-        if (discounts.length > 0) {
-            text += `- 할인: ${discounts.join(" / ")}\n`;
-        }
+        text += `추가 문의사항이 있으시면 언제든지 연락 주시기 바랍니다.\n감사합니다.\n${supplier} 드림\n${state.phone || state.contact || ''}`.trim();
 
-        if (prod.link && prod.link.trim()) {
-            text += `- 상세보기: ${prod.link.trim()}\n`;
-        }
-
-        text += `\n`;
-    });
-
-    text += `■ 합계 월 렌탈료 (VAT 포함): ${formatNumber(totalFee)}원\n\n`;
-
-    text += `■ 유의사항\n`;
-    if (state.notes && state.notes.trim()) {
-        text += `${state.notes.trim()}\n\n`;
-    } else {
-        text += `1. 설치비 및 등록비 면제 조건입니다.\n2. 약정 기간 내 해지 시 위약금이 발생할 수 있습니다.\n3. 렌탈료는 부가가치세(VAT)가 포함된 금액입니다.\n\n`;
+        return text;
+    } catch (err) {
+        console.error("generateMailTemplate 생성 오류:", err);
+        return "메일 템플릿 생성 중 오류가 발생했습니다.";
     }
-
-    text += `추가 문의사항이 있으시면 언제든지 연락 주시기 바랍니다.\n감사합니다.\n${supplier} 드림\n${state.phone || state.contact || ''}`.trim();
-
-    return text;
 }
 
 /**
  * 메일 작성기 UI 갱신 (제목, 본문 텍스트박스, 실시간 미리보기)
  */
 function updateMailView() {
-    const customer = state.customer ? `${state.customer}` : "고객님";
-    const supplier = state.supplier || "렌탈의정원";
-    const defaultSubject = `[렌탈 견적서] ${customer}, 요청하신 렌탈 서비스 견적 내용 안내드립니다.`;
+    try {
+        const customer = (state.customer && typeof state.customer === 'string') ? state.customer : "고객님";
+        const defaultSubject = `[렌탈 견적서] ${customer}, 요청하신 렌탈 서비스 견적 내용 안내드립니다.`;
 
-    const subjectInput = document.getElementById("mailSubject");
-    if (subjectInput && !subjectInput.dataset.manualEdited) {
-        subjectInput.value = defaultSubject;
-    }
+        const subjectInput = document.getElementById("mailSubject");
+        if (subjectInput && !subjectInput.dataset.manualEdited) {
+            subjectInput.value = defaultSubject;
+        }
 
-    const mailText = generateMailTemplate();
-    const mailTextarea = document.getElementById("mailBodyText");
-    const mailPreview = document.getElementById("mailPreviewBox");
+        const mailText = generateMailTemplate();
+        const mailTextarea = document.getElementById("mailBodyText");
+        const mailPreview = document.getElementById("mailPreviewBox");
 
-    if (mailTextarea && !mailTextarea.dataset.manualEdited) {
-        mailTextarea.value = mailText;
-    }
-    if (mailPreview) {
-        mailPreview.textContent = mailTextarea ? mailTextarea.value : mailText;
+        if (mailTextarea && !mailTextarea.dataset.manualEdited) {
+            mailTextarea.value = mailText;
+        }
+        if (mailPreview) {
+            mailPreview.textContent = mailTextarea ? mailTextarea.value : mailText;
+        }
+    } catch (err) {
+        console.error("updateMailView 오류:", err);
     }
 }
+
+// window 전역 객체에 명시적 등록
+window.switchMainTab = switchMainTab;
+window.updateMailView = updateMailView;
+window.generateMailTemplate = generateMailTemplate;
 
 /**
  * 클립보드 복사 유틸리티

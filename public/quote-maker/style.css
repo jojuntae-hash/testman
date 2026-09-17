@@ -1314,53 +1314,55 @@ input, select, textarea, button {
 }
 
 /* ==========================================================================
-   상단 메인 탭 (견적서 작성기 / 메일 작성기) CSS
+   상단 메인 탭 (견적서 작성기 / 메일 작성기) CSS - 모던 세그먼트 컨트롤 테마
    ========================================================================== */
 .main-tab-nav {
     display: flex;
     gap: 8px;
-    padding: 12px 24px 0 24px;
-    background-color: #ffffff;
-    border-bottom: 1px solid #e2e8f0;
+    margin-bottom: 24px;
+    background-color: #f1f5f9;
+    padding: 6px;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
 }
 
 .main-tab-btn {
+    flex: 1;
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 8px;
-    padding: 10px 22px;
-    font-size: 14px;
+    padding: 12px 20px;
+    font-size: 14.5px;
     font-weight: 600;
     color: #64748b;
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-bottom: none;
-    border-radius: 8px 8px 0 0;
+    background: transparent;
+    border: none;
+    border-radius: 8px;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.2s ease-in-out;
 }
 
 .main-tab-btn:hover {
-    color: #1e293b;
-    background: #f1f5f9;
+    color: #0f172a;
+    background: rgba(255, 255, 255, 0.6);
 }
 
 .main-tab-btn.active {
     color: var(--primary, #2563eb);
     background: #ffffff;
-    border-color: #cbd5e1;
-    border-bottom: 2px solid var(--primary, #2563eb);
     font-weight: 700;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
 }
 
 /* 메일 작성기 전용 컨테이너 */
 .mail-view-section {
-    padding: 24px;
+    padding: 0;
     display: none;
 }
 
 .mail-view-section.active {
-    display: block;
+    display: block !important;
 }
 
 .mail-grid {

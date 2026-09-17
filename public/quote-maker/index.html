@@ -19,6 +19,39 @@
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <!-- 스타일시트 로드 -->
     <link rel="stylesheet" href="style.css">
+    <script>
+    function switchMainTab(tabName) {
+        var btnQuote = document.getElementById("btnTabQuote");
+        var btnMail = document.getElementById("btnTabMail");
+        var quoteView = document.getElementById("quoteViewSection");
+        var mailView = document.getElementById("mailViewSection");
+
+        if (tabName === "mail") {
+            if (btnQuote) btnQuote.classList.remove("active");
+            if (btnMail) btnMail.classList.add("active");
+            if (quoteView) quoteView.style.display = "none";
+            if (mailView) {
+                mailView.classList.add("active");
+                mailView.style.display = "block";
+            }
+            if (typeof window.updateMailView === 'function') {
+                window.updateMailView();
+            }
+        } else {
+            if (btnMail) btnMail.classList.remove("active");
+            if (btnQuote) btnQuote.classList.add("active");
+            if (mailView) {
+                mailView.classList.remove("active");
+                mailView.style.display = "none";
+            }
+            if (quoteView) quoteView.style.display = "block";
+        }
+
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
+    }
+    </script>
 </head>
 <body>
     <div class="app-container">
@@ -66,30 +99,28 @@
 
         <!-- 메인 콘텐츠 영역 -->
         <main class="main-content">
-            <header class="app-header">
-                <div class="header-title">
-                    <h1><i data-lucide="file-spreadsheet" class="logo-icon"></i> Rental Quotation <span>렌탈 견적서 작성기</span></h1>
-                </div>
-                <div class="header-actions">
-                    <button class="btn btn-outline" id="btnOpenSidebar">
-                        <i data-lucide="archive"></i> 보관함 열기 (<span id="savedCount">0</span>)
-                    </button>
-                    <button class="btn btn-danger" id="btnNewQuotation">
-                        <i data-lucide="rotate-ccw"></i> 새로 작성
-                    </button>
-                </div>
             <!-- 상단 메인 탭 네비게이션 -->
             <nav class="main-tab-nav">
-                <button class="main-tab-btn active" id="btnTabQuote">
-                    <i data-lucide="file-spreadsheet"></i> 📄 견적서 작성기
+                <button class="main-tab-btn active" id="btnTabQuote" onclick="switchMainTab('quote')">
+                    <i data-lucide="file-spreadsheet"></i> 견적서 작성기
                 </button>
-                <button class="main-tab-btn" id="btnTabMail">
-                    <i data-lucide="mail"></i> ✉️ 메일 작성기
+                <button class="main-tab-btn" id="btnTabMail" onclick="switchMainTab('mail')">
+                    <i data-lucide="mail"></i> 메일 작성기
                 </button>
             </nav>
 
             <!-- 1. 견적서 작성기 뷰 섹션 -->
             <div class="quote-view-section" id="quoteViewSection">
+                <div class="quote-actions-bar margin-bottom" style="display: flex; justify-content: flex-end;">
+                    <div class="header-actions" style="display: flex; gap: 8px;">
+                        <button class="btn btn-outline" id="btnOpenSidebar">
+                            <i data-lucide="archive"></i> 보관함 열기 (<span id="savedCount">0</span>)
+                        </button>
+                        <button class="btn btn-danger" id="btnNewQuotation">
+                            <i data-lucide="rotate-ccw"></i> 새로 작성
+                        </button>
+                    </div>
+                </div>
                 <div class="editor-grid">
                     <!-- 견적서 작성 폼 -->
                     <section class="editor-section">
@@ -197,6 +228,7 @@
                         </button>
                     </div>
                 </section>
+            </div>
             </div>
             <!-- /quoteViewSection -->
 
@@ -414,6 +446,6 @@
     </div>
 
     <!-- 스크립트 파일 로드 -->
-    <script src="app.js"></script>
+    <script src="app.js?v=20260917_999"></script>
 </body>
 </html>
