@@ -1256,10 +1256,37 @@ async function downloadPDF() {
                 format: 'a4'
             });
 
-            const pdfWidth = 210; // A4 너비(mm)
-            const pdfHeight = (canvas.height * pdfWidth) / canvas.width; // A4 비례 높이
+            const pageWidthMM = 210;  // A4 너비(mm)
+            const pageHeightMM = 297; // A4 높이(mm)
+            const imgWidth = pageWidthMM;
+            const imgHeight = (canvas.height * imgWidth) / canvas.width; // A4 비례 높이
 
-            pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+            // A4 페이지 크기에 맞춘 스마트 스케일링 및 다중 페이지 처리
+            if (imgHeight <= pageHeightMM) {
+                // 1페이지에 완벽히 들어오는 경우
+                pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight);
+            } else if (imgHeight <= pageHeightMM * 1.25) {
+                // A4 1페이지를 살짝 넘치는 경우 (25% 이내 초과) -> 1페이지에 딱 맞게 비율 축소 (Fit to 1 Page)
+                const scale = pageHeightMM / imgHeight;
+                const fitWidth = imgWidth * scale;
+                const fitHeight = pageHeightMM;
+                const marginX = (pageWidthMM - fitWidth) / 2;
+                pdf.addImage(imgData, 'JPEG', marginX, 0, fitWidth, fitHeight);
+            } else {
+                // 내용이 많이 길어서 2페이지 이상인 경우 -> 다중 페이지 분할 처리
+                let heightLeft = imgHeight;
+                let position = 0;
+
+                pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+                heightLeft -= pageHeightMM;
+
+                while (heightLeft > 0) {
+                    position -= pageHeightMM;
+                    pdf.addPage();
+                    pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+                    heightLeft -= pageHeightMM;
+                }
+            }
 
             const safeCustomer = state.customer ? state.customer.replace(/[\/\\:*?"<>|]/g, "_") : '고객';
             pdf.save(`${safeCustomer}_렌탈견적서.pdf`);
