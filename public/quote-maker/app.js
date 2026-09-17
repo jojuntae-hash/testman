@@ -48,6 +48,7 @@ const state = {
     expiry: "견적일로부터 30일",
     supplier: "",
     contact: "",
+    phone: "",
     notes: "1. 설치비 및 등록비 면제 조건입니다.\n2. 약정 기간 내 해지 시 위약금이 발생할 수 있습니다.\n3. 렌탈료는 부가가치세(VAT)가 포함된 금액입니다.",
     products: [] // 제품 객체 배열
 };
@@ -149,6 +150,7 @@ function registerEventListeners() {
     bindEvent("inputExpiry", "input", (e) => { state.expiry = e.target.value; });
     bindEvent("inputSupplier", "input", (e) => { state.supplier = e.target.value; });
     bindEvent("inputContact", "input", (e) => { state.contact = e.target.value; });
+    bindEvent("inputPhone", "input", (e) => { state.phone = e.target.value; });
     bindEvent("inputNotes", "input", (e) => { state.notes = e.target.value; });
 
     // 사이드바 제어
@@ -625,6 +627,7 @@ function saveQuotation(showAlert = true) {
                 expiry: state.expiry,
                 supplier: state.supplier,
                 contact: state.contact,
+                phone: state.phone,
                 notes: state.notes,
                 products: state.products
             };
@@ -864,6 +867,7 @@ window.loadQuotation = function(id) {
     state.expiry = quotation.expiry || "";
     state.supplier = quotation.supplier || "";
     state.contact = quotation.contact || "";
+    state.phone = quotation.phone || "";
     state.notes = quotation.notes || "";
     state.products = Array.isArray(quotation.products) ? [...quotation.products] : [];
 
@@ -875,6 +879,7 @@ window.loadQuotation = function(id) {
     document.getElementById("inputExpiry").value = state.expiry;
     document.getElementById("inputSupplier").value = state.supplier;
     document.getElementById("inputContact").value = state.contact;
+    document.getElementById("inputPhone").value = state.phone;
     document.getElementById("inputNotes").value = state.notes;
 
     // 제품 목록 영역 클리어 후 재생성
@@ -923,6 +928,7 @@ function resetToNewQuotation() {
     state.expiry = "견적일로부터 30일";
     state.supplier = "";
     state.contact = "";
+    state.phone = "";
     state.notes = "1. 설치비 및 등록비 면제 조건입니다.\n2. 약정 기간 내 해지 시 위약금이 발생할 수 있습니다.\n3. 렌탈료는 부가가치세(VAT)가 포함된 금액입니다.";
     state.products = [];
 
@@ -941,6 +947,7 @@ function resetToNewQuotation() {
     document.getElementById("inputExpiry").value = state.expiry;
     document.getElementById("inputSupplier").value = state.supplier;
     document.getElementById("inputContact").value = state.contact;
+    document.getElementById("inputPhone").value = state.phone;
     document.getElementById("inputNotes").value = state.notes;
 
     // 제품 목록 클리어 후 신규 추가
@@ -1109,12 +1116,8 @@ function renderPreviewData() {
     document.getElementById("quoteDate").textContent = formatDateKorean(state.date);
     document.getElementById("quoteExpiry").textContent = state.expiry || "-";
     document.getElementById("quoteSupplier").textContent = state.supplier || "-";
-    
-    // 담당자 및 연락처에서 연락처 파싱 시도 (또는 전체 노출)
-    document.getElementById("quoteContact").textContent = state.contact.split("(")[0].trim() || "-";
-    // 괄호 안에 있는 연락처 정보 추출 시도
-    const phoneMatch = state.contact.match(/\(([^)]+)\)/);
-    document.getElementById("quotePhone").textContent = phoneMatch ? phoneMatch[1] : (state.contact.includes(" ") ? state.contact.substring(state.contact.indexOf(" ")).trim() : "-");
+    document.getElementById("quoteContact").textContent = state.contact || "-";
+    document.getElementById("quotePhone").textContent = state.phone || "-";
 
     // 3. 비고/주의사항 리스트 생성
     const notesContent = document.getElementById("quoteNotesContent");
