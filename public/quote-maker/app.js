@@ -277,10 +277,9 @@ function addNewProduct(productData = null) {
         name: "",
         term: "36개월",
         quantity: 1,
+        color: "",
         discount1: "",
         discount2: "",
-        benefit1: "",
-        benefit2: "",
         fee: 0,
         photo: "",
         link: ""
@@ -352,20 +351,16 @@ function renderProductCard(product) {
                     <input type="text" class="field-fee" value="${formattedFee}" placeholder="0" oninput="handleFeeInput(this, '${product.id}')">
                 </div>
                 <div class="form-group">
+                    <label>색상</label>
+                    <input type="text" class="field-color" value="${escapeHtml(product.color || '')}" placeholder="예: 화이트, 아이보리, 실버" oninput="updateProductState('${product.id}', 'color', this.value)">
+                </div>
+                <div class="form-group">
                     <label>할인항목 1</label>
                     <input type="text" class="field-discount1" value="${escapeHtml(product.discount1)}" placeholder="예: 제휴카드 할인 최대 2만원" oninput="updateProductState('${product.id}', 'discount1', this.value)">
                 </div>
                 <div class="form-group">
                     <label>할인항목 2</label>
                     <input type="text" class="field-discount2" value="${escapeHtml(product.discount2)}" placeholder="예: 결합 할인 3,000원" oninput="updateProductState('${product.id}', 'discount2', this.value)">
-                </div>
-                <div class="form-group">
-                    <label>추가혜택 1</label>
-                    <input type="text" class="field-benefit1" value="${escapeHtml(product.benefit1)}" placeholder="예: 상품권 10만원 지급" oninput="updateProductState('${product.id}', 'benefit1', this.value)">
-                </div>
-                <div class="form-group">
-                    <label>추가혜택 2</label>
-                    <input type="text" class="field-benefit2" value="${escapeHtml(product.benefit2)}" placeholder="예: 초기 설치비 전액 지원" oninput="updateProductState('${product.id}', 'benefit2', this.value)">
                 </div>
                 <div class="form-group col-span-full">
                     <label>제품 설명 상세 링크 (URL)</label>
@@ -1158,12 +1153,8 @@ function renderPreviewData() {
         discountHtml += "</ul>";
         if (discountHtml === "<ul></ul>") discountHtml = "-";
 
-        // 추가 혜택 목록 구성
-        let benefitHtml = "<ul>";
-        if (prod.benefit1.trim()) benefitHtml += `<li>${escapeHtml(prod.benefit1)}</li>`;
-        if (prod.benefit2.trim()) benefitHtml += `<li>${escapeHtml(prod.benefit2)}</li>`;
-        benefitHtml += "</ul>";
-        if (benefitHtml === "<ul></ul>") benefitHtml = "-";
+        // 색상 정보 셀
+        const colorText = (prod.color && prod.color.trim()) ? escapeHtml(prod.color) : "-";
 
         // 제품 사진 셀
         let photoHtml = "";
@@ -1187,8 +1178,8 @@ function renderPreviewData() {
                 <span class="quote-table-product-term">약정: ${escapeHtml(prod.term) || '없음'}</span>
                 ${linkHtml}
             </td>
+            <td>${colorText}</td>
             <td>${discountHtml}</td>
-            <td>${benefitHtml}</td>
             <td class="text-nowrap">${qty}대</td>
             <td class="text-right text-nowrap">${formatNumber(prod.fee)}원</td>
             <td class="text-right font-bold text-nowrap">${formatNumber(subtotal)}원</td>
