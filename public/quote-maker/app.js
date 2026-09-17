@@ -1230,39 +1230,41 @@ async function downloadPDF() {
         const filename = `${safeCustomer}_렌탈견적서.pdf`;
 
         // 텍스트 레이어가 포함된 완전한 HTML 바이너리 템플릿 생성
+        const baseUrl = window.location.origin;
         const htmlContent = `
 <!DOCTYPE html>
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
+    <base href="${baseUrl}/">
     <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" />
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
     <style>
         ${styleCss}
         @page {
-            size: A4;
+            size: A4 portrait;
             margin: 0;
         }
-        body {
-            margin: 0;
-            padding: 0;
-            background: #ffffff;
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
+        html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            background: #ffffff !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            width: 210mm;
         }
         .print-paper {
             margin: 0 auto !important;
             box-shadow: none !important;
             transform: none !important;
             width: 210mm !important;
-            min-height: 297mm !important;
             box-sizing: border-box !important;
             padding: 22mm 18mm !important;
         }
     </style>
 </head>
 <body>
-    <div class="print-paper">
+    <div class="print-paper" id="printPaper">
         ${printPaper ? printPaper.innerHTML : ''}
     </div>
 </body>
