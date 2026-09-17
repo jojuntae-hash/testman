@@ -78,16 +78,26 @@
                         <i data-lucide="rotate-ccw"></i> 새로 작성
                     </button>
                 </div>
-            </header>
+            <!-- 상단 메인 탭 네비게이션 -->
+            <nav class="main-tab-nav">
+                <button class="main-tab-btn active" id="btnTabQuote">
+                    <i data-lucide="file-spreadsheet"></i> 📄 견적서 작성기
+                </button>
+                <button class="main-tab-btn" id="btnTabMail">
+                    <i data-lucide="mail"></i> ✉️ 메일 작성기
+                </button>
+            </nav>
 
-            <div class="editor-grid">
-                <!-- 견적서 작성 폼 -->
-                <section class="editor-section">
-                    <!-- 기본 정보 카드 -->
-                    <div class="card">
-                        <div class="card-header">
-                            <h2><i data-lucide="info"></i> 견적서 기본 정보</h2>
-                        </div>
+            <!-- 1. 견적서 작성기 뷰 섹션 -->
+            <div class="quote-view-section" id="quoteViewSection">
+                <div class="editor-grid">
+                    <!-- 견적서 작성 폼 -->
+                    <section class="editor-section">
+                        <!-- 기본 정보 카드 -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h2><i data-lucide="info"></i> 견적서 기본 정보</h2>
+                            </div>
                         <div class="card-body">
                             <div class="form-grid">
                                 <div class="form-group col-span-2">
@@ -188,6 +198,53 @@
                     </div>
                 </section>
             </div>
+            <!-- /quoteViewSection -->
+
+            <!-- 2. 메일 작성기 뷰 섹션 -->
+            <div class="mail-view-section" id="mailViewSection">
+                <div class="card margin-bottom">
+                    <div class="card-header flex-between">
+                        <h2><i data-lucide="mail"></i> 이메일 제목 설정</h2>
+                        <button type="button" class="btn btn-primary btn-sm" id="btnCopySubject">
+                            <i data-lucide="copy"></i> 메일 제목 복사
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <input type="text" id="mailSubject" class="form-control" style="width:100%; font-size:14px; font-weight:700; padding:10px 14px;" value="">
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header flex-between">
+                        <h2><i data-lucide="file-text"></i> 이메일 본문 생성 및 작성</h2>
+                        <div style="display:flex; gap:8px;">
+                            <button type="button" class="btn btn-success btn-sm" id="btnCopyBody">
+                                <i data-lucide="copy"></i> 본문 전체 복사
+                            </button>
+                            <button type="button" class="btn btn-purple btn-sm" id="btnSendMail">
+                                <i data-lucide="send"></i> 메일 앱 열기
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="mail-grid">
+                            <div>
+                                <label style="display:block; font-weight:700; margin-bottom:8px; font-size:13px; color:#475569;">
+                                    ✏️ 메일 본문 텍스트 (직접 수정 가능)
+                                </label>
+                                <textarea id="mailBodyText" class="mail-textarea"></textarea>
+                            </div>
+                            <div>
+                                <label style="display:block; font-weight:700; margin-bottom:8px; font-size:13px; color:#475569;">
+                                    👁️ 실시간 메일 본문 미리보기
+                                </label>
+                                <div id="mailPreviewBox" class="mail-preview-box"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- /mailViewSection -->
         </main>
     </div>
 

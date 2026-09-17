@@ -1312,3 +1312,100 @@ input, select, textarea, button {
         page-break-inside: avoid;
     }
 }
+
+/* ==========================================================================
+   상단 메인 탭 (견적서 작성기 / 메일 작성기) CSS
+   ========================================================================== */
+.main-tab-nav {
+    display: flex;
+    gap: 8px;
+    padding: 12px 24px 0 24px;
+    background-color: #ffffff;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.main-tab-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 22px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #64748b;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-bottom: none;
+    border-radius: 8px 8px 0 0;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.main-tab-btn:hover {
+    color: #1e293b;
+    background: #f1f5f9;
+}
+
+.main-tab-btn.active {
+    color: var(--primary, #2563eb);
+    background: #ffffff;
+    border-color: #cbd5e1;
+    border-bottom: 2px solid var(--primary, #2563eb);
+    font-weight: 700;
+}
+
+/* 메일 작성기 전용 컨테이너 */
+.mail-view-section {
+    padding: 24px;
+    display: none;
+}
+
+.mail-view-section.active {
+    display: block;
+}
+
+.mail-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+}
+
+@media (max-width: 900px) {
+    .mail-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.mail-textarea {
+    width: 100%;
+    min-height: 480px;
+    font-family: inherit;
+    font-size: 13.5px;
+    line-height: 1.6;
+    padding: 16px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    background-color: #f8fafc;
+    resize: vertical;
+    box-sizing: border-box;
+    color: #1e293b;
+}
+
+.mail-textarea:focus {
+    background-color: #ffffff;
+    border-color: var(--primary, #2563eb);
+    outline: none;
+}
+
+.mail-preview-box {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 20px;
+    min-height: 480px;
+    white-space: pre-wrap;
+    font-size: 13.5px;
+    line-height: 1.65;
+    color: #1e293b;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+

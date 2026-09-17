@@ -188,6 +188,32 @@ function registerEventListeners() {
     bindEvent("btnSaveImage", "click", downloadImage);
     bindEvent("btnSavePDF", "click", downloadPDF);
 
+    // 메인 탭 전환 및 메일 작성기 이벤트
+    bindEvent("btnTabQuote", "click", () => switchMainTab("quote"));
+    bindEvent("btnTabMail", "click", () => switchMainTab("mail"));
+
+    bindEvent("btnCopySubject", "click", () => {
+        const subject = document.getElementById("mailSubject")?.value || "";
+        copyToClipboard(subject, "메일 제목이 클립보드에 복사되었습니다!");
+    });
+
+    bindEvent("btnCopyBody", "click", () => {
+        const body = document.getElementById("mailBodyText")?.value || "";
+        copyToClipboard(body, "메일 본문 전체가 클립보드에 복사되었습니다!");
+    });
+
+    bindEvent("btnSendMail", "click", () => {
+        const subject = encodeURIComponent(document.getElementById("mailSubject")?.value || "");
+        const body = encodeURIComponent(document.getElementById("mailBodyText")?.value || "");
+        window.location.href = `mailto:?subject=${subject}&body=${body}`;
+    });
+
+    bindEvent("mailBodyText", "input", (e) => {
+        e.target.dataset.manualEdited = "true";
+        const preview = document.getElementById("mailPreviewBox");
+        if (preview) preview.textContent = e.target.value;
+    });
+
     // 로고 관리 모달 연동
     const btnManageLogos = document.getElementById("btnManageLogos");
     const logoManagerModal = document.getElementById("logoManagerModal");
@@ -1571,5 +1597,142 @@ async function uploadCompanyLogo() {
         if (typeof lucide !== 'undefined') {
             lucide.createIcons();
         }
+    }
+}
+
+/* ==========================================================================
+   메인 탭 스위칭 및 이메일 작성기 연동 로직
+   ========================================================================== */
+
+/**
+ * 탭 스위칭 함수 (견적서 작성기 <-> 메일 작성기)
+ */
+function switchMainTab(tabName) {
+    const btnQuote = document.getElementById("btnTabQuote");
+    const btnMail = document.getElementById("btnTabMail");
+    const quoteView = document.getElementById("quoteViewSection");
+    const mailView = document.getElementById("mailViewSection");
+
+    if (tabName === "mail") {
+        if (btnQuote) btnQuote.classList.remove("active");
+        if (btnMail) btnMail.classList.add("active");
+        if (quoteView) quoteView.style.display = "none";
+        if (mailView) mailView.classList.add("active");
+
+        // 메일 작성 탭으로 이동 시 실시간 템플릿 갱신
+        updateMailView();
+    } else {
+        if (btnMail) btnMail.classList.remove("active");
+        if (btnQuote) btnQuote.classList.add("active");
+        if (mailView) mailView.classList.remove("active");
+        if (quoteView) quoteView.style.display = "block";
+    }
+}
+
+/**
+ * 견적서 상태 데이터를 기반으로 이메일 템플릿 자동 생성
+ */
+function generateMailTemplate() {
+    const customer = state.customer ? `${state.customer}` : "고객님";
+    const supplier = state.supplier || "렌탈의정원";
+    const dateFormatted = formatDateKorean(state.date);
+    const expiry = state.expiry || "견적일로부터 30일";
+    const phone = state.phone || state.contact || "-";
+
+    let text = `안녕하세요, ${customer}. ${supplier} 입니다.\n요청하신 내용을 적용하여 렌탈 서비스 견적서를 아래와 같이 안내드립니다.\n첨부파일로도 견적서 이미지파일 첨부해드렸습니다.\n\n`;
+
+    text += `■ 견적 정보\n`;
+    text += `- 견적일자: ${dateFormatted}\n`;
+    text += `- 유효기간: ${expiry}\n`;
+    text += `- 담당자: ${phone}\n\n`;
+
+    text += `■ 견적 내역\n`;
+    const activeProducts = state.products.filter(p => p.name.trim() !== "");
+    let totalFee = 0;
+
+    activeProducts.forEach((prod, idx) => {
+        const qty = prod.quantity || 1;
+        const subtotal = prod.fee * qty;
+        totalFee += subtotal;
+
+        const termStr = prod.term ? ` (약정 ${prod.term})` : "";
+        const colorStr = prod.color ? ` - 색상: ${prod.color}` : "";
+
+        text += `${idx + 1}. ${prod.name}${termStr}${colorStr}\n`;
+        
+        let qtyFeeStr = `- 수량: ${qty}대 / 월 렌탈료: ${formatNumber(subtotal)}원`;
+        if (qty > 1) {
+            qtyFeeStr += ` (단가 ${formatNumber(prod.fee)}원)`;
+        }
+        text += `${qtyFeeStr}\n`;
+
+        const discounts = [];
+        if (prod.discount1 && prod.discount1.trim()) discounts.push(prod.discount1.trim());
+        if (prod.discount2 && prod.discount2.trim()) discounts.push(prod.discount2.trim());
+        if (discounts.length > 0) {
+            text += `- 할인: ${discounts.join(" / ")}\n`;
+        }
+
+        if (prod.link && prod.link.trim()) {
+            text += `- 상세보기: ${prod.link.trim()}\n`;
+        }
+
+        text += `\n`;
+    });
+
+    text += `■ 합계 월 렌탈료 (VAT 포함): ${formatNumber(totalFee)}원\n\n`;
+
+    text += `■ 유의사항\n`;
+    if (state.notes && state.notes.trim()) {
+        text += `${state.notes.trim()}\n\n`;
+    } else {
+        text += `1. 설치비 및 등록비 면제 조건입니다.\n2. 약정 기간 내 해지 시 위약금이 발생할 수 있습니다.\n3. 렌탈료는 부가가치세(VAT)가 포함된 금액입니다.\n\n`;
+    }
+
+    text += `추가 문의사항이 있으시면 언제든지 연락 주시기 바랍니다.\n감사합니다.\n${supplier} 드림\n${state.phone || state.contact || ''}`.trim();
+
+    return text;
+}
+
+/**
+ * 메일 작성기 UI 갱신 (제목, 본문 텍스트박스, 실시간 미리보기)
+ */
+function updateMailView() {
+    const customer = state.customer ? `${state.customer}` : "고객님";
+    const supplier = state.supplier || "렌탈의정원";
+    const defaultSubject = `[렌탈 견적서] ${customer}, 요청하신 렌탈 서비스 견적 내용 안내드립니다.`;
+
+    const subjectInput = document.getElementById("mailSubject");
+    if (subjectInput && !subjectInput.dataset.manualEdited) {
+        subjectInput.value = defaultSubject;
+    }
+
+    const mailText = generateMailTemplate();
+    const mailTextarea = document.getElementById("mailBodyText");
+    const mailPreview = document.getElementById("mailPreviewBox");
+
+    if (mailTextarea && !mailTextarea.dataset.manualEdited) {
+        mailTextarea.value = mailText;
+    }
+    if (mailPreview) {
+        mailPreview.textContent = mailTextarea ? mailTextarea.value : mailText;
+    }
+}
+
+/**
+ * 클립보드 복사 유틸리티
+ */
+async function copyToClipboard(text, successMessage) {
+    try {
+        await navigator.clipboard.writeText(text);
+        alert(successMessage);
+    } catch (err) {
+        const textarea = document.createElement("textarea");
+        textarea.value = text;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textarea);
+        alert(successMessage);
     }
 }
