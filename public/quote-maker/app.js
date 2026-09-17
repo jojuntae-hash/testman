@@ -1218,68 +1218,68 @@ async function downloadPDF() {
     const container = document.querySelector(".print-paper-container");
     const modalBody = document.querySelector(".modal-body");
 
-    try {
-        // 1. 원본을 복제하여 화면 밖에 배치 (원본 DOM에 영향 없음)
-        const clone = printPaper.cloneNode(true);
-        clone.style.position = "absolute";
-        clone.style.left = "-9999px";
-        clone.style.top = "0";
-        clone.style.width = "210mm";
-        clone.style.height = "auto";
-        clone.style.maxHeight = "none";
-        clone.style.overflow = "visible";
-        clone.style.boxSizing = "border-box";
-        clone.style.transform = "none";
-        clone.style.padding = "22mm 18mm";
-        clone.style.backgroundColor = "#ffffff";
-        document.body.appendChild(clone);
+    // 1. 모바일 반응형용 transform 배율 임시 해제 및 스크롤 상단 고정 (downloadImage와 동일)
+    let originalTransform = "";
+    let originalTransformOrigin = "";
+    if (container) {
+        originalTransform = container.style.transform;
+        originalTransformOrigin = container.style.transformOrigin;
+        container.style.transform = "none";
+        container.style.transformOrigin = "unset";
+    }
 
-        // 2. DOM 렌더링 리플로우 유도
-        await new Promise(resolve => setTimeout(resolve, 300));
+    const prevScrollTop = modalBody ? modalBody.scrollTop : 0;
+    if (modalBody) modalBody.scrollTop = 0;
 
-        const safeCustomer = state.customer ? state.customer.replace(/[\/\\:*?"<>|]/g, "_") : '고객';
-        const filename = `${safeCustomer}_렌탈견적서.pdf`;
-
-        const opt = {
-            margin:       0,
-            filename:     filename,
-            image:        { type: 'jpeg', quality: 0.98 },
-            html2canvas:  { 
-                scale: 2, 
-                useCORS: true,
+    // 2. 레이아웃 리플로우 대기 후 html2canvas 캡처 및 jsPDF 변환
+    setTimeout(async () => {
+        try {
+            const canvas = await html2canvas(printPaper, {
+                scale: 2,
+                useCORS: false,
                 allowTaint: true,
                 logging: false,
                 backgroundColor: '#ffffff',
                 scrollX: 0,
                 scrollY: 0,
-                windowWidth: clone.scrollWidth,
-                windowHeight: clone.scrollHeight
-            },
-            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
-            pagebreak:    { mode: 'avoid-all' }
-        };
+                x: 0,
+                y: 0
+            });
 
-        // 3. 복제본에서 PDF 생성
-        await html2pdf().set(opt).from(clone).save();
+            const imgData = canvas.toDataURL('image/jpeg', 0.98);
+            
+            // jsPDF 인스턴스 생성 (jspdf.jsPDF 호환성 처리)
+            const jsPDFLib = (window.jspdf && window.jspdf.jsPDF) ? window.jspdf.jsPDF : window.jsPDF;
+            const pdf = new jsPDFLib({
+                orientation: 'portrait',
+                unit: 'mm',
+                format: 'a4'
+            });
 
-        // 4. 복제본 제거
-        document.body.removeChild(clone);
+            const pdfWidth = 210; // A4 너비(mm)
+            const pdfHeight = (canvas.height * pdfWidth) / canvas.width; // A4 비례 높이
 
-    } catch (err) {
-        console.error("PDF 생성 오류:", err);
-        alert(`PDF 파일 저장 중 오류가 발생했습니다: ${err.message || err}`);
-        // 실패 시에도 복제본 정리
-        const leftover = document.querySelector('[style*="-9999px"]');
-        if (leftover && leftover.id === "printPaper") {
-            leftover.remove();
+            pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+
+            const safeCustomer = state.customer ? state.customer.replace(/[\/\\:*?"<>|]/g, "_") : '고객';
+            pdf.save(`${safeCustomer}_렌탈견적서.pdf`);
+
+        } catch (err) {
+            console.error("PDF 생성 오류:", err);
+            alert(`PDF 파일 저장 중 오류가 발생했습니다: ${err.message || err}`);
+        } finally {
+            if (container) {
+                container.style.transform = originalTransform;
+                container.style.transformOrigin = originalTransformOrigin;
+            }
+            if (modalBody) modalBody.scrollTop = prevScrollTop;
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = btn.dataset.originHtml || '<i data-lucide="file-pdf"></i> PDF 파일 저장';
+                if (window.lucide) lucide.createIcons();
+            }
         }
-    } finally {
-        if (btn) {
-            btn.disabled = false;
-            btn.innerHTML = btn.dataset.originHtml || '<i data-lucide="file-pdf"></i> PDF 파일 저장';
-            if (window.lucide) lucide.createIcons();
-        }
-    }
+    }, 150);
 }
 
 /**
