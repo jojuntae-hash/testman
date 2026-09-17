@@ -1215,98 +1215,93 @@ async function downloadPDF() {
     }
 
     const printPaper = document.getElementById("printPaper");
-    const container = document.querySelector(".print-paper-container");
-    const modalBody = document.querySelector(".modal-body");
 
-    // 1. 모바일 반응형용 transform 배율 임시 해제 및 스크롤 상단 고정 (downloadImage와 동일)
-    let originalTransform = "";
-    let originalTransformOrigin = "";
-    if (container) {
-        originalTransform = container.style.transform;
-        originalTransformOrigin = container.style.transformOrigin;
-        container.style.transform = "none";
-        container.style.transformOrigin = "unset";
-    }
-
-    const prevScrollTop = modalBody ? modalBody.scrollTop : 0;
-    if (modalBody) modalBody.scrollTop = 0;
-
-    // 2. 레이아웃 리플로우 대기 후 html2canvas 캡처 및 jsPDF 변환
-    setTimeout(async () => {
+    try {
+        // 스타일시트 로드
+        let styleCss = "";
         try {
-            const canvas = await html2canvas(printPaper, {
-                scale: 2,
-                useCORS: false,
-                allowTaint: true,
-                logging: false,
-                backgroundColor: '#ffffff',
-                scrollX: 0,
-                scrollY: 0,
-                x: 0,
-                y: 0
-            });
-
-            const imgData = canvas.toDataURL('image/jpeg', 0.98);
-            
-            // jsPDF 인스턴스 생성 (jspdf.jsPDF 호환성 처리)
-            const jsPDFLib = (window.jspdf && window.jspdf.jsPDF) ? window.jspdf.jsPDF : window.jsPDF;
-            const pdf = new jsPDFLib({
-                orientation: 'portrait',
-                unit: 'mm',
-                format: 'a4'
-            });
-
-            const pageWidthMM = 210;  // A4 너비(mm)
-            const pageHeightMM = 297; // A4 높이(mm)
-            const imgWidth = pageWidthMM;
-            const imgHeight = (canvas.height * imgWidth) / canvas.width; // A4 비례 높이
-
-            // A4 페이지 크기에 맞춘 스마트 스케일링 및 다중 페이지 처리
-            if (imgHeight <= pageHeightMM) {
-                // 1페이지에 완벽히 들어오는 경우
-                pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight);
-            } else if (imgHeight <= pageHeightMM * 1.25) {
-                // A4 1페이지를 살짝 넘치는 경우 (25% 이내 초과) -> 1페이지에 딱 맞게 비율 축소 (Fit to 1 Page)
-                const scale = pageHeightMM / imgHeight;
-                const fitWidth = imgWidth * scale;
-                const fitHeight = pageHeightMM;
-                const marginX = (pageWidthMM - fitWidth) / 2;
-                pdf.addImage(imgData, 'JPEG', marginX, 0, fitWidth, fitHeight);
-            } else {
-                // 내용이 많이 길어서 2페이지 이상인 경우 -> 다중 페이지 분할 처리
-                let heightLeft = imgHeight;
-                let position = 0;
-
-                pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
-                heightLeft -= pageHeightMM;
-
-                while (heightLeft > 0) {
-                    position -= pageHeightMM;
-                    pdf.addPage();
-                    pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
-                    heightLeft -= pageHeightMM;
-                }
-            }
-
-            const safeCustomer = state.customer ? state.customer.replace(/[\/\\:*?"<>|]/g, "_") : '고객';
-            pdf.save(`${safeCustomer}_렌탈견적서.pdf`);
-
-        } catch (err) {
-            console.error("PDF 생성 오류:", err);
-            alert(`PDF 파일 저장 중 오류가 발생했습니다: ${err.message || err}`);
-        } finally {
-            if (container) {
-                container.style.transform = originalTransform;
-                container.style.transformOrigin = originalTransformOrigin;
-            }
-            if (modalBody) modalBody.scrollTop = prevScrollTop;
-            if (btn) {
-                btn.disabled = false;
-                btn.innerHTML = btn.dataset.originHtml || '<i data-lucide="file-pdf"></i> PDF 파일 저장';
-                if (window.lucide) lucide.createIcons();
-            }
+            const styleRes = await fetch('/quote-maker/style.css');
+            styleCss = await styleRes.text();
+        } catch (e) {
+            console.warn("스타일시트 로드 오류:", e);
         }
-    }, 150);
+
+        const safeCustomer = state.customer ? state.customer.replace(/[\/\\:*?"<>|]/g, "_") : '고객';
+        const filename = `${safeCustomer}_렌탈견적서.pdf`;
+
+        // 텍스트 레이어가 포함된 완전한 HTML 바이너리 템플릿 생성
+        const htmlContent = `
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        ${styleCss}
+        @page {
+            size: A4;
+            margin: 0;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            background: #ffffff;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+        .print-paper {
+            margin: 0 auto !important;
+            box-shadow: none !important;
+            transform: none !important;
+            width: 210mm !important;
+            min-height: 297mm !important;
+            box-sizing: border-box !important;
+            padding: 22mm 18mm !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="print-paper">
+        ${printPaper ? printPaper.innerHTML : ''}
+    </div>
+</body>
+</html>
+        `;
+
+        const response = await fetch('/api/pdf', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ html: htmlContent })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || 'PDF 생성에 실패했습니다.');
+        }
+
+        const blob = await response.blob();
+        const downloadUrl = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = downloadUrl;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(downloadUrl);
+
+    } catch (err) {
+        console.error("PDF 생성 오류:", err);
+        alert(`PDF 파일 저장 중 오류가 발생했습니다: ${err.message || err}`);
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = btn.dataset.originHtml || '<i data-lucide="file-pdf"></i> PDF 파일 저장';
+            if (window.lucide) lucide.createIcons();
+        }
+    }
 }
 
 /**
