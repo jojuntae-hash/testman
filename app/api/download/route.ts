@@ -6,8 +6,8 @@ import coway from "@/lib/scrapers/coway";
 import skmagic from "@/lib/scrapers/skmagic";
 import JSZip from "jszip";
 
-const SCRAPERS = { cuckoo, coway, skmagic };
-const REFERERS = {
+const SCRAPERS: Record<string, any> = { cuckoo, coway, skmagic };
+const REFERERS: Record<string, string> = {
   cuckoo: "https://www.cuckoo.co.kr/",
   coway: "https://www.coway.com/",
   skmagic: "https://www.skmagic.com/",
@@ -16,12 +16,12 @@ const REFERERS = {
 const MAX_REVIEW_IMAGES = 20;
 const MAX_PRODUCT_IMAGES = 20;
 
-function safeName(name) {
+function safeName(name: string) {
   return (name || "product").replace(/[\\/:*?"<>|]/g, "_").trim() || "product";
 }
 
 
-export async function POST(req) {
+export async function POST(req: any) {
   try {
     const body = await req.json();
     const { site, model, productImages, reviewImages } = body;
@@ -32,7 +32,7 @@ export async function POST(req) {
     let savedCount = 0;
     let failedCount = 0;
 
-    async function addToZip(url, filename) {
+    async function addToZip(url: string, filename: string) {
       try {
         const response = await client.get(url, {
           responseType: "arraybuffer",
@@ -41,7 +41,7 @@ export async function POST(req) {
         const ext = (url.split("?")[0].match(/\.(jpg|jpeg|png|webp|gif)$/i) || [, "jpg"])[1].toLowerCase();
         zip.file(`${filename}.${ext}`, response.data);
         savedCount++;
-      } catch (e) {
+      } catch (e: any) {
         failedCount++;
       }
     }
@@ -61,10 +61,10 @@ export async function POST(req) {
       return NextResponse.json({ error: "사진을 하나도 받아오지 못했습니다." }, { status: 502 });
     }
 
-    const buffer = await zip.generateAsync({ type: "nodebuffer", compression: "DEFLATE" });
+    const buffer = await zip.generateAsync({ type: "uint8array", compression: "DEFLATE" });
     const zipName = `${safeName(site)}_${safeName(model)}.zip`;
 
-    return new NextResponse(buffer, {
+    return new NextResponse(buffer as any, {
       status: 200,
       headers: {
         "Content-Type": "application/zip",
@@ -74,7 +74,7 @@ export async function POST(req) {
         "Access-Control-Expose-Headers": "X-Saved-Count, X-Failed-Count",
       },
     });
-  } catch(e) {
+  } catch (e: any) {
     return NextResponse.json({ error: "서버 오류: " + e.message }, { status: 500 });
   }
 }
