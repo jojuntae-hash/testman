@@ -10,7 +10,10 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.105.4",
+    "axios": "^1.20.0",
+    "cheerio": "^1.2.0",
     "clsx": "latest",
+    "jszip": "^3.10.2",
     "lucide-react": "latest",
     "next": "latest",
     "pdfjs-dist": "^6.0.227",

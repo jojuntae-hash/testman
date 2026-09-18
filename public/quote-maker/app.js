@@ -205,7 +205,8 @@ function registerEventListeners() {
     bindEvent("btnSendMail", "click", () => {
         const subject = encodeURIComponent(document.getElementById("mailSubject")?.value || "");
         const body = encodeURIComponent(document.getElementById("mailBodyText")?.value || "");
-        window.location.href = `mailto:?subject=${subject}&body=${body}`;
+        const gmailUrl = `https://mail.google.com/mail/u/jungwon5225@gmail.com/?view=cm&fs=1&su=${subject}&body=${body}`;
+        window.open(gmailUrl, "_blank");
     });
 
     bindEvent("mailBodyText", "input", (e) => {
@@ -1675,15 +1676,17 @@ function generateMailTemplate() {
             totalFee += subtotal;
 
             const termStr = prod.term ? ` (약정 ${prod.term})` : "";
-            const colorStr = prod.color ? ` - 색상: ${prod.color}` : "";
-
-            text += `${idx + 1}. ${prod.name}${termStr}${colorStr}\n`;
+            text += `${idx + 1}. ${prod.name}${termStr}\n`;
             
             let qtyFeeStr = `- 수량: ${qty}대 / 월 렌탈료: ${formatNumber(subtotal)}원`;
             if (qty > 1) {
                 qtyFeeStr += ` (단가 ${formatNumber(feeNum)}원)`;
             }
             text += `${qtyFeeStr}\n`;
+
+            if (prod.color && typeof prod.color === 'string' && prod.color.trim()) {
+                text += `- 색상: ${prod.color.trim()}\n`;
+            }
 
             const discounts = [];
             if (prod.discount1 && typeof prod.discount1 === 'string' && prod.discount1.trim()) discounts.push(prod.discount1.trim());

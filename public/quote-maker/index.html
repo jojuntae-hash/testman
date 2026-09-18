@@ -259,19 +259,19 @@
                         </div>
                     </div>
                     <div class="card-body">
-                        <div class="mail-grid">
+                        <div style="display:flex; flex-direction:column; gap:20px;">
                             <div>
                                 <label style="display:block; font-weight:700; margin-bottom:8px; font-size:13px; color:#475569;">
                                     ✏️ 메일 본문 텍스트 (직접 수정 가능)
                                 </label>
-                                <textarea id="mailBodyText" class="mail-textarea"></textarea>
+                                <textarea id="mailBodyText" class="mail-textarea" style="min-height:300px;"></textarea>
                             </div>
-                            <div>
-                                <label style="display:block; font-weight:700; margin-bottom:8px; font-size:13px; color:#475569;">
-                                    👁️ 실시간 메일 본문 미리보기
-                                </label>
-                                <div id="mailPreviewBox" class="mail-preview-box"></div>
-                            </div>
+                            <details style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:16px;">
+                                <summary style="font-weight:700; font-size:14px; color:#475569; cursor:pointer;">
+                                    👁️ 실시간 메일 본문 미리보기 (클릭하여 열기/접기)
+                                </summary>
+                                <div id="mailPreviewBox" class="mail-preview-box" style="margin-top:16px; background:#fff; border:1px solid #e2e8f0; border-radius:6px; box-shadow:none;"></div>
+                            </details>
                         </div>
                     </div>
                 </div>

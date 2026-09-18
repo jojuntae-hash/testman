@@ -9,6 +9,7 @@ import { ArrowLeft, Package, Edit2, Share2, ArrowUp, ArrowDown, Save, X } from '
 
 import AddProductModal from '@/components/AddProductModal'
 import EditProductModal from '@/components/EditProductModal'
+import ImageSaver from '@/components/ImageSaver'
 
 export default function ProductsPage() {
   const router = useRouter()
@@ -21,6 +22,9 @@ export default function ProductsPage() {
   const [activeCategory, setActiveCategory] = useState<string>('전체')
   const [isEditOrderMode, setIsEditOrderMode] = useState(false)
   const [orderedProducts, setOrderedProducts] = useState<Product[]>([])
+
+  // Main Tab State
+  const [activeMainTab, setActiveMainTab] = useState<'list' | 'images'>('list')
 
   const loadProducts = async () => {
     setLoading(true)
@@ -102,91 +106,114 @@ export default function ProductsPage() {
         </button>
         <div className="title">
           <Package size={20} />
-          <h1>제품 목록</h1>
+          <h1>제품 관리</h1>
         </div>
         <div className="placeholder" />
       </header>
 
-      <main className="content">
-        <div className="category-header-area">
-          <div className="category-tabs">
-            <div className="tabs-scroll">
-              {categories.map(cat => (
-                <button 
-                  key={cat} 
-                  className={`tab-btn ${activeCategory === cat ? 'active' : ''}`}
-                  onClick={() => { setActiveCategory(cat); setIsEditOrderMode(false); }}
-                >
-                  {cat}
-                </button>
-              ))}
-            </div>
-          </div>
+      <div style={{ display: 'flex', borderBottom: '1px solid #e2e8f0', background: '#fff' }}>
+        <button 
+          onClick={() => setActiveMainTab('list')}
+          style={{ flex: 1, padding: '14px 0', fontSize: '15px', fontWeight: 700, borderBottom: activeMainTab === 'list' ? '3px solid #3b82f6' : '3px solid transparent', color: activeMainTab === 'list' ? '#3b82f6' : '#64748b' }}
+        >
+          제품 목록
+        </button>
+        <button 
+          onClick={() => setActiveMainTab('images')}
+          style={{ flex: 1, padding: '14px 0', fontSize: '15px', fontWeight: 700, borderBottom: activeMainTab === 'images' ? '3px solid #3b82f6' : '3px solid transparent', color: activeMainTab === 'images' ? '#3b82f6' : '#64748b' }}
+        >
+          제품 이미지 저장
+        </button>
+      </div>
 
-          <div className="action-bar-right">
-            {!isEditOrderMode ? (
-              <button className="edit-order-btn" onClick={() => setIsEditOrderMode(true)}>
-                <Edit2 size={14} /> 순서 변경
-              </button>
-            ) : (
-              <div className="edit-mode-actions">
-                <button className="cancel-order-btn" onClick={() => { setIsEditOrderMode(false); setOrderedProducts(products.filter(p => activeCategory === '전체' ? true : (p.category || '미분류') === activeCategory)); }}>
-                  <X size={14} />
-                </button>
-                <button className="save-order-btn" onClick={handleSaveOrder}>
-                  <Save size={14} /> 저장
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {loading ? (
-          <div className="loading-state">제품 정보를 불러오는 중입니다...</div>
-        ) : (
-          <div className="product-grid">
-            {orderedProducts.map((product, index) => (
-              <div 
-                key={product.id} 
-                className={`product-card ${isEditOrderMode ? 'edit-mode' : ''}`}
-                onClick={() => !isEditOrderMode && router.push(`/products/${product.id}`)}
-              >
-                <div className="product-info-wrapper">
-                  <div className="product-info-compact">
-                    <span className="product-category-badge">{product.category || '미분류'}</span>
-                    <h2 className="product-name-compact">
-                      {product.name} <span className="product-model-inline">{product.model_name}</span>
-                    </h2>
-                  </div>
-                  
-                  {isEditOrderMode ? (
-                    <div className="order-actions">
-                      <button className="order-btn" onClick={(e) => { e.stopPropagation(); moveUp(index); }} disabled={index === 0}>
-                        <ArrowUp size={20} />
-                      </button>
-                      <button className="order-btn" onClick={(e) => { e.stopPropagation(); moveDown(index); }} disabled={index === orderedProducts.length - 1}>
-                        <ArrowDown size={20} />
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="product-actions">
-                      <button className="card-action-btn" onClick={(e) => handleShare(e, product.id)}>
-                        <Share2 size={18} />
-                      </button>
-                      <button className="card-action-btn" onClick={(e) => handleEdit(e, product)}>
-                        <Edit2 size={18} />
-                      </button>
-                    </div>
-                  )}
+      <main className="content" style={{ padding: activeMainTab === 'images' ? '0' : undefined }}>
+        {activeMainTab === 'list' ? (
+          <>
+            <div className="category-header-area">
+              <div className="category-tabs">
+                <div className="tabs-scroll">
+                  {categories.map(cat => (
+                    <button 
+                      key={cat} 
+                      className={`tab-btn ${activeCategory === cat ? 'active' : ''}`}
+                      onClick={() => { setActiveCategory(cat); setIsEditOrderMode(false); }}
+                    >
+                      {cat}
+                    </button>
+                  ))}
                 </div>
               </div>
-            ))}
-            
-            {!isEditOrderMode && (
-              <div className="product-card add-new-card" onClick={() => setIsAddModalOpen(true)}>
-                <p>+ 제품 추가하기</p>
+
+              <div className="action-bar-right">
+                {!isEditOrderMode ? (
+                  <button className="edit-order-btn" onClick={() => setIsEditOrderMode(true)}>
+                    <Edit2 size={14} /> 순서 변경
+                  </button>
+                ) : (
+                  <div className="edit-mode-actions">
+                    <button className="cancel-order-btn" onClick={() => { setIsEditOrderMode(false); setOrderedProducts(products.filter(p => activeCategory === '전체' ? true : (p.category || '미분류') === activeCategory)); }}>
+                      <X size={14} />
+                    </button>
+                    <button className="save-order-btn" onClick={handleSaveOrder}>
+                      <Save size={14} /> 저장
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {loading ? (
+              <div className="loading-state">제품 정보를 불러오는 중입니다...</div>
+            ) : (
+              <div className="product-grid">
+                {orderedProducts.map((product, index) => (
+                  <div 
+                    key={product.id} 
+                    className={`product-card ${isEditOrderMode ? 'edit-mode' : ''}`}
+                    onClick={() => !isEditOrderMode && router.push(`/products/${product.id}`)}
+                  >
+                    <div className="product-info-wrapper">
+                      <div className="product-info-compact">
+                        <span className="product-category-badge">{product.category || '미분류'}</span>
+                        <h2 className="product-name-compact">
+                          {product.name} <span className="product-model-inline">{product.model_name}</span>
+                        </h2>
+                      </div>
+                      
+                      {isEditOrderMode ? (
+                        <div className="order-actions">
+                          <button className="order-btn" onClick={(e) => { e.stopPropagation(); moveUp(index); }} disabled={index === 0}>
+                            <ArrowUp size={20} />
+                          </button>
+                          <button className="order-btn" onClick={(e) => { e.stopPropagation(); moveDown(index); }} disabled={index === orderedProducts.length - 1}>
+                            <ArrowDown size={20} />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="product-actions">
+                          <button className="card-action-btn" onClick={(e) => handleShare(e, product.id)}>
+                            <Share2 size={18} />
+                          </button>
+                          <button className="card-action-btn" onClick={(e) => handleEdit(e, product)}>
+                            <Edit2 size={18} />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+                
+                {!isEditOrderMode && (
+                  <div className="product-card add-new-card" onClick={() => setIsAddModalOpen(true)}>
+                    <p>+ 제품 추가하기</p>
+                  </div>
+                )}
               </div>
             )}
+          </>
+        ) : (
+          <div style={{ padding: '20px' }}>
+            <ImageSaver />
           </div>
         )}
       </main>
@@ -226,11 +253,9 @@ export default function ProductsPage() {
         }
         .tabs-scroll {
           display: flex;
+          flex-wrap: wrap;
           gap: 8px;
-          overflow-x: auto;
-          scrollbar-width: none;
         }
-        .tabs-scroll::-webkit-scrollbar { display: none; }
         .tab-btn {
           padding: 6px 14px;
           border-radius: 20px;
