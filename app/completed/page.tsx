@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react'
 import { useData } from '@/lib/DataContext'
 import { useRouter } from 'next/navigation'
-import { CheckCircle2, ChevronRight, Search, Undo2, ArrowUpDown, Calendar, Phone } from 'lucide-react'
+import { CheckCircle2, ChevronRight, Search, Undo2, ArrowUpDown, Calendar, Phone, X } from 'lucide-react'
 
 export default function CompletedPage() {
   const { customers, changeCustomerStatus } = useData()
@@ -276,6 +276,7 @@ export default function CompletedPage() {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
+          {searchTerm && <X size={18} className="clear-icon" onClick={() => setSearchTerm('')} />}
         </div>
       </div>
 

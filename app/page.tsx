@@ -350,6 +350,7 @@ export default function HomePage() {
               localStorage.setItem('lastSearchTerm', e.target.value)
             }}
           />
+          {searchTerm && <X size={18} className="clear-icon" onClick={() => { setSearchTerm(''); localStorage.setItem('lastSearchTerm', ''); }} />}
         </div>
       </div>
 

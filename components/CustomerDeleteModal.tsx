@@ -73,6 +73,7 @@ export default function CustomerDeleteModal({ onClose }: CustomerDeleteModalProp
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
             />
+          {searchTerm && <X size={18} className="clear-icon" onClick={() => setSearchTerm('')} />}
           </div>
         </div>
 

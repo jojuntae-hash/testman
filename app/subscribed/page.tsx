@@ -15,7 +15,12 @@ const formatShortAddress = (addr: string) => {
 export default function SubscribedCustomersPage() {
   const router = useRouter()
   const { subscribedCustomers, changeSubscribedCustomerStatus, deleteSubscribedCustomers, folderColors, updateFolderColor, renameFolderColor, addSubscribedCustomer } = useData()
-  const [searchTerm, setSearchTerm] = useState('')
+  const [searchTerm, setSearchTerm] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('lastSearchTerm_subscribed') || ''
+    }
+    return ''
+  })
   const [selectedFolder, setSelectedFolder] = useState('전체')
   const [sortOption, setSortOption] = useState('join-desc')
   const [filterYear, setFilterYear] = useState('')
@@ -329,9 +334,12 @@ export default function SubscribedCustomersPage() {
             type="text" 
             placeholder="이름, 전화번호, 주소 검색 (띄어쓰기 무시)" 
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => {
+              setSearchTerm(e.target.value)
+              localStorage.setItem('lastSearchTerm_subscribed', e.target.value)
+            }}
           />
-          {searchTerm && <X size={18} className="clear-icon" onClick={() => setSearchTerm('')} />}
+          {searchTerm && <X size={18} className="clear-icon" onClick={() => { setSearchTerm(''); localStorage.setItem('lastSearchTerm_subscribed', ''); }} />}
         </div>
         
         

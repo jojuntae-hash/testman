@@ -59,9 +59,24 @@ export default function MapPage() {
       const savedKey = localStorage.getItem('kakao_app_key')
       if (savedKey) setKakaoKey(savedKey)
 
-      // 이전에 선택했던 폴더 복원
-      const savedFolder = sessionStorage.getItem('map_selected_folder')
-      if (savedFolder) setSelectedFolder(savedFolder)
+      // 이전에 선택했던 폴더 복원 (선택된 항목이 없을 때만)
+      const hasSelectedIds = (() => {
+        try {
+          const savedIds = sessionStorage.getItem('map_selected_ids')
+          if (savedIds) {
+            const parsed = JSON.parse(savedIds)
+            return Array.isArray(parsed) && parsed.length > 0
+          }
+        } catch (e) {}
+        return false
+      })();
+
+      if (hasSelectedIds || selectedIds.length > 0) {
+        setSelectedFolder('선택된 항목')
+      } else {
+        const savedFolder = sessionStorage.getItem('map_selected_folder')
+        if (savedFolder) setSelectedFolder(savedFolder)
+      }
 
       // 리스트 패널 확장 상태 복원
       const savedExpanded = sessionStorage.getItem('map_is_expanded')
@@ -268,10 +283,20 @@ export default function MapPage() {
           if (restored.length > 0) {
             setSelectedCustomersList(restored)
             // 복원된 마커 중 첫 번째로 지도 중심 이동
-            const firstRestoredMarker = markers.find(m => m.customers.some(c => ids.includes(c.id)))
-            if (firstRestoredMarker) setMapCenter({ lat: firstRestoredMarker.lat, lng: firstRestoredMarker.lng })
+            const firstRestoredMarker = markers.find(m => m.customers.some((c: any) => ids.includes(c.id)))
+            if (firstRestoredMarker) {
+              setMapCenter({ lat: firstRestoredMarker.lat, lng: firstRestoredMarker.lng })
+              if (mapRef && window.kakao) {
+                const moveLatLng = new window.kakao.maps.LatLng(firstRestoredMarker.lat, firstRestoredMarker.lng)
+                mapRef.setCenter(moveLatLng)
+              }
+            }
           } else {
             setMapCenter({ lat: markers[0].lat, lng: markers[0].lng })
+            if (mapRef && window.kakao) {
+              const moveLatLng = new window.kakao.maps.LatLng(markers[0].lat, markers[0].lng)
+              mapRef.setCenter(moveLatLng)
+            }
           }
         } catch {
           setMapCenter({ lat: markers[0].lat, lng: markers[0].lng })

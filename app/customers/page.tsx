@@ -15,7 +15,12 @@ const formatShortAddress = (addr: string) => {
 export default function CustomersPage() {
   const router = useRouter()
   const { longTermCustomers, changeLongTermCustomerStatus, deleteLongTermCustomers, folderColors, updateFolderColor, renameFolderColor, copyLongTermToSubscribed, addLongTermCustomer } = useData()
-  const [searchTerm, setSearchTerm] = useState('')
+  const [searchTerm, setSearchTerm] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('lastSearchTerm_long') || ''
+    }
+    return ''
+  })
   const [selectedFolder, setSelectedFolder] = useState('전체')
   const [sortOption, setSortOption] = useState('name')
   const [isManualAddOpen, setIsManualAddOpen] = useState(false)
@@ -283,9 +288,12 @@ export default function CustomersPage() {
             type="text" 
             placeholder="이름, 전화번호, 주소 검색 (띄어쓰기 무시)" 
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => {
+              setSearchTerm(e.target.value)
+              localStorage.setItem('lastSearchTerm_long', e.target.value)
+            }}
           />
-          {searchTerm && <X size={18} className="clear-icon" onClick={() => setSearchTerm('')} />}
+          {searchTerm && <X size={18} className="clear-icon" onClick={() => { setSearchTerm(''); localStorage.setItem('lastSearchTerm_long', ''); }} />}
         </div>
         
         <div className="category-filters" style={{ display: 'flex', alignItems: 'center', gap: '8px', overflowX: 'auto', width: '100%' }}>

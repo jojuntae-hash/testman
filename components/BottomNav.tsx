@@ -84,7 +84,10 @@ export default function BottomNav() {
           <button className="clear-selection-btn" onClick={() => setSelectedIds([])}>전체해제</button>
         </div>
         <div className="action-buttons">
-          <button className="action-btn" onClick={() => router.push('/map')}>
+          <button className="action-btn" onClick={() => {
+            sessionStorage.setItem('map_selected_ids', JSON.stringify(selectedIds));
+            router.push('/map');
+          }}>
             <Map size={18} />
             <span>지도</span>
           </button>

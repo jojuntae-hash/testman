@@ -145,3 +145,14 @@ main {
 .font-bold { font-weight: 700; }
 .mt-10 { margin-top: 10px; }
 .mb-20 { margin-bottom: 20px; }
+
+.clear-icon {
+  cursor: pointer;
+  color: #94a3b8;
+  transition: color 0.2s;
+  flex-shrink: 0;
+  margin-left: 8px;
+}
+.clear-icon:hover {
+  color: #64748b;
+}
